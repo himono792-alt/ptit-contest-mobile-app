@@ -76,10 +76,11 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
   @override
   Widget build(BuildContext context) {
     final asyncList = ref.watch(auditLogsProvider);
+    final isMobile = MediaQuery.of(context).size.width < 768;
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       body: Column(children: [
-        Container(
+        if (!isMobile) Container(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
           decoration: const BoxDecoration(
             color: Colors.white,
@@ -109,7 +110,7 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
           ]),
         ),
         Container(
-          padding: const EdgeInsets.fromLTRB(32, 18, 32, 0),
+          padding: EdgeInsets.fromLTRB(isMobile ? 14 : 32, isMobile ? 12 : 18, isMobile ? 14 : 32, 0),
           child: Row(children: [
             Expanded(
               child: SizedBox(
@@ -176,7 +177,7 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
                   (data['items'] as List).cast<Map<String, dynamic>>();
               final total = data['total'] as int;
               return Padding(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(isMobile ? 14 : 24),
                 child: items.isEmpty
                     ? const Center(
                         child: Text('Không có log nào',

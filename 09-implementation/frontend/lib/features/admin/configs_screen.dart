@@ -21,11 +21,12 @@ class ConfigsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncList = ref.watch(configsProvider);
+    final isMobile = MediaQuery.of(context).size.width < 768;
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       body: Column(children: [
-        Container(
+        if (!isMobile) Container(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
           decoration: const BoxDecoration(
             color: Colors.white,
@@ -62,7 +63,7 @@ class ConfigsScreen extends ConsumerWidget {
                 child: Text('Lỗi: ${_msg(e)}',
                     style: const TextStyle(color: ptitRed))),
             data: (items) => Padding(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(isMobile ? 14 : 24),
               child: items.isEmpty
                   ? const Center(
                       child: Text('Không có config nào',

@@ -21,11 +21,12 @@ class JudgeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncList = ref.watch(myAssignmentsProvider);
+    final isMobile = MediaQuery.of(context).size.width < 768;
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       body: Column(children: [
-        Container(
+        if (!isMobile) Container(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
           decoration: const BoxDecoration(
             color: Colors.white,
@@ -76,7 +77,7 @@ class JudgeScreen extends ConsumerWidget {
                     ),
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                    padding: EdgeInsets.fromLTRB(isMobile ? 14 : 24, 16, isMobile ? 14 : 24, 24),
                     itemCount: items.length,
                     itemBuilder: (_, i) =>
                         _AssignmentCard(data: items[i] as Map<String, dynamic>),

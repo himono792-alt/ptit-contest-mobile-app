@@ -32,12 +32,13 @@ class MasterDataScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 768;
     return DefaultTabController(
       length: 3,
       child: Scaffold(
         backgroundColor: const Color(0xFFFAFAFA),
         body: Column(children: [
-          Container(
+          if (!isMobile) Container(
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
             decoration: const BoxDecoration(
               color: Colors.white,
@@ -556,8 +557,9 @@ class _SectionScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 768;
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isMobile ? 14 : 24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           FilledButton.icon(

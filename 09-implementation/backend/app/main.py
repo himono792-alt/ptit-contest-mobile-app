@@ -38,6 +38,10 @@ ALTER TABLE ptit_contest.app_users
   ADD COLUMN IF NOT EXISTS religion VARCHAR(50),
   ADD COLUMN IF NOT EXISTS nationality VARCHAR(50),
   ADD COLUMN IF NOT EXISTS secondary_email VARCHAR(255);
+
+-- File upload qua DB BYTEA (demo mode, ≤10MB, không cần S3 setup)
+ALTER TABLE ptit_contest.submission_files
+  ADD COLUMN IF NOT EXISTS file_data BYTEA;
 """
 
 
@@ -105,6 +109,7 @@ app.include_router(entries.me_entries_router, prefix=P)
 # Teams
 app.include_router(teams.contest_teams_router, prefix=P)
 app.include_router(teams.teams_router, prefix=P)
+app.include_router(teams.me_teams_router, prefix=P)
 
 # Approvals
 app.include_router(approvals.me_pending_router, prefix=P)

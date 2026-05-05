@@ -83,11 +83,12 @@ class ReviewModerationScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncList = ref.watch(reviewModerationListProvider);
     final onlyHidden = ref.watch(reviewModerationFilterProvider);
+    final isMobile = MediaQuery.of(context).size.width < 768;
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       body: Column(children: [
-        Container(
+        if (!isMobile) Container(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
           color: Colors.white,
           child: Row(children: const [
@@ -106,7 +107,7 @@ class ReviewModerationScreen extends ConsumerWidget {
           ]),
         ),
         Container(
-          padding: const EdgeInsets.fromLTRB(32, 16, 32, 0),
+          padding: EdgeInsets.fromLTRB(isMobile ? 14 : 32, isMobile ? 12 : 16, isMobile ? 14 : 32, 0),
           child: Row(children: [
             FilterChip(
               label: const Text('Chỉ hiện đã ẩn'),
@@ -143,7 +144,7 @@ class ReviewModerationScreen extends ConsumerWidget {
                     ),
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                    padding: EdgeInsets.fromLTRB(isMobile ? 14 : 24, 16, isMobile ? 14 : 24, 24),
                     itemCount: reviews.length,
                     itemBuilder: (_, i) {
                       final r = reviews[i] as Map<String, dynamic>;

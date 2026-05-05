@@ -28,12 +28,13 @@ class ApprovalQueueScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncList = ref.watch(pendingApprovalsProvider);
     final type = ref.watch(approvalTypeFilterProvider);
+    final isMobile = MediaQuery.of(context).size.width < 768;
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       body: Column(children: [
         // Top bar
-        Container(
+        if (!isMobile) Container(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
           decoration: const BoxDecoration(
             color: Colors.white,
@@ -58,7 +59,7 @@ class ApprovalQueueScreen extends ConsumerWidget {
         ),
         // Filter
         Container(
-          padding: const EdgeInsets.fromLTRB(32, 18, 32, 0),
+          padding: EdgeInsets.fromLTRB(isMobile ? 14 : 32, isMobile ? 12 : 18, isMobile ? 14 : 32, 0),
           child: Row(children: [
             SizedBox(
               width: 280,
@@ -105,7 +106,7 @@ class ApprovalQueueScreen extends ConsumerWidget {
             data: (items) => items.isEmpty
                 ? const _EmptyView()
                 : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                    padding: EdgeInsets.fromLTRB(isMobile ? 14 : 24, 16, isMobile ? 14 : 24, 24),
                     itemCount: items.length,
                     itemBuilder: (_, i) =>
                         _ApprovalCard(data: items[i] as Map<String, dynamic>),

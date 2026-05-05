@@ -30,31 +30,40 @@ class AdminDashboardScreen extends ConsumerWidget {
     final asyncSummary = user.isAdmin ? ref.watch(systemSummaryProvider) : null;
     final asyncCount = ref.watch(myStatsProvider);
 
+    final isMobile = MediaQuery.of(context).size.width < 768;
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       body: Column(children: [
-        // Top bar
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            border: Border(bottom: BorderSide(color: cardBorder)),
-          ),
-          child: Row(children: [
-            const Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Trang chủ', style: TextStyle(color: textMuted, fontSize: 11)),
-                SizedBox(height: 2),
-                Text('Dashboard', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: textPrimary)),
-              ]),
+        // Top bar — ẩn user info + chỉ "Dashboard" trên mobile (đã có AppBar shell)
+        if (!isMobile)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(bottom: BorderSide(color: cardBorder)),
             ),
-            Text('${user.fullName} · ${user.roles.join(",")}',
-                style: const TextStyle(color: textMuted, fontSize: 12)),
-          ]),
-        ),
+            child: Row(children: [
+              const Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Trang chủ',
+                          style: TextStyle(color: textMuted, fontSize: 11)),
+                      SizedBox(height: 2),
+                      Text('Dashboard',
+                          style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: textPrimary)),
+                    ]),
+              ),
+              Text('${user.fullName} · ${user.roles.join(",")}',
+                  style: const TextStyle(color: textMuted, fontSize: 12)),
+            ]),
+          ),
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(isMobile ? 14 : 24),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               // Stats cards row
               if (user.isAdmin && asyncSummary != null)
@@ -97,18 +106,35 @@ class _AdminStatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+    // <600px → 2 cols. 600-1100px → 2-3 cols. ≥1100px → 4 cols.
+    final cols = w < 600 ? 2 : (w < 1100 ? 2 : 4);
+    final aspectRatio = w < 600 ? 1.5 : 1.9;
     return GridView.count(
-      crossAxisCount: 4,
+      crossAxisCount: cols,
       shrinkWrap: true,
-      crossAxisSpacing: 14,
-      mainAxisSpacing: 14,
-      childAspectRatio: 1.9,
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: aspectRatio,
       physics: const NeverScrollableScrollPhysics(),
       children: [
-        _StatCard(label: 'Tổng users', value: '${data['total_users'] ?? 0}', delta: 'SV ${data['students_active']} · GV ${data['organizers']} · BCN ${data['department_heads']}'),
-        _StatCard(label: 'Tổng contests', value: '${data['total_contests'] ?? 0}', delta: '${data['contests_finished']} đã kết thúc'),
-        _StatCard(label: 'Bài nộp', value: '${data['total_submissions'] ?? 0}', color: infoBlue),
-        _StatCard(label: 'Chứng nhận đã cấp', value: '${data['total_certificates_issued'] ?? 0}', color: ptitRed),
+        _StatCard(
+            label: 'Tổng users',
+            value: '${data['total_users'] ?? 0}',
+            delta:
+                'SV ${data['students_active']} · GV ${data['organizers']} · BCN ${data['department_heads']}'),
+        _StatCard(
+            label: 'Tổng contests',
+            value: '${data['total_contests'] ?? 0}',
+            delta: '${data['contests_finished']} đã kết thúc'),
+        _StatCard(
+            label: 'Bài nộp',
+            value: '${data['total_submissions'] ?? 0}',
+            color: infoBlue),
+        _StatCard(
+            label: 'Chứng nhận đã cấp',
+            value: '${data['total_certificates_issued'] ?? 0}',
+            color: ptitRed),
       ],
     );
   }
@@ -119,11 +145,29 @@ class _SimpleStatsRow extends StatelessWidget {
   final dynamic user;
   const _SimpleStatsRow({required this.totalContests, required this.user});
   @override
-  Widget build(BuildContext context) => Row(children: [
-        Expanded(child: _StatCard(label: 'Cuộc thi public', value: '$totalContests')),
-        const SizedBox(width: 14),
-        Expanded(child: _StatCard(label: 'Vai trò của bạn', value: user.roles.length.toString(), delta: user.roles.join(", "))),
+  Widget build(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+    if (w < 600) {
+      // Mobile: stack 2 cards thẳng đứng cho dễ đọc
+      return Column(children: [
+        _StatCard(label: 'Cuộc thi public', value: '$totalContests'),
+        const SizedBox(height: 12),
+        _StatCard(
+            label: 'Vai trò của bạn',
+            value: user.roles.length.toString(),
+            delta: user.roles.join(", ")),
       ]);
+    }
+    return Row(children: [
+      Expanded(child: _StatCard(label: 'Cuộc thi public', value: '$totalContests')),
+      const SizedBox(width: 14),
+      Expanded(
+          child: _StatCard(
+              label: 'Vai trò của bạn',
+              value: user.roles.length.toString(),
+              delta: user.roles.join(", "))),
+    ]);
+  }
 }
 
 class _StatCard extends StatelessWidget {

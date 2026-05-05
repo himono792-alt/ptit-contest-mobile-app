@@ -12,6 +12,17 @@ from app.services import team_service
 
 contest_teams_router = APIRouter(prefix="/contests", tags=["teams"])
 teams_router = APIRouter(prefix="/teams", tags=["teams"])
+me_teams_router = APIRouter(prefix="/me", tags=["teams"])
+
+
+@me_teams_router.get("/teams", response_model=list[TeamOut])
+async def list_my_teams(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[TeamOut]:
+    """SV — List tất cả team mà SV đang là leader hoặc member (kèm members)."""
+    teams = await team_service.list_my_teams(db, user)
+    return [TeamOut.model_validate(t) for t in teams]
 
 
 @contest_teams_router.post(

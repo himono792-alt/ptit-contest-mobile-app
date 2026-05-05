@@ -8,6 +8,7 @@ import '../../core/models/contest_detail.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_top_bar.dart';
+import 'team_management_screen.dart';
 
 class RegisterContestScreen extends ConsumerStatefulWidget {
   final ContestDetail contest;
@@ -29,22 +30,37 @@ class _RegisterContestScreenState extends ConsumerState<RegisterContestScreen> {
     super.dispose();
   }
 
+  Future<void> _goToTeamFlow() async {
+    final c = widget.contest;
+    // Navigate sang TeamManagementScreen với filter contestId.
+    // Nếu user chọn 1 team và đăng ký thành công, screen sẽ pop với team_id.
+    final result = await Navigator.of(context).push<int>(
+      MaterialPageRoute(
+        builder: (_) => TeamManagementScreen(
+          filterContestId: c.contestId,
+          filterContestTitle: c.title,
+        ),
+      ),
+    );
+    if (result != null && mounted) {
+      // Đã đăng ký xong từ TeamManagementScreen, redirect về home
+      context.go('/');
+    }
+  }
+
   Future<void> _submit() async {
+    final c = widget.contest;
+    if (c.isTeam) {
+      // TEAM mode → chuyển sang team management flow
+      _goToTeamFlow();
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final api = ref.read(apiClientProvider);
-      final c = widget.contest;
-      if (c.isTeam) {
-        setState(() {
-          _error =
-              'Cuộc thi team — chức năng tạo team chưa implement trên mobile. Vui lòng dùng web.';
-          _loading = false;
-        });
-        return;
-      }
       await api.dio.post(
         '/contests/${c.contestId}/register/individual',
         data: {'note': _noteCtrl.text.isEmpty ? null : _noteCtrl.text},
@@ -150,15 +166,18 @@ class _RegisterContestScreenState extends ConsumerState<RegisterContestScreen> {
                 ),
               ],
               const SizedBox(height: 20),
-              FilledButton(
+              FilledButton.icon(
                 onPressed: _loading ? null : _submit,
-                child: _loading
+                icon: _loading
                     ? const SizedBox(
-                        height: 18,
-                        width: 18,
+                        height: 16,
+                        width: 16,
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: Colors.white))
-                    : const Text('Gửi đăng ký'),
+                    : Icon(c.isTeam ? Icons.groups : Icons.send, size: 16),
+                label: Text(c.isTeam
+                    ? 'Tiếp tục — Chọn / Tạo team'
+                    : (_loading ? 'Đang gửi...' : 'Gửi đăng ký')),
               ),
             ],
           ),

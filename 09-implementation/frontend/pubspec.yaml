@@ -25,6 +25,9 @@ dependencies:
   intl: ^0.19.0
   # Typography — Google Fonts (Plus Jakarta Sans, JetBrains Mono)
   google_fonts: ^6.2.1
+  # File picker for submission upload
+  file_picker: ^8.1.2
+  # HTTP multipart upload (Dio đã có sẵn FormData)
 
 dev_dependencies:
   flutter_test:

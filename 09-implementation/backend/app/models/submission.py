@@ -3,7 +3,8 @@
 from datetime import datetime
 
 from sqlalchemy import (
-    BigInteger, Boolean, DateTime, Enum as SAEnum, ForeignKey, Integer, String, Text, func,
+    BigInteger, Boolean, DateTime, Enum as SAEnum, ForeignKey, Integer, LargeBinary,
+    String, Text, func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -86,6 +87,8 @@ class SubmissionFile(Base):
     file_url: Mapped[str] = mapped_column(Text, nullable=False)
     mime_type: Mapped[str | None] = mapped_column(String(100))
     file_size_bytes: Mapped[int | None] = mapped_column(BigInteger)
+    # Demo: lưu file bytes trong DB (≤10MB). Production nên dùng S3/R2.
+    file_data: Mapped[bytes | None] = mapped_column(LargeBinary)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(),
     )

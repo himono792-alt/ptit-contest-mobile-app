@@ -21,12 +21,13 @@ class MonitorScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncData = ref.watch(monitorProvider);
+    final isMobile = MediaQuery.of(context).size.width < 768;
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       body: Column(children: [
         // Top bar
-        Container(
+        if (!isMobile) Container(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
           decoration: const BoxDecoration(
             color: Colors.white,
@@ -64,7 +65,7 @@ class MonitorScreen extends ConsumerWidget {
               final items = (data['items'] as List).cast<Map<String, dynamic>>();
               final total = data['total'] as int;
               return SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(isMobile ? 14 : 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

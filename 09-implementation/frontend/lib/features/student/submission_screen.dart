@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -33,6 +34,9 @@ class _SubmissionScreenState extends ConsumerState<SubmissionScreen> {
   final _textCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
   bool _loading = false;
+  // File pending upload (chưa submit). Sau khi submit version, sẽ upload file kèm theo.
+  PlatformFile? _pendingFile;
+  double? _uploadProgress;
 
   @override
   void dispose() {
@@ -43,6 +47,28 @@ class _SubmissionScreenState extends ConsumerState<SubmissionScreen> {
     super.dispose();
   }
 
+  Future<void> _pickFile() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const [
+        'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+        'png', 'jpg', 'jpeg', 'gif', 'zip', 'txt', 'csv'
+      ],
+      withData: true, // Cần withData=true để có file.bytes (web không có file.path)
+    );
+    if (result == null || result.files.isEmpty) return;
+    final file = result.files.first;
+    if (file.size > 10 * 1024 * 1024) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('File quá lớn (${(file.size / 1024 / 1024).toStringAsFixed(1)} MB). Tối đa 10 MB.')),
+      );
+      return;
+    }
+    setState(() => _pendingFile = file);
+  }
+
   Future<void> _submit() async {
     final link = _linkCtrl.text.trim();
     if (link.isNotEmpty && !RegExp(r'^https?://').hasMatch(link)) {
@@ -51,16 +77,20 @@ class _SubmissionScreenState extends ConsumerState<SubmissionScreen> {
       );
       return;
     }
-    if (link.isEmpty && _textCtrl.text.trim().isEmpty) {
+    if (link.isEmpty && _textCtrl.text.trim().isEmpty && _pendingFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cần nhập ít nhất 1 trong: external link hoặc text answer')),
+        const SnackBar(content: Text('Cần nhập ít nhất 1 trong: link / text / upload file')),
       );
       return;
     }
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _uploadProgress = null;
+    });
     try {
       final api = ref.read(apiClientProvider);
-      await api.dio.post(
+      // Step 1: tạo version
+      final res = await api.dio.post(
         '/rounds/${widget.roundId}/submissions/me/versions',
         data: {
           'title': _titleCtrl.text.isEmpty ? null : _titleCtrl.text,
@@ -69,14 +99,45 @@ class _SubmissionScreenState extends ConsumerState<SubmissionScreen> {
           'note': _noteCtrl.text.isEmpty ? null : _noteCtrl.text,
         },
       );
+      final versionId = res.data['submission_version_id'] as int;
+
+      // Step 2: nếu có file pending, upload kèm theo
+      if (_pendingFile != null) {
+        final file = _pendingFile!;
+        final formData = FormData.fromMap({
+          'file': MultipartFile.fromBytes(
+            file.bytes!,
+            filename: file.name,
+          ),
+        });
+        await api.dio.post(
+          '/submissions/versions/$versionId/files',
+          data: formData,
+          onSendProgress: (sent, total) {
+            if (total > 0 && mounted) {
+              setState(() => _uploadProgress = sent / total);
+            }
+          },
+        );
+      }
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nộp bài thành công'), backgroundColor: successGreen),
+        SnackBar(
+          content: Text(_pendingFile != null
+              ? 'Nộp bài + upload file thành công'
+              : 'Nộp bài thành công'),
+          backgroundColor: successGreen,
+        ),
       );
       _titleCtrl.clear();
       _linkCtrl.clear();
       _textCtrl.clear();
       _noteCtrl.clear();
+      setState(() {
+        _pendingFile = null;
+        _uploadProgress = null;
+      });
       ref.invalidate(mySubmissionProvider(widget.roundId));
     } on DioException catch (e) {
       if (!mounted) return;
@@ -152,10 +213,95 @@ class _SubmissionScreenState extends ConsumerState<SubmissionScreen> {
                 decoration: const InputDecoration(
                     labelText: 'Ghi chú (vd: lần 2 đã sửa)'),
               ),
+              const SizedBox(height: 12),
+              // ============== File picker ==============
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _pendingFile != null ? successSoft : appBg,
+                  border: Border.all(
+                      color: _pendingFile != null ? successGreen : cardBorder,
+                      width: 1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: _pendingFile == null
+                    ? InkWell(
+                        onTap: _pickFile,
+                        child: Row(children: const [
+                          Icon(Icons.attach_file, color: textMuted, size: 20),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Đính kèm file (tuỳ chọn)',
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        color: textPrimary,
+                                        fontWeight: FontWeight.w600)),
+                                SizedBox(height: 2),
+                                Text(
+                                    'PDF, Word, Excel, PPT, ảnh, ZIP — tối đa 10 MB',
+                                    style: TextStyle(
+                                        fontSize: 11, color: textMuted)),
+                              ],
+                            ),
+                          ),
+                          Icon(Icons.add, color: ptitRed, size: 20),
+                        ]),
+                      )
+                    : Row(children: [
+                        const Icon(Icons.insert_drive_file,
+                            color: successGreen, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(_pendingFile!.name,
+                                  style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: successGreen),
+                                  overflow: TextOverflow.ellipsis),
+                              Text(
+                                  '${(_pendingFile!.size / 1024).toStringAsFixed(1)} KB',
+                                  style: const TextStyle(
+                                      fontSize: 11, color: textMuted)),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close,
+                              color: ptitRed, size: 18),
+                          tooltip: 'Bỏ file',
+                          onPressed: _loading
+                              ? null
+                              : () => setState(() => _pendingFile = null),
+                        ),
+                      ]),
+              ),
+              if (_uploadProgress != null) ...[
+                const SizedBox(height: 8),
+                LinearProgressIndicator(
+                  value: _uploadProgress,
+                  color: ptitRed,
+                  backgroundColor: ptitRedSoft,
+                ),
+                Text(
+                    'Đang upload file: ${(_uploadProgress! * 100).toStringAsFixed(0)}%',
+                    style: const TextStyle(fontSize: 11, color: textMuted)),
+              ],
               const SizedBox(height: 16),
               FilledButton.icon(
                 icon: const Icon(Icons.send, size: 16),
-                label: Text(_loading ? 'Đang gửi...' : 'Nộp bài'),
+                label: Text(_loading
+                    ? (_uploadProgress != null
+                        ? 'Đang upload...'
+                        : 'Đang gửi...')
+                    : (_pendingFile != null
+                        ? 'Nộp bài + Upload file'
+                        : 'Nộp bài')),
                 onPressed: _loading ? null : _submit,
               ),
               const SizedBox(height: 12),

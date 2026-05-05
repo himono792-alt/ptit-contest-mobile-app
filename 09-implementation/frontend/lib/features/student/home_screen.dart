@@ -36,11 +36,11 @@ class HomeScreen extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(18, 14, 18, 4),
             child: Row(children: [
-              // Avatar + greeting đều click được → switch sang tab Tôi (index 4)
+              // Avatar + greeting đều click được → switch sang tab Tôi (index 5)
               Expanded(
                 child: InkWell(
                   borderRadius: BorderRadius.circular(8),
-                  onTap: () => onSwitchTab?.call(4),
+                  onTap: () => onSwitchTab?.call(5),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Row(children: [

@@ -117,3 +117,16 @@ async def get_team(db: AsyncSession, team_id: int) -> Team:
     if team is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Team not found")
     return team
+
+
+async def list_my_teams(db: AsyncSession, user: AppUser) -> list[Team]:
+    """SV-06 — List tất cả team mà SV đang là leader hoặc member."""
+    student = await _get_student_or_403(db, user)
+    stmt = (
+        select(Team)
+        .join(TeamMember, TeamMember.team_id == Team.team_id)
+        .where(TeamMember.student_id == student.student_id)
+        .options(selectinload(Team.members))
+        .order_by(Team.created_at.desc())
+    )
+    return list((await db.execute(stmt)).scalars().all())
