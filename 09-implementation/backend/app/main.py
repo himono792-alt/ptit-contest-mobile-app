@@ -152,15 +152,19 @@ async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) 
     """Trả 429 + Retry-After header thân thiện với FE.
 
     FE Flutter có thể đọc header này để hiện toast "Thử lại sau X giây".
+
+    Phase 1.2 fix (2026-05-06): Trước đây parse exc.detail thành int → ValueError 500.
+    exc.detail format thực tế = "10 per 1 minute" → không thể split lấy số. Dùng
+    fixed retry_after = 60s (period mặc định "minute") + format detail rõ ràng.
     """
-    retry_after = int(exc.detail.split(" ")[-1]) if exc.detail else 60
+    detail = str(exc.detail) if exc.detail else "rate limit exceeded"
     return JSONResponse(
         status_code=429,
         content={
-            "detail": f"Quá nhiều request — giới hạn {exc.detail}. Thử lại sau ít phút.",
-            "retry_after_seconds": retry_after,
+            "detail": f"Quá nhiều request. Giới hạn: {detail}. Thử lại sau ~1 phút.",
+            "limit": detail,
         },
-        headers={"Retry-After": str(retry_after)},
+        headers={"Retry-After": "60"},
     )
 
 
