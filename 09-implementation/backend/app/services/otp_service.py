@@ -51,7 +51,7 @@ def generate_otp(email: str) -> str:
         otp_hash=otp_hash,
         expires_at=datetime.now(timezone.utc) + timedelta(minutes=_OTP_TTL_MINUTES),
     )
-    log.info("OTP generated: email=%s (TTL %dp)", email, _OTP_TTL_MINUTES)
+    log.warning("OTP generated: email=%s (TTL %dp)", email, _OTP_TTL_MINUTES)
     return code
 
 
@@ -66,7 +66,7 @@ def verify_otp(email: str, code: str) -> bool:
     key = email.lower()
     entry = _store.get(key)
     if entry is None:
-        log.info("OTP verify: email=%s -> no entry", email)
+        log.warning("OTP verify: email=%s -> no entry", email)
         return False
 
     now = datetime.now(timezone.utc)
@@ -78,7 +78,7 @@ def verify_otp(email: str, code: str) -> bool:
 
     # Check expired
     if now > entry.expires_at:
-        log.info("OTP verify: email=%s -> expired", email)
+        log.warning("OTP verify: email=%s -> expired", email)
         _store.pop(key, None)
         return False
 
@@ -89,7 +89,7 @@ def verify_otp(email: str, code: str) -> bool:
         is_valid = False
 
     if is_valid:
-        log.info("OTP verify: email=%s -> SUCCESS", email)
+        log.warning("OTP verify: email=%s -> SUCCESS", email)
         _store.pop(key, None)  # Single-use, xóa ngay
         return True
 
@@ -101,7 +101,7 @@ def verify_otp(email: str, code: str) -> bool:
             "OTP verify: email=%s -> LOCKED (attempts=%d)", email, entry.attempts
         )
     else:
-        log.info("OTP verify: email=%s -> wrong (attempts=%d)", email, entry.attempts)
+        log.warning("OTP verify: email=%s -> wrong (attempts=%d)", email, entry.attempts)
     return False
 
 

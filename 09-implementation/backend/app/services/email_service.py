@@ -57,6 +57,13 @@ async def send_email(
         template_name: tên file template trong app/templates/emails/ (vd "password_reset.html")
         context: dict variables truyền vào template
     """
+    # Debug print — luôn xuất stdout Railway log (log.warning có thể bị drop)
+    print(
+        f"[EMAIL_DEBUG] send_email called: to={to_email} subject={subject!r} "
+        f"transport={settings.mail_transport!r} host={settings.smtp_host!r} "
+        f"user={settings.smtp_user!r} from={settings.smtp_from!r}",
+        flush=True,
+    )
     # Render template HTML + plain text fallback
     try:
         html_template = _jinja_env.get_template(template_name)
@@ -78,7 +85,7 @@ async def send_email(
     if settings.mail_transport != "smtp" or not settings.smtp_host:
         if settings.mail_transport == "smtp" and not settings.smtp_host:
             log.warning("MAIL_TRANSPORT=smtp nhung SMTP_HOST rong -> fallback console")
-        log.info(
+        log.warning(
             "[EMAIL CONSOLE]\n"
             "  To: %s\n"
             "  Subject: %s\n"
@@ -99,6 +106,7 @@ async def send_email(
 
     try:
         # STARTTLS port 587 (Brevo, Gmail). Nếu SSL port 465 thì dùng use_tls=True + start_tls=False
+        print(f"[EMAIL_DEBUG] About to call aiosmtplib.send to {to_email}", flush=True)
         await aiosmtplib.send(
             msg,
             hostname=settings.smtp_host,
@@ -108,10 +116,12 @@ async def send_email(
             start_tls=settings.smtp_use_tls,
             timeout=15,  # Tổng timeout 15s (Brevo thường <2s, để buffer cho slow network)
         )
-        log.info("Email sent: to=%s subject=%s template=%s", to_email, full_subject, template_name)
+        print(f"[EMAIL_DEBUG] aiosmtplib.send OK: to={to_email}", flush=True)
+        log.warning("Email sent: to=%s subject=%s template=%s", to_email, full_subject, template_name)
         return True
     except Exception as e:
         # KHÔNG raise — fail-open, log warning + Sentry sẽ tự capture qua attach_stacktrace
+        print(f"[EMAIL_DEBUG] aiosmtplib.send FAIL: to={to_email} err={type(e).__name__}: {e}", flush=True)
         log.warning(
             "Email SMTP fail: to=%s subject=%s err=%s (transport=%s host=%s)",
             to_email, full_subject, e, settings.mail_transport, settings.smtp_host,
