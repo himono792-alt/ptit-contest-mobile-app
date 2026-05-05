@@ -26,13 +26,15 @@ from app.schemas.contest import (
 
 _EDITABLE_STATUSES = (ContestStatus.DRAFT, ContestStatus.REVISION_REQUESTED)
 
-# Structural changes (rounds/sessions) allowed cho đến trước khi ONGOING
+# Structural changes (rounds/sessions) — cho phép xuyên suốt trừ FINISHED/CANCELLED
+# (thực tế BTC có thể cần thêm round phụ giữa contest ONGOING)
 _STRUCTURE_EDITABLE_STATUSES = (
     ContestStatus.DRAFT,
     ContestStatus.REVISION_REQUESTED,
     ContestStatus.PUBLISHED,
     ContestStatus.REG_OPEN,
     ContestStatus.REG_CLOSED,
+    ContestStatus.ONGOING,
 )
 
 
