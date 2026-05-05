@@ -1,9 +1,12 @@
 #!/bin/sh
-# Entry point cho container backend.
-# - Đợi DB ready
-# - Init schema từ raw SQL nếu chưa có bảng
-# - Seed users (Admin/GV/BCN/SV) lần đầu
-# - Start uvicorn
+# Entry point cho container backend (Sprint 0 P0-4 audit 2026-05-06).
+# Workflow:
+#   1. Đợi DB ready
+#   2. Nếu schema CHƯA tồn tại → chạy init-schema.sql v04 + alembic stamp head
+#   3. Nếu schema ĐÃ tồn tại nhưng KHÔNG có alembic_version → stamp head (legacy)
+#   4. Nếu có alembic_version → alembic upgrade head (apply pending migrations)
+#   5. Optional seed users
+#   6. Start uvicorn
 
 set -e
 
@@ -33,26 +36,41 @@ for i in $(seq 1 30); do
   sleep 1
 done
 
-# Check schema đã init chưa (kiểm tra bảng app_users tồn tại trong schema ptit_contest)
+# ----- Schema state detection -----
 SCHEMA_EXISTS=$(psql "$PSQL_URL" -tAc "SELECT 1 FROM information_schema.tables WHERE table_schema='ptit_contest' AND table_name='app_users' LIMIT 1;" 2>/dev/null || echo "")
+ALEMBIC_EXISTS=$(psql "$PSQL_URL" -tAc "SELECT 1 FROM information_schema.tables WHERE table_schema='ptit_contest' AND table_name='alembic_version' LIMIT 1;" 2>/dev/null || echo "")
+
+cd /app
 
 if [ -z "$SCHEMA_EXISTS" ]; then
-  echo "Schema chưa tồn tại — init từ raw SQL..."
+  # ----- Trường hợp 1: DB trống → init từ raw SQL + stamp baseline -----
+  echo "Schema chưa tồn tại — init từ raw SQL v04..."
   if [ -f "/app/init-schema.sql" ]; then
     psql "$PSQL_URL" -f /app/init-schema.sql
     echo "Schema init done"
+    echo "Alembic stamp baseline..."
+    alembic stamp head
+    echo "Alembic baseline stamped"
   else
     echo "WARN: /app/init-schema.sql không tồn tại — skip init"
   fi
+elif [ -z "$ALEMBIC_EXISTS" ]; then
+  # ----- Trường hợp 2: DB cũ có schema nhưng chưa có alembic_version → stamp -----
+  echo "Schema tồn tại nhưng chưa track Alembic — stamp baseline..."
+  alembic stamp head
+  echo "Legacy DB đã được stamp baseline"
 else
-  echo "Schema đã tồn tại — skip init"
+  # ----- Trường hợp 3: DB đã track Alembic → upgrade head -----
+  echo "Alembic upgrade head..."
+  alembic upgrade head
+  echo "Migrations up-to-date"
 fi
 
 # Optional seed users (chỉ chạy nếu chưa có user nào)
 USER_COUNT=$(psql "$PSQL_URL" -tAc "SELECT COUNT(*) FROM ptit_contest.app_users;" 2>/dev/null || echo "0")
 if [ "$USER_COUNT" = "0" ] && [ -f "/app/scripts/seed-users.sh" ]; then
   echo "DB trống — seed users..."
-  cd /app && sh scripts/seed-users.sh || echo "Seed failed (non-fatal)"
+  sh scripts/seed-users.sh || echo "Seed failed (non-fatal)"
 fi
 
 echo "Starting uvicorn on 0.0.0.0:$PORT"

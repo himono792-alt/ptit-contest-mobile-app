@@ -8,7 +8,11 @@ from sqlalchemy import text
 
 from app.config import settings
 from app.database import engine
-from app.middleware.audit import AuditASGIMiddleware
+from app.middleware.audit import (
+    AuditASGIMiddleware,
+    start_audit_worker,
+    stop_audit_worker,
+)
 from app.routers import (
     admin,
     approvals,
@@ -27,6 +31,11 @@ from app.routers import (
 )
 
 
+# Sprint 0 / P0-1 (audit 2026-05-06): idempotent block đã được inline vào schema v04.
+# Giữ block này LÀM SAFETY NET cho:
+#   - DB production cũ (đã chạy v03) — block sẽ no-op vì cột đã có
+#   - Trường hợp Alembic chưa kịp upgrade (race condition cold-start)
+# Sau khi Alembic baseline ổn định 1-2 tháng → có thể xóa hẳn.
 _PROFILE_MIGRATION_SQL = """
 ALTER TABLE ptit_contest.app_users
   ADD COLUMN IF NOT EXISTS dob DATE,
@@ -39,7 +48,6 @@ ALTER TABLE ptit_contest.app_users
   ADD COLUMN IF NOT EXISTS nationality VARCHAR(50),
   ADD COLUMN IF NOT EXISTS secondary_email VARCHAR(255);
 
--- File upload qua DB BYTEA (demo mode, ≤10MB, không cần S3 setup)
 ALTER TABLE ptit_contest.submission_files
   ADD COLUMN IF NOT EXISTS file_data BYTEA;
 """
@@ -50,13 +58,21 @@ async def lifespan(app: FastAPI):
     print(f"PTIT Contest API starting in {settings.app_env} mode")
     print(f"   DB: {settings.database_url.split('@')[-1]}")
     # Idempotent migration cho profile fields mở rộng (2026-05-05)
+    # Note: Sau khi chuyển sang Alembic baseline (Sprint 0 P0-4), block này sẽ là
+    # safety net cho các DB cũ chưa migrate. DB mới đã có cột trong init-schema v04.
     try:
         async with engine.begin() as conn:
             await conn.execute(text(_PROFILE_MIGRATION_SQL))
-        print("Profile fields migration: ok (idempotent)")
+        print("Profile fields migration: ok (idempotent safety net)")
     except Exception as e:
         print(f"Profile fields migration WARN: {e}")
+
+    # Fix P0-3 (audit 2026-05-06): start audit worker fire-and-forget
+    await start_audit_worker()
+
     yield
+
+    await stop_audit_worker()
     await engine.dispose()
     print("Shutdown complete")
 
@@ -139,7 +155,7 @@ app.include_router(notifications.me_notifications_router, prefix=P)
 app.include_router(certificates.contests_certs_router, prefix=P)
 app.include_router(certificates.templates_router, prefix=P)
 app.include_router(certificates.certs_router, prefix=P)
-app.include_router(certificates.verify_router)
+app.include_router(certificates.verify_router, prefix=P)  # /api/verify/{qr_code} — fix 2026-05-06 (P0-2 audit)
 
 # Admin
 app.include_router(admin.router, prefix=P)

@@ -34,9 +34,18 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
     # Auth
-    jwt_secret_key: str = "change-me-to-random-32-byte-string"
+    # Fix P1-1 (audit 2026-05-06): default rỗng + raise nếu production. Trước đây có
+    # default "change-me-..." → nguy hiểm nếu Railway env var bị xóa.
+    jwt_secret_key: str = ""
     jwt_algorithm: str = "HS256"
-    jwt_access_token_expire_minutes: int = 1440
+    # Access token TTL: 60p cho production (đi với refresh token Phase 1).
+    # Dev có thể nâng qua .env để đỡ phải re-login.
+    jwt_access_token_expire_minutes: int = 60
+
+    # DB pool — Fix P1-3 (audit 2026-05-06): giảm xuống cho Railway hobby (~22 conn).
+    # Main pool 5+10=15 + audit pool 2+2=4 = 19 conn → safe.
+    db_pool_size: int = 5
+    db_max_overflow: int = 10
 
     # Server
     host: str = "0.0.0.0"
@@ -44,9 +53,25 @@ class Settings(BaseSettings):
 
 
 @lru_cache
-def get_settings() -> Settings:
+def get_settings() -> "Settings":
     """Cached singleton — settings không đổi trong runtime của app."""
-    return Settings()
+    s = Settings()
+    # Production env safety check (Fix P1-1)
+    if s.app_env == "production" and not s.jwt_secret_key:
+        raise RuntimeError(
+            "JWT_SECRET_KEY phải được set khi APP_ENV=production. "
+            "Generate: python -c \"import secrets; print(secrets.token_urlsafe(32))\""
+        )
+    # Dev fallback chỉ khi không phải production — log warning rõ ràng
+    if not s.jwt_secret_key:
+        import warnings
+        s.jwt_secret_key = "DEV_INSECURE_DEFAULT_DO_NOT_USE_IN_PRODUCTION"
+        warnings.warn(
+            "JWT_SECRET_KEY rỗng — dùng fallback insecure (dev only). "
+            "Set env var trước khi deploy.",
+            stacklevel=2,
+        )
+    return s
 
 
 settings = get_settings()

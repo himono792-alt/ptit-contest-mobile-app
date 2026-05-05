@@ -1,11 +1,21 @@
-"""Audit middleware — pure ASGI, await audit insert sync (chậm ~5ms nhưng clean pool).
+"""Audit middleware — pure ASGI, fire-and-forget enqueue (Fix P0-3 audit 2026-05-06).
 
 Ghi mọi mutation request (POST/PATCH/PUT/DELETE) vào audit_logs.
 Skip endpoints không cần log (auth/login, /health, /docs, /openapi).
+
+Architecture:
+- Middleware enqueue payload non-blocking (asyncio.Queue.put_nowait).
+- 1 background worker async drain queue, write từng record.
+- Worker đời = lifespan của app, start ở startup_audit_worker(), cancel ở shutdown.
+
+Trade-off: nếu queue đầy (>1000 record chưa flush), audit bị drop. Đây là
+acceptable degradation — request không nên fail vì audit log.
 """
 
 from __future__ import annotations
 
+import asyncio
+import logging
 import re
 from typing import Iterable
 
@@ -60,10 +70,14 @@ _ENTITY_PATTERNS: list[tuple[re.Pattern[str], str]] = [
 ]
 
 
-# Engine RIÊNG cho audit (pool nhỏ 2 connections) — không tranh giành với main pool.
-# Tạo lazy ở init, không export.
+# Engine + queue — lazy init
 _audit_engine = None
 _audit_session_maker = None
+_audit_queue: asyncio.Queue | None = None
+_audit_worker_task: asyncio.Task | None = None
+_AUDIT_QUEUE_MAX = 1000
+
+log = logging.getLogger("audit")
 
 
 def _get_audit_session():
@@ -109,29 +123,79 @@ def _extract_user_id(headers: list[tuple[bytes, bytes]]) -> int | None:
     return None
 
 
-async def _write_audit(
-    user_id: int | None, method: str, path: str,
-    entity_name: str, entity_id: str | None,
-    ip: str | None, status_code: int, query: str,
-):
-    """AWAIT trực tiếp — engine pool riêng đảm bảo cleanup đúng."""
+async def _write_audit(payload: dict) -> None:
+    """Worker thực hiện INSERT thật. Lỗi chỉ log warning, không re-raise."""
     try:
-        details: dict = {"method": method, "path": path, "status": status_code}
-        if query:
-            details["query"] = query[:500]
+        details: dict = {
+            "method": payload["method"],
+            "path": payload["path"],
+            "status": payload["status_code"],
+        }
+        if payload.get("query"):
+            details["query"] = payload["query"][:500]
         async with _get_audit_session() as db:
             await db.execute(insert(AuditLog).values(
-                user_id=user_id, action_type=method,
-                entity_name=entity_name, entity_id=entity_id,
-                ip_address=ip, details_json=details,
+                user_id=payload.get("user_id"),
+                action_type=payload["method"],
+                entity_name=payload["entity_name"],
+                entity_id=payload.get("entity_id"),
+                ip_address=payload.get("ip"),
+                details_json=details,
             ))
             await db.commit()
-    except Exception:
-        pass
+    except Exception as e:
+        log.warning("audit write failed: %s", e)
+
+
+async def _audit_worker_loop():
+    """Background drain queue, write audit_log từng record."""
+    assert _audit_queue is not None
+    while True:
+        try:
+            payload = await _audit_queue.get()
+            await _write_audit(payload)
+        except asyncio.CancelledError:
+            # Drain phần còn lại trước khi exit (best effort)
+            while _audit_queue is not None and not _audit_queue.empty():
+                try:
+                    payload = _audit_queue.get_nowait()
+                    await _write_audit(payload)
+                except asyncio.QueueEmpty:
+                    break
+            raise
+        except Exception as e:
+            log.warning("audit worker exception: %s", e)
+
+
+async def start_audit_worker() -> None:
+    """Gọi từ FastAPI lifespan startup. Idempotent."""
+    global _audit_queue, _audit_worker_task
+    if _audit_worker_task is not None and not _audit_worker_task.done():
+        return
+    _audit_queue = asyncio.Queue(maxsize=_AUDIT_QUEUE_MAX)
+    _audit_worker_task = asyncio.create_task(_audit_worker_loop(), name="audit-worker")
+    log.info("audit worker started (queue maxsize=%d)", _AUDIT_QUEUE_MAX)
+
+
+async def stop_audit_worker() -> None:
+    """Gọi từ FastAPI lifespan shutdown."""
+    global _audit_worker_task, _audit_engine, _audit_session_maker
+    if _audit_worker_task is not None:
+        _audit_worker_task.cancel()
+        try:
+            await _audit_worker_task
+        except asyncio.CancelledError:
+            pass
+        _audit_worker_task = None
+    if _audit_engine is not None:
+        await _audit_engine.dispose()
+        _audit_engine = None
+        _audit_session_maker = None
+    log.info("audit worker stopped")
 
 
 class AuditASGIMiddleware:
-    """Pure ASGI middleware — tránh BaseHTTPMiddleware (Starlette known issue)."""
+    """Pure ASGI middleware — enqueue audit non-blocking sau khi response đã gửi."""
 
     def __init__(self, app):
         self.app = app
@@ -161,10 +225,13 @@ class AuditASGIMiddleware:
 
         await self.app(scope, receive, send_wrapper)
 
-        # Sau khi response xong → AWAIT audit (block ~5ms, an toàn pool)
+        # Sau khi response xong → enqueue NON-BLOCKING. Drop nếu queue full.
         try:
             status_code = captured_status["code"]
             if not (200 <= status_code < 300):
+                return
+            if _audit_queue is None:
+                # Worker chưa start (startup race) — skip thay vì block
                 return
             user_id = _extract_user_id(scope.get("headers", []))
             entity_name, entity_id = _classify(path)
@@ -172,10 +239,19 @@ class AuditASGIMiddleware:
             ip = client[0] if client else None
             query = scope.get("query_string", b"").decode("latin-1", errors="ignore")
 
-            await _write_audit(
-                user_id=user_id, method=method, path=path,
-                entity_name=entity_name, entity_id=entity_id,
-                ip=ip, status_code=status_code, query=query,
-            )
-        except Exception:
-            pass
+            payload = {
+                "user_id": user_id,
+                "method": method,
+                "path": path,
+                "entity_name": entity_name,
+                "entity_id": entity_id,
+                "ip": ip,
+                "status_code": status_code,
+                "query": query,
+            }
+            try:
+                _audit_queue.put_nowait(payload)
+            except asyncio.QueueFull:
+                log.warning("audit queue full — dropping log for %s %s", method, path)
+        except Exception as e:
+            log.warning("audit enqueue failed: %s", e)

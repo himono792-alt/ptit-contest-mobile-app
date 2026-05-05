@@ -190,11 +190,13 @@ async def upload_file_to_version(
 @submissions_router.get("/files/{file_id}/download")
 async def download_file(
     file_id: int,
+    user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    """Stream file BYTEA xuống client. Public access (không cần auth — cho phép preview chia sẻ).
+    """Stream file BYTEA xuống client.
 
-    Production: nên check perm + signed URL.
+    Auth required (fix P1-2 2026-05-06): chỉ owner SV / member team / BTC contest /
+    JUDGE assigned / ADMIN xem được. Trước đây public bypass — giờ đã siết.
     """
     stmt = select(SubmissionFile).where(
         SubmissionFile.submission_file_id == file_id
@@ -207,6 +209,16 @@ async def download_file(
             status.HTTP_404_NOT_FOUND,
             "File data trống (legacy file chưa migrate)",
         )
+
+    # Lookup submission qua version → submission → reuse perm check sẵn có
+    version = await db.get(SubmissionVersion, sub_file.submission_version_id)
+    if version is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Version not found")
+    submission = await submission_service.get_submission_detail(
+        db, user, version.submission_id,
+    )
+    # get_submission_detail đã raise 403 nếu không có quyền → tới đây là OK
+    _ = submission  # silence unused var warning
 
     def _iter():
         yield bytes(sub_file.file_data)

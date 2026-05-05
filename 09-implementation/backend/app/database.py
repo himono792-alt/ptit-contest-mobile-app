@@ -12,12 +12,14 @@ from sqlalchemy.ext.asyncio import (
 from app.config import settings
 
 # Engine — async, sử dụng asyncpg driver
+# Fix P1-3 (audit 2026-05-06): pool size đọc từ settings (default 5+10=15) để fit
+# Railway hobby plan ~22 conn limit. Audit pool 2+2 = 4 → tổng 19 conn.
 engine: AsyncEngine = create_async_engine(
     settings.database_url,
     echo=settings.db_echo,
     pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
+    pool_size=settings.db_pool_size,
+    max_overflow=settings.db_max_overflow,
     # Đảm bảo SQL chạy đúng schema "ptit_contest"
     connect_args={
         "server_settings": {"search_path": "ptit_contest,public"}
