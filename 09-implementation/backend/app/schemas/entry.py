@@ -50,3 +50,23 @@ class ReviewEntryIn(BaseModel):
 
     action: EntryReviewAction
     note: str | None = Field(None, description="Bắt buộc nếu reject")
+
+
+class MyEntryItem(BaseModel):
+    """SV-10 GET /me/entries — entry của SV + contest info kèm theo."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    entry_id: int
+    contest_id: int
+    contest_slug: str
+    contest_title: str
+    contest_status: str
+    entry_type: str
+    team_id: int | None = None
+    registration_status: RegistrationStatus
+    participant_status: ParticipantStatus
+    registration_note: str | None = None
+    created_at: datetime
+    contest_start_at: datetime
+    contest_end_at: datetime

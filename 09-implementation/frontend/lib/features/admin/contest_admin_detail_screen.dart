@@ -399,16 +399,20 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
             const SizedBox(height: 12),
             _InfoRow('Mô tả', (c['description'] ?? '—').toString()),
             _InfoRow('Khoa chủ trì', 'ID #${c['host_faculty_id'] ?? '—'}'),
-            _InfoRow('Loại', '${c['contest_type'] ?? '—'} · ${c['delivery_mode']} · ${c['participation_mode']}'),
-            _InfoRow('Mở đăng ký', _safeFmt(c['reg_open_at'])),
-            _InfoRow('Đóng đăng ký', _safeFmt(c['reg_close_at'])),
+            _InfoRow('Hình thức', '${c['delivery_mode']} · ${c['participation_mode']}'),
+            _InfoRow('Địa điểm', (c['location_text'] ?? '—').toString()),
+            _InfoRow('Mở đăng ký', _safeFmt(c['registration_open_at'])),
+            _InfoRow('Đóng đăng ký', _safeFmt(c['registration_close_at'])),
             _InfoRow('Bắt đầu thi', _safeFmt(c['start_at'])),
             _InfoRow('Kết thúc thi', _safeFmt(c['end_at'])),
             _InfoRow('Số entry tối đa', '${c['max_entries'] ?? "—"}'),
+            _InfoRow('Team size', c['participation_mode'] == 'TEAM'
+                ? '${c['team_min_members'] ?? "?"} - ${c['team_max_members'] ?? "?"} thành viên'
+                : 'Cá nhân'),
             _InfoRow('Cần nộp bài', (c['requires_submission'] == true) ? 'Có' : 'Không'),
             _InfoRow('Công khai', (c['is_public'] == true) ? 'Có' : 'Không'),
-            _InfoRow('Submission policy', (c['submission_policy'] ?? '—').toString()),
             _InfoRow('Created at', _safeFmt(c['created_at'])),
+            _InfoRow('Owner user_id', '#${c['created_by'] ?? '—'}'),
           ]),
         ),
       ]),
@@ -967,7 +971,7 @@ class _EntriesTabState extends ConsumerState<_EntriesTab> {
                     itemCount: entries.length,
                     itemBuilder: (_, i) {
                       final e = entries[i] as Map<String, dynamic>;
-                      final st = e['status'] as String;
+                      final st = e['registration_status'] as String? ?? 'PENDING';
                       return MCard(
                         child: Row(children: [
                           Expanded(
@@ -975,15 +979,16 @@ class _EntriesTabState extends ConsumerState<_EntriesTab> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                      'Entry #${e['entry_id']} · ${e['entry_kind']}',
+                                      'Entry #${e['entry_id']} · ${e['entry_type'] ?? '—'}',
                                       style: const TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w700)),
                                   const SizedBox(height: 4),
                                   Text(
-                                      'SV user #${e['student_user_id'] ?? '—'}'
+                                      'SV student_id #${e['student_id'] ?? '—'}'
                                       ' · Team ${e['team_id'] ?? '—'}'
-                                      ' · Đăng ký lúc ${_safeFmtIso(e['registered_at'])}',
+                                      ' · Đăng ký ${_safeFmtIso(e['created_at'])}'
+                                      '${(e['registration_note'] ?? '').toString().isNotEmpty ? " · \"${e['registration_note']}\"" : ""}',
                                       style: const TextStyle(
                                           fontSize: 11, color: textMuted)),
                                 ]),
@@ -1355,7 +1360,7 @@ class _ResultsTabState extends ConsumerState<_ResultsTab> {
                         child: Row(children: [
                           SizedBox(
                             width: 40,
-                            child: Text('#${r['rank'] ?? '-'}',
+                            child: Text('#${r['rank_no'] ?? '-'}',
                                 style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w800,
@@ -1366,7 +1371,7 @@ class _ResultsTabState extends ConsumerState<_ResultsTab> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                      'Entry #${r['entry_id']} · Final score ${r['final_score']?.toStringAsFixed(2) ?? '—'}',
+                                      'Entry #${r['entry_id']} · Final score ${(r['final_score'] is num ? (r['final_score'] as num).toStringAsFixed(2) : (r['final_score']?.toString() ?? "—"))}',
                                       style: const TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w700)),
@@ -1458,9 +1463,11 @@ class _CertsTabState extends ConsumerState<_CertsTab> {
           '/contests/${widget.contestId}/certificates/issue',
           data: {'only_with_award': onlyAward});
       if (!mounted) return;
-      final issued = (res.data is Map) ? (res.data['issued'] ?? 0) : 0;
+      final d = res.data is Map ? res.data as Map : {};
+      final issued = d['issued_count'] ?? d['issued'] ?? 0;
+      final skipped = d['skipped_count'] ?? d['skipped'] ?? 0;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Đã cấp $issued certificates')),
+        SnackBar(content: Text('Đã cấp $issued certificates · skipped $skipped')),
       );
     } catch (e) {
       if (!mounted) return;
@@ -1508,7 +1515,7 @@ class _CertsTabState extends ConsumerState<_CertsTab> {
                     itemCount: items.length,
                     itemBuilder: (_, i) {
                       final t = items[i] as Map<String, dynamic>;
-                      final st = t['approval_status'] as String? ?? '—';
+                      final isApproved = t['approved_at'] != null;
                       final isActive = t['is_active'] == true;
                       return MCard(
                         child: Row(children: [
@@ -1522,9 +1529,12 @@ class _CertsTabState extends ConsumerState<_CertsTab> {
                                           fontSize: 13, fontWeight: FontWeight.w700)),
                                   const SizedBox(height: 4),
                                   Row(children: [
-                                    Pill(label: 'Approval: $st',
-                                        color: st == 'APPROVED' ? successGreen : warnOrange,
-                                        bg: st == 'APPROVED' ? successSoft : warnSoft),
+                                    Pill(
+                                        label: isApproved
+                                            ? 'BCN duyệt OK'
+                                            : 'Chờ BCN duyệt (QĐ3)',
+                                        color: isApproved ? successGreen : warnOrange,
+                                        bg: isApproved ? successSoft : warnSoft),
                                     const SizedBox(width: 6),
                                     if (isActive)
                                       const Pill(
@@ -1535,7 +1545,7 @@ class _CertsTabState extends ConsumerState<_CertsTab> {
                                   ]),
                                 ]),
                           ),
-                          if (st == 'APPROVED' && !isActive)
+                          if (isApproved && !isActive)
                             FilledButton.icon(
                               onPressed: () => _activate(t['template_id'] as int),
                               icon: const Icon(Icons.power_settings_new, size: 16),

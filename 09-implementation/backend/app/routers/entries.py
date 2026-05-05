@@ -10,15 +10,44 @@ from app.deps import CurrentUser
 from app.models.enums import RegistrationStatus
 from app.schemas.entry import (
     EntryListItem,
+    MyEntryItem,
     RegisterIndividualIn,
     RegisterTeamIn,
     ReviewEntryIn,
 )
 from app.services import entry_service
 
-# 2 router: 1 cho /contests/{id}/* (đăng ký, list entries), 1 cho /entries/{id} (review)
+# 3 router: 1 cho /contests/{id}/*, 1 cho /entries/{id}, 1 cho /me/entries
 contest_entries_router = APIRouter(prefix="/contests", tags=["entries"])
 entries_router = APIRouter(prefix="/entries", tags=["entries"])
+me_entries_router = APIRouter(prefix="/me", tags=["entries"])
+
+
+@me_entries_router.get("/entries", response_model=list[MyEntryItem])
+async def list_my_entries(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[MyEntryItem]:
+    """SV-10 — Danh sách entries của SV hiện tại + contest info kèm theo."""
+    rows = await entry_service.list_my_entries(db, user)
+    return [
+        MyEntryItem(
+            entry_id=e.entry_id,
+            contest_id=e.contest_id,
+            contest_slug=c.slug,
+            contest_title=c.title,
+            contest_status=c.status.value,
+            entry_type=e.entry_type.value if hasattr(e.entry_type, 'value') else str(e.entry_type),
+            team_id=e.team_id,
+            registration_status=e.registration_status,
+            participant_status=e.participant_status,
+            registration_note=e.registration_note,
+            created_at=e.created_at,
+            contest_start_at=c.start_at,
+            contest_end_at=c.end_at,
+        )
+        for e, c in rows
+    ]
 
 
 # ---------- SV-06 register ----------

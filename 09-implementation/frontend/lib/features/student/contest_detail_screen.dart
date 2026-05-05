@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -24,40 +23,6 @@ class ContestDetailScreen extends ConsumerWidget {
   final String slug;
   const ContestDetailScreen({super.key, required this.slug});
 
-  Future<void> _cancelRegistration(BuildContext context, WidgetRef ref, ContestDetail c) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Hủy đăng ký?'),
-        content: Text('Hủy đăng ký cuộc thi "${c.title}"?\n\nNếu bạn chưa đăng ký, hành động này sẽ báo lỗi.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Không')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: ptitRed),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Hủy đăng ký'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    try {
-      final api = ref.read(apiClientProvider);
-      await api.dio.delete('/contests/${c.contestId}/registration');
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã hủy đăng ký')),
-      );
-      ref.invalidate(contestDetailProvider(slug));
-    } catch (e) {
-      final msg = e is DioException
-          ? (e.response?.data is Map ? '${e.response?.data['detail']}' : e.message ?? '')
-          : '$e';
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $msg')));
-    }
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncData = ref.watch(contestDetailProvider(slug));
@@ -68,12 +33,6 @@ class ContestDetailScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back, color: textMuted),
           onPressed: () => context.pop(),
         ),
-        actions: const [
-          Icon(Icons.bookmark_border, color: textMuted),
-          SizedBox(width: 12),
-          Icon(Icons.share_outlined, color: textMuted),
-          SizedBox(width: 4),
-        ],
       ),
       body: asyncData.when(
         loading: () =>
@@ -83,12 +42,12 @@ class ContestDetailScreen extends ConsumerWidget {
                 padding: const EdgeInsets.all(24),
                 child: Text('Lỗi: $e',
                     style: const TextStyle(color: textMuted)))),
-        data: (c) => _buildBody(context, ref, c),
+        data: (c) => _buildBody(context, c),
       ),
     );
   }
 
-  Widget _buildBody(BuildContext context, WidgetRef ref, ContestDetail c) {
+  Widget _buildBody(BuildContext context, ContestDetail c) {
     final fmt = DateFormat('dd/MM/yyyy · HH:mm');
     return Stack(children: [
       ListView(
@@ -282,25 +241,13 @@ class ContestDetailScreen extends ConsumerWidget {
           child: SafeArea(
             top: false,
             child: c.isRegOpen
-                ? Column(mainAxisSize: MainAxisSize.min, children: [
-                    FilledButton.icon(
-                      icon: const Icon(Icons.app_registration, size: 18),
-                      label: const Text('Đăng ký tham gia'),
-                      onPressed: () => context.push(
-                          '/contests/${c.slug}/register',
-                          extra: c),
-                    ),
-                    const SizedBox(height: 6),
-                    TextButton.icon(
-                      icon: const Icon(Icons.cancel_outlined, size: 14, color: textMuted),
-                      label: const Text('Đã đăng ký? Hủy đăng ký',
-                          style: TextStyle(fontSize: 11, color: textMuted)),
-                      onPressed: () => _cancelRegistration(context, ref, c),
-                      style: TextButton.styleFrom(
-                          minimumSize: const Size(0, 28),
-                          padding: const EdgeInsets.symmetric(horizontal: 8)),
-                    ),
-                  ])
+                ? FilledButton.icon(
+                    icon: const Icon(Icons.app_registration, size: 18),
+                    label: const Text('Đăng ký tham gia'),
+                    onPressed: () => context.push(
+                        '/contests/${c.slug}/register',
+                        extra: c),
+                  )
                 : FilledButton(
                     onPressed: null,
                     style: FilledButton.styleFrom(

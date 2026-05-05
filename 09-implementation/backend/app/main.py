@@ -78,6 +78,7 @@ app.include_router(approvals.contests_submit_router, prefix=P)
 # Entries
 app.include_router(entries.contest_entries_router, prefix=P)
 app.include_router(entries.entries_router, prefix=P)
+app.include_router(entries.me_entries_router, prefix=P)
 
 # Teams
 app.include_router(teams.contest_teams_router, prefix=P)

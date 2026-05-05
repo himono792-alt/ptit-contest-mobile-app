@@ -131,10 +131,7 @@ class ProfileScreen extends ConsumerWidget {
             icon: const Icon(Icons.delete_outline, size: 18, color: ptitRed),
             label: const Text('Xóa tài khoản', style: TextStyle(color: ptitRed)),
             style: OutlinedButton.styleFrom(side: const BorderSide(color: ptitRedSoft)),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('TODO: confirm dialog + DELETE /me')));
-            },
+            onPressed: () => _deleteAccountDialog(context, ref),
           ),
         ],
       ),
@@ -156,21 +153,47 @@ class ProfileScreen extends ConsumerWidget {
     final user = ref.read(authProvider).value!;
     final nameCtrl = TextEditingController(text: user.fullName);
     final phoneCtrl = TextEditingController(text: user.phone ?? '');
+    final formKey = GlobalKey<FormState>();
     showDialog(context: context, builder: (ctx) => AlertDialog(
       title: const Text('Cập nhật thông tin'),
-      content: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Họ tên')),
-        const SizedBox(height: 12),
-        TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Số điện thoại')),
-      ]),
+      content: Form(
+        key: formKey,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextFormField(
+            controller: nameCtrl,
+            autofocus: true,
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(labelText: 'Họ tên *'),
+            validator: (v) =>
+                (v == null || v.trim().length < 2) ? 'Tối thiểu 2 ký tự' : null,
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: phoneCtrl,
+            keyboardType: TextInputType.phone,
+            textInputAction: TextInputAction.done,
+            decoration: const InputDecoration(
+                labelText: 'Số điện thoại', hintText: '0xxx xxx xxx'),
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) return null; // optional
+              final clean = v.replaceAll(RegExp(r'[\s-]'), '');
+              if (!RegExp(r'^(0|\+84)\d{9,10}$').hasMatch(clean)) {
+                return 'SĐT VN không hợp lệ (vd: 0912345678)';
+              }
+              return null;
+            },
+          ),
+        ]),
+      ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
         FilledButton(
           onPressed: () async {
+            if (!formKey.currentState!.validate()) return;
             try {
               await ref.read(apiClientProvider).dio.patch('/me', data: {
-                'full_name': nameCtrl.text,
-                'phone': phoneCtrl.text.isEmpty ? null : phoneCtrl.text,
+                'full_name': nameCtrl.text.trim(),
+                'phone': phoneCtrl.text.trim().isEmpty ? null : phoneCtrl.text.trim(),
               });
               ref.invalidate(authProvider);
               if (!ctx.mounted) return;
@@ -191,17 +214,48 @@ class ProfileScreen extends ConsumerWidget {
   void _changePasswordDialog(BuildContext context, WidgetRef ref) {
     final curCtrl = TextEditingController();
     final newCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
     showDialog(context: context, builder: (ctx) => AlertDialog(
       title: const Text('Đổi mật khẩu'),
-      content: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: curCtrl, obscureText: true, decoration: const InputDecoration(labelText: 'Mật khẩu hiện tại')),
-        const SizedBox(height: 12),
-        TextField(controller: newCtrl, obscureText: true, decoration: const InputDecoration(labelText: 'Mật khẩu mới (≥6)')),
-      ]),
+      content: Form(
+        key: formKey,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextFormField(
+            controller: curCtrl,
+            obscureText: true,
+            autofocus: true,
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(labelText: 'Mật khẩu hiện tại'),
+            validator: (v) => (v == null || v.isEmpty) ? 'Bắt buộc' : null,
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: newCtrl,
+            obscureText: true,
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(labelText: 'Mật khẩu mới (≥6 ký tự)'),
+            validator: (v) {
+              if (v == null || v.length < 6) return 'Tối thiểu 6 ký tự';
+              if (v == curCtrl.text) return 'Mật khẩu mới phải khác mật khẩu cũ';
+              return null;
+            },
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: confirmCtrl,
+            obscureText: true,
+            textInputAction: TextInputAction.done,
+            decoration: const InputDecoration(labelText: 'Xác nhận mật khẩu mới'),
+            validator: (v) => v != newCtrl.text ? 'Không khớp' : null,
+          ),
+        ]),
+      ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
         FilledButton(
           onPressed: () async {
+            if (!formKey.currentState!.validate()) return;
             try {
               await ref.read(apiClientProvider).dio.patch('/me/password', data: {
                 'current_password': curCtrl.text, 'new_password': newCtrl.text,
@@ -220,5 +274,65 @@ class ProfileScreen extends ConsumerWidget {
         ),
       ],
     ));
+  }
+
+  void _deleteAccountDialog(BuildContext context, WidgetRef ref) {
+    final confirmCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xóa tài khoản?', style: TextStyle(color: ptitRed)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text(
+            'Tài khoản sẽ bị soft-delete (status = INACTIVE).\n'
+            'Tất cả dữ liệu (đăng ký, kết quả, chứng nhận) vẫn giữ trong DB.\n'
+            'Bạn không thể đăng nhập lại trừ khi admin reactivate.',
+            style: TextStyle(fontSize: 12, color: textMuted, height: 1.5),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: confirmCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Gõ "XÓA" để xác nhận',
+              hintText: 'XÓA',
+            ),
+            textCapitalization: TextCapitalization.characters,
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: ptitRed),
+            onPressed: () async {
+              if (confirmCtrl.text.trim().toUpperCase() != 'XÓA') {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  const SnackBar(content: Text('Cần gõ chính xác "XÓA"')),
+                );
+                return;
+              }
+              try {
+                await ref.read(apiClientProvider).dio.delete('/me');
+                if (!ctx.mounted) return;
+                Navigator.pop(ctx);
+                await ref.read(authProvider.notifier).logout();
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Đã xóa tài khoản — tạm biệt!')),
+                );
+              } on DioException catch (e) {
+                if (!ctx.mounted) return;
+                final msg = e.response?.data is Map
+                    ? '${e.response?.data['detail']}'
+                    : e.message;
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  SnackBar(content: Text('Lỗi xóa: $msg')),
+                );
+              }
+            },
+            child: const Text('Xóa vĩnh viễn'),
+          ),
+        ],
+      ),
+    );
   }
 }

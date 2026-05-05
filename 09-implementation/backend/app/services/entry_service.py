@@ -206,6 +206,25 @@ async def list_entries(
     return list((await db.execute(stmt)).scalars().all())
 
 
+async def list_my_entries(
+    db: AsyncSession,
+    user: AppUser,
+) -> list[tuple[ContestEntry, Contest]]:
+    """SV-10 — List entries của SV hiện tại + contest info kèm theo."""
+    student = await _get_my_student(db, user)
+    # Individual entries: student_id matches
+    stmt = (
+        select(ContestEntry, Contest)
+        .join(Contest, ContestEntry.contest_id == Contest.contest_id)
+        .where(ContestEntry.student_id == student.student_id)
+        .order_by(ContestEntry.created_at.desc())
+    )
+    rows = (await db.execute(stmt)).all()
+    # TODO: Team entries: cần thêm join Team -> TeamMember để lấy team SV thuộc.
+    # Hiện tại chỉ trả individual entries.
+    return [(e, c) for e, c in rows]
+
+
 async def review_entry(
     db: AsyncSession,
     user: AppUser,
