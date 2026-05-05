@@ -62,6 +62,20 @@ class Settings(BaseSettings):
     rate_limit_default: str = "200/minute"
     rate_limit_enabled: bool = True
 
+    # Email service — Phase 1 step 4 (2026-05-06)
+    # mail_transport: "smtp" (production qua Brevo/Gmail) | "console" (dev: log ra stdout)
+    # Nếu mail_transport=smtp mà SMTP_HOST rỗng → fallback console + warning.
+    mail_transport: str = "console"
+    smtp_host: str = ""
+    smtp_port: int = 587  # Brevo + Gmail dùng port 587 STARTTLS
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+    smtp_from_name: str = "PTIT Contest"
+    smtp_use_tls: bool = True  # STARTTLS (port 587). Set False nếu dùng SSL port 465.
+    # FE base URL — dùng cho link reset password trong email
+    frontend_base_url: str = "https://luxury-crostata-3c5c69.netlify.app"
+
 
 @lru_cache
 def get_settings() -> "Settings":

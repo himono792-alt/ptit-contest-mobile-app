@@ -25,6 +25,11 @@ dependencies = [
     # slowapi storage default = memory (đủ cho 1 replica), upgrade sang Redis qua REDIS_URL
     "slowapi>=0.1.9",
     "redis>=5.2.0",   # optional, chỉ dùng nếu REDIS_URL env var có
+    # Phase 1 step 4 (2026-05-06): Email service production
+    # aiosmtplib: async SMTP client (non-blocking, fire-and-forget qua BackgroundTasks)
+    # jinja2: render template HTML email (password reset, welcome, OTP, notification)
+    "aiosmtplib>=3.0.0",
+    "jinja2>=3.1.0",
 ]
 
 [project.optional-dependencies]

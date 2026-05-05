@@ -10,7 +10,7 @@ Endpoints:
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends, Query, status
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -41,6 +41,7 @@ from app.services import (
     admin_config_service,
     admin_master_service,
     admin_user_service,
+    email_service,
 )
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -79,10 +80,18 @@ async def list_users(
 @router.post("/users", response_model=AdminUserListItem, status_code=status.HTTP_201_CREATED)
 async def create_user(
     data: AdminUserCreateIn,
+    bg: BackgroundTasks,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> AdminUserListItem:
     new_user = await admin_user_service.create_user(db, user, data)
+    # Phase 1 step 4 (2026-05-06): gửi welcome email kèm temp password (fire-and-forget)
+    bg.add_task(
+        email_service.send_welcome,
+        to_email=str(new_user.email),
+        full_name=new_user.full_name,
+        temp_password=data.password,
+    )
     return _user_to_item(new_user)
 
 

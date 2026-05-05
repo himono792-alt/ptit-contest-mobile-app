@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from jose import JWTError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,9 +13,17 @@ from app.database import get_db
 from app.deps import CurrentUser
 from app.models.identity import AppUser, UserRole
 from app.rate_limit import limiter
-from app.schemas.auth import LoginIn, MeOut, RefreshIn, RegisterIn, TokenOut
+from app.schemas.auth import (
+    LoginIn,
+    MeOut,
+    OTPRequestIn,
+    OTPVerifyIn,
+    RefreshIn,
+    RegisterIn,
+    TokenOut,
+)
 from app.security import create_access_token, create_refresh_token, decode_refresh_token
-from app.services import auth_service
+from app.services import auth_service, email_service, otp_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -102,6 +110,81 @@ async def refresh(
         access_token=new_access,
         expires_in=settings.jwt_access_token_expire_minutes * 60,
         refresh_token=new_refresh,
+        refresh_expires_in=settings.jwt_refresh_token_expire_days * 86400,
+    )
+
+
+@router.post("/otp/request", status_code=status.HTTP_200_OK)
+@limiter.limit("3/minute")
+async def request_otp(
+    request: Request,
+    response: Response,
+    data: OTPRequestIn,
+    bg: BackgroundTasks,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """Phase 1 step 4 (2026-05-06): OTP login alternative.
+
+    Bước 1: User nhập email -> backend sinh OTP 6 số -> gửi email -> trả 200.
+    Rate limit 3/phút/email để chống spam OTP.
+
+    Luôn trả 200 dù email tồn tại hay không (chống enumeration). Chỉ user thật
+    sự có email mới nhận được OTP.
+    """
+    stmt = select(AppUser).where(AppUser.email == data.email)
+    user = (await db.execute(stmt)).scalar_one_or_none()
+    if user is not None and user.status == "ACTIVE":
+        otp_code = otp_service.generate_otp(data.email)
+        bg.add_task(
+            email_service.send_otp,
+            to_email=str(user.email),
+            full_name=user.full_name,
+            otp_code=otp_code,
+        )
+    return {"message": "Nếu email tồn tại, mã OTP đã được gửi (TTL 5 phút)."}
+
+
+@router.post("/otp/verify", response_model=TokenOut)
+@limiter.limit("10/minute")
+async def verify_otp(
+    request: Request,
+    response: Response,
+    data: OTPVerifyIn,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> TokenOut:
+    """Phase 1 step 4: bước 2 OTP login — verify OTP + cấp JWT (giống /login).
+
+    Sai 5 lần -> lock 30p (server-side trong otp_service).
+    Rate limit endpoint 10/phút (defense-in-depth chống brute force phía network).
+    """
+    if not otp_service.verify_otp(data.email, data.otp_code):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Mã OTP không hợp lệ, đã hết hạn, hoặc tài khoản bị khóa tạm thời.",
+        )
+
+    stmt = (
+        select(AppUser)
+        .where(AppUser.email == data.email)
+        .options(selectinload(AppUser.user_roles).selectinload(UserRole.role))
+    )
+    user = (await db.execute(stmt)).scalar_one_or_none()
+    if user is None or user.status != "ACTIVE":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Tài khoản không tồn tại hoặc đã bị khóa.",
+        )
+
+    role_codes = sorted(user.role_codes)
+    access_token = create_access_token(
+        subject=user.user_id,
+        extra={"email": str(user.email), "roles": role_codes},
+    )
+    refresh_token = create_refresh_token(subject=user.user_id)
+    return TokenOut(
+        access_token=access_token,
+        expires_in=settings.jwt_access_token_expire_minutes * 60,
+        refresh_token=refresh_token,
         refresh_expires_in=settings.jwt_refresh_token_expire_days * 86400,
     )
 

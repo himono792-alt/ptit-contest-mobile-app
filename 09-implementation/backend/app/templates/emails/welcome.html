@@ -1,0 +1,28 @@
+{% extends "_base.html" %}
+{% block title %}Chào mừng đến PTIT Contest{% endblock %}
+{% block content %}
+<h2 style="margin:0 0 16px;font-size:18px;color:#111827;">Chào mừng đến với PTIT Contest 🎉</h2>
+<p style="margin:0 0 16px;line-height:1.6;">Xin chào <strong>{{ full_name }}</strong>,</p>
+<p style="margin:0 0 16px;line-height:1.6;">
+  Tài khoản của bạn đã được tạo trên hệ thống quản lý cuộc thi sinh viên PTIT. Vui lòng
+  đăng nhập với thông tin sau:
+</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;width:100%;">
+  <tr><td style="padding:14px 20px;border-bottom:1px solid #e5e7eb;font-size:14px;">
+    <strong>Email:</strong> <span style="color:#1e3a8a;">{{ email }}</span>
+  </td></tr>
+  <tr><td style="padding:14px 20px;font-size:14px;">
+    <strong>Mật khẩu tạm thời:</strong>
+    <code style="background:#fef3c7;padding:3px 8px;border-radius:4px;font-size:14px;color:#92400e;">{{ temp_password }}</code>
+  </td></tr>
+</table>
+<p style="margin:24px 0;text-align:center;">
+  <a href="{{ login_link }}" style="display:inline-block;background:#1e3a8a;color:#ffffff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
+    Đăng nhập ngay
+  </a>
+</p>
+<p style="margin:0;line-height:1.6;font-size:13px;color:#dc2626;">
+  ⚠️ Vì lý do bảo mật, vui lòng <strong>đổi mật khẩu tạm</strong> ngay sau lần đăng nhập đầu
+  tiên (Hồ sơ → Đổi mật khẩu).
+</p>
+{% endblock %}
