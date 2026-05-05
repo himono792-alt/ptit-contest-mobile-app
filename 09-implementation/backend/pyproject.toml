@@ -19,6 +19,8 @@ dependencies = [
     "python-jose[cryptography]>=3.3.0",
     "bcrypt>=4.2.0",
     "python-multipart>=0.0.18",
+    # Phase 1 step 1 (2026-05-06): Sentry error tracking + performance monitoring
+    "sentry-sdk[fastapi]>=2.18.0",
 ]
 
 [project.optional-dependencies]

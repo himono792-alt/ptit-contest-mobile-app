@@ -51,6 +51,16 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
 
+    # Sentry — Phase 1 step 1 (2026-05-06)
+    # DSN từ Sentry project settings. Rỗng = tắt Sentry (dev / không có DSN).
+    sentry_dsn: str = ""
+    # % request được trace performance (1.0 = 100%, 0.1 = 10%, 0 = tắt).
+    # Free tier giới hạn 10K performance events/tháng → 0.1 đủ cho ~100K req/tháng.
+    sentry_traces_sample_rate: float = 0.1
+    # Release tag — set qua Railway env (RAILWAY_GIT_COMMIT_SHA) để map stack trace
+    # về đúng commit. Default rỗng → Sentry tự gán "unknown".
+    sentry_release: str = ""
+
 
 @lru_cache
 def get_settings() -> "Settings":

@@ -1,5 +1,7 @@
 """FastAPI app entry point."""
 
+import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -13,6 +15,51 @@ from app.middleware.audit import (
     start_audit_worker,
     stop_audit_worker,
 )
+
+
+# ----- Phase 1 step 1 (2026-05-06): Sentry error tracking -----
+# Init NGAY trước khi tạo FastAPI() để Sentry catch cả lỗi import / startup config.
+# Skip init nếu SENTRY_DSN rỗng (dev mode hoặc local).
+if settings.sentry_dsn:
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.asyncio import AsyncioIntegration
+        from sentry_sdk.integrations.fastapi import FastApiIntegration
+        from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+        from sentry_sdk.integrations.starlette import StarletteIntegration
+
+        # Release tag: ưu tiên config, fallback Railway env, cuối cùng "unknown"
+        release = (
+            settings.sentry_release
+            or os.environ.get("RAILWAY_GIT_COMMIT_SHA", "")
+            or "unknown"
+        )
+
+        sentry_sdk.init(
+            dsn=settings.sentry_dsn,
+            environment=settings.app_env,
+            release=release,
+            traces_sample_rate=settings.sentry_traces_sample_rate,
+            # GDPR-safer default: không gửi PII (email, IP, headers) trừ khi explicit
+            send_default_pii=False,
+            integrations=[
+                StarletteIntegration(transaction_style="endpoint"),
+                FastApiIntegration(transaction_style="endpoint"),
+                SqlalchemyIntegration(),
+                AsyncioIntegration(),
+            ],
+            # Tự động attach stack trace cho mọi message log level WARNING+
+            attach_stacktrace=True,
+        )
+        logging.getLogger("sentry").info(
+            "Sentry initialized — env=%s release=%s traces=%.2f",
+            settings.app_env, release, settings.sentry_traces_sample_rate,
+        )
+    except Exception as e:
+        # Không bao giờ để Sentry init crash app — fail open
+        logging.getLogger("sentry").warning("Sentry init failed: %s", e)
+else:
+    logging.getLogger("sentry").info("Sentry skipped — SENTRY_DSN rỗng")
 from app.routers import (
     admin,
     approvals,
@@ -104,6 +151,25 @@ app.add_middleware(
 @app.get("/health", tags=["meta"])
 async def health() -> dict[str, str]:
     return {"status": "ok", "app": settings.app_name, "env": settings.app_env}
+
+
+# Phase 1 step 1 (2026-05-06): Sentry test endpoint — gọi 1 lần để verify Sentry
+# nhận được event, sau đó SẼ XÓA. Yêu cầu query token để tránh trigger nhầm.
+# Token = first 8 chars của SENTRY_DSN, hoặc "verify-2026-05-06" nếu DSN rỗng.
+@app.get("/debug-sentry", tags=["meta"], include_in_schema=False)
+async def debug_sentry(token: str = "") -> dict:
+    expected = (
+        settings.sentry_dsn[:8] if settings.sentry_dsn
+        else "verify-2026-05-06"
+    )
+    if token != expected:
+        return {
+            "msg": "Sentry test endpoint. Cần query ?token=<8 char đầu của SENTRY_DSN>",
+            "hint_dev": "verify-2026-05-06" if not settings.sentry_dsn else None,
+        }
+    # Trigger artificial exception → Sentry phải capture
+    1 / 0
+    return {"unreachable": True}
 
 
 P = settings.api_prefix
