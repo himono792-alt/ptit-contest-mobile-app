@@ -79,25 +79,26 @@ from app.routers import (
 
 
 # Sprint 0 / P0-1 (audit 2026-05-06): idempotent block đã được inline vào schema v04.
-# Giữ block này LÀM SAFETY NET cho:
+# Giữ list này LÀM SAFETY NET cho:
 #   - DB production cũ (đã chạy v03) — block sẽ no-op vì cột đã có
 #   - Trường hợp Alembic chưa kịp upgrade (race condition cold-start)
 # Sau khi Alembic baseline ổn định 1-2 tháng → có thể xóa hẳn.
-_PROFILE_MIGRATION_SQL = """
-ALTER TABLE ptit_contest.app_users
-  ADD COLUMN IF NOT EXISTS dob DATE,
-  ADD COLUMN IF NOT EXISTS gender VARCHAR(10),
-  ADD COLUMN IF NOT EXISTS citizen_id VARCHAR(20),
-  ADD COLUMN IF NOT EXISTS place_of_birth VARCHAR(150),
-  ADD COLUMN IF NOT EXISTS address VARCHAR(500),
-  ADD COLUMN IF NOT EXISTS ethnicity VARCHAR(50),
-  ADD COLUMN IF NOT EXISTS religion VARCHAR(50),
-  ADD COLUMN IF NOT EXISTS nationality VARCHAR(50),
-  ADD COLUMN IF NOT EXISTS secondary_email VARCHAR(255);
-
-ALTER TABLE ptit_contest.submission_files
-  ADD COLUMN IF NOT EXISTS file_data BYTEA;
-"""
+#
+# Phase 1 fix (2026-05-06): asyncpg KHÔNG cho 2+ statement trong 1 prepared statement.
+# Tách ra thành list, await execute từng cái riêng để tránh ProgrammingError.
+_PROFILE_MIGRATION_STATEMENTS = [
+    """ALTER TABLE ptit_contest.app_users
+       ADD COLUMN IF NOT EXISTS dob DATE,
+       ADD COLUMN IF NOT EXISTS gender VARCHAR(10),
+       ADD COLUMN IF NOT EXISTS citizen_id VARCHAR(20),
+       ADD COLUMN IF NOT EXISTS place_of_birth VARCHAR(150),
+       ADD COLUMN IF NOT EXISTS address VARCHAR(500),
+       ADD COLUMN IF NOT EXISTS ethnicity VARCHAR(50),
+       ADD COLUMN IF NOT EXISTS religion VARCHAR(50),
+       ADD COLUMN IF NOT EXISTS nationality VARCHAR(50),
+       ADD COLUMN IF NOT EXISTS secondary_email VARCHAR(255)""",
+    "ALTER TABLE ptit_contest.submission_files ADD COLUMN IF NOT EXISTS file_data BYTEA",
+]
 
 
 @asynccontextmanager
@@ -105,11 +106,13 @@ async def lifespan(app: FastAPI):
     print(f"PTIT Contest API starting in {settings.app_env} mode")
     print(f"   DB: {settings.database_url.split('@')[-1]}")
     # Idempotent migration cho profile fields mở rộng (2026-05-05)
-    # Note: Sau khi chuyển sang Alembic baseline (Sprint 0 P0-4), block này sẽ là
+    # Note: Sau khi chuyển sang Alembic baseline (Sprint 0 P0-4), khối này là
     # safety net cho các DB cũ chưa migrate. DB mới đã có cột trong init-schema v04.
+    # Phase 1 fix: chạy từng statement riêng vì asyncpg không nhận multi-statement.
     try:
         async with engine.begin() as conn:
-            await conn.execute(text(_PROFILE_MIGRATION_SQL))
+            for stmt in _PROFILE_MIGRATION_STATEMENTS:
+                await conn.execute(text(stmt))
         print("Profile fields migration: ok (idempotent safety net)")
     except Exception as e:
         print(f"Profile fields migration WARN: {e}")
@@ -153,23 +156,10 @@ async def health() -> dict[str, str]:
     return {"status": "ok", "app": settings.app_name, "env": settings.app_env}
 
 
-# Phase 1 step 1 (2026-05-06): Sentry test endpoint — gọi 1 lần để verify Sentry
-# nhận được event, sau đó SẼ XÓA. Yêu cầu query token để tránh trigger nhầm.
-# Token = first 8 chars của SENTRY_DSN, hoặc "verify-2026-05-06" nếu DSN rỗng.
-@app.get("/debug-sentry", tags=["meta"], include_in_schema=False)
-async def debug_sentry(token: str = "") -> dict:
-    expected = (
-        settings.sentry_dsn[:8] if settings.sentry_dsn
-        else "verify-2026-05-06"
-    )
-    if token != expected:
-        return {
-            "msg": "Sentry test endpoint. Cần query ?token=<8 char đầu của SENTRY_DSN>",
-            "hint_dev": "verify-2026-05-06" if not settings.sentry_dsn else None,
-        }
-    # Trigger artificial exception → Sentry phải capture
-    1 / 0
-    return {"unreachable": True}
+# Endpoint /debug-sentry đã xóa sau khi Phase 1.7 verify Sentry hoạt động (2026-05-06).
+# Sentry đã nhận được ZeroDivisionError event với release SHA + environment tag đầy đủ.
+# Nếu cần test lại sau này, dùng `sentry_sdk.capture_exception()` từ shell hoặc thêm
+# tạm endpoint local — KHÔNG để endpoint trigger exception trong production.
 
 
 P = settings.api_prefix
