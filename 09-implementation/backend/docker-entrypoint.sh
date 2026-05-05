@@ -11,11 +11,16 @@ PORT="${PORT:-8000}"
 
 echo "PTIT Contest Backend starting..."
 echo "  PORT=$PORT"
-echo "  DATABASE_URL=${DATABASE_URL:0:40}..."
 
-# Parse DATABASE_URL để psql có thể connect
-# DATABASE_URL: postgresql+asyncpg://user:pass@host:port/db
-# Convert sang psql format: postgresql://user:pass@host:port/db
+# Railway/Render thường set DATABASE_URL=postgresql://... (cho Django/SQLAlchemy sync)
+# SQLAlchemy async cần postgresql+asyncpg:// → tự convert ngược lại
+if echo "$DATABASE_URL" | grep -q "^postgresql://"; then
+  export DATABASE_URL=$(echo "$DATABASE_URL" | sed 's|^postgresql://|postgresql+asyncpg://|')
+  echo "  Converted DATABASE_URL → asyncpg dialect"
+fi
+echo "  DATABASE_URL=$(echo "$DATABASE_URL" | cut -c1-50)..."
+
+# psql cần postgresql:// (sync), strip +asyncpg
 PSQL_URL=$(echo "$DATABASE_URL" | sed 's|postgresql+asyncpg://|postgresql://|')
 
 # Wait for DB ready (max 30s)
