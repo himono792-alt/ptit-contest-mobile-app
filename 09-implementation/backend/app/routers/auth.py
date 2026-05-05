@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from jose import JWTError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,6 +24,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @limiter.limit("5/minute")
 async def register(
     request: Request,
+    response: Response,
     data: RegisterIn,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> MeOut:
@@ -36,6 +37,7 @@ async def register(
 @limiter.limit("10/minute")
 async def login(
     request: Request,
+    response: Response,
     data: LoginIn,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TokenOut:
@@ -59,6 +61,7 @@ async def login(
 @limiter.limit("20/minute")
 async def refresh(
     request: Request,
+    response: Response,
     data: RefreshIn,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TokenOut:
@@ -93,7 +96,7 @@ async def refresh(
         subject=user.user_id,
         extra={"email": str(user.email), "roles": role_codes},
     )
-    # Rotate: cap refresh token moi (sliding window, TTL diperpanjang)
+    # Rotate: cap refresh token moi (sliding window)
     new_refresh = create_refresh_token(subject=user.user_id)
     return TokenOut(
         access_token=new_access,
@@ -105,7 +108,6 @@ async def refresh(
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(_user: CurrentUser) -> None:
-    # JWT stateless: FE xoa token la du. Backend chi log audit.
     return None
 
 
