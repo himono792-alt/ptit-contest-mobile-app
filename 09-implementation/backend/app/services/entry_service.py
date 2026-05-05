@@ -210,19 +210,46 @@ async def list_my_entries(
     db: AsyncSession,
     user: AppUser,
 ) -> list[tuple[ContestEntry, Contest]]:
-    """SV-10 — List entries của SV hiện tại + contest info kèm theo."""
+    """SV-10 — List entries của SV hiện tại + contest info kèm theo.
+
+    Bao gồm:
+    - Individual entries: student_id == student.student_id
+    - Team entries: SV là member của team (team_members JOIN)
+    """
     student = await _get_my_student(db, user)
-    # Individual entries: student_id matches
-    stmt = (
+
+    # 1. Individual entries
+    indiv_stmt = (
         select(ContestEntry, Contest)
         .join(Contest, ContestEntry.contest_id == Contest.contest_id)
         .where(ContestEntry.student_id == student.student_id)
-        .order_by(ContestEntry.created_at.desc())
     )
-    rows = (await db.execute(stmt)).all()
-    # TODO: Team entries: cần thêm join Team -> TeamMember để lấy team SV thuộc.
-    # Hiện tại chỉ trả individual entries.
-    return [(e, c) for e, c in rows]
+    indiv_rows = (await db.execute(indiv_stmt)).all()
+
+    # 2. Team entries — SV là member của team đã đăng ký contest
+    team_stmt = (
+        select(ContestEntry, Contest)
+        .join(Contest, ContestEntry.contest_id == Contest.contest_id)
+        .join(TeamMember, TeamMember.team_id == ContestEntry.team_id)
+        .where(
+            ContestEntry.team_id.is_not(None),
+            TeamMember.student_id == student.student_id,
+        )
+    )
+    team_rows = (await db.execute(team_stmt)).all()
+
+    # Merge + dedup theo entry_id (phòng trường hợp lạ)
+    seen_ids = set()
+    result: list[tuple[ContestEntry, Contest]] = []
+    for e, c in [*indiv_rows, *team_rows]:
+        if e.entry_id in seen_ids:
+            continue
+        seen_ids.add(e.entry_id)
+        result.append((e, c))
+
+    # Sort theo created_at DESC
+    result.sort(key=lambda r: r[0].created_at, reverse=True)
+    return result
 
 
 async def review_entry(
