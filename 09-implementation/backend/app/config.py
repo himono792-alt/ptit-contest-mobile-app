@@ -61,6 +61,16 @@ class Settings(BaseSettings):
     # về đúng commit. Default rỗng → Sentry tự gán "unknown".
     sentry_release: str = ""
 
+    # Rate limit — Phase 1 step 2 (2026-05-06)
+    # Storage backend: memory (default, OK 1 replica) hoặc Redis (cho multi-replica).
+    # Format: "redis://default:<pass>@<host>:<port>" (Upstash) hoặc rỗng = memory.
+    redis_url: str = ""
+    # Default rate limit cho mọi endpoint chưa decorate riêng.
+    # Format slowapi: "<count>/<period>" — period: second/minute/hour/day.
+    rate_limit_default: str = "200/minute"
+    # Bật/tắt rate limit toàn cục — set false trong dev nếu cản trở test.
+    rate_limit_enabled: bool = True
+
 
 @lru_cache
 def get_settings() -> "Settings":

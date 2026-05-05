@@ -2,12 +2,13 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import get_db
 from app.deps import CurrentUser
+from app.rate_limit import limiter
 from app.schemas.auth import LoginIn, MeOut, RegisterIn, TokenOut
 from app.security import create_access_token
 from app.services import auth_service
@@ -16,24 +17,34 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=MeOut, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
 async def register(
+    request: Request,
     data: RegisterIn,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> MeOut:
     """SV-01c — Sinh viên tự đăng ký (matched với student_directory).
 
     Các role khác (ORGANIZER/JUDGE/HOD/ADMIN) chỉ Admin tạo qua AD-02.
+
+    Rate limit (Phase 1.2): 5 req/phút per IP — chống spam tạo account.
     """
     user = await auth_service.register_student(db, data)
     return _to_me_out(user)
 
 
 @router.post("/login", response_model=TokenOut)
+@limiter.limit("10/minute")
 async def login(
+    request: Request,
     data: LoginIn,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TokenOut:
-    """Endpoint login chung cho mọi role. Trả JWT bearer token."""
+    """Endpoint login chung cho mọi role. Trả JWT bearer token.
+
+    Rate limit (Phase 1.2): 10 req/phút per IP — chống brute force password.
+    Sau 10 lần sai, attacker phải đợi 1 phút → giảm tốc độ brute force ~6000x.
+    """
     user = await auth_service.authenticate(db, data)
     role_codes = sorted(user.role_codes)
     token = create_access_token(

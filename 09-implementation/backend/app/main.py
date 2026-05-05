@@ -15,6 +15,11 @@ from app.middleware.audit import (
     start_audit_worker,
     stop_audit_worker,
 )
+from app.rate_limit import limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from fastapi import Request
+from fastapi.responses import JSONResponse
 
 
 # ----- Phase 1 step 1 (2026-05-06): Sentry error tracking -----
@@ -137,6 +142,29 @@ app = FastAPI(
     openapi_url=f"{settings.api_prefix}/openapi.json",
 )
 
+# ----- Phase 1 step 2 (2026-05-06): Rate limit -----
+# Attach Limiter vào app.state để decorator @limiter.limit truy cập được.
+app.state.limiter = limiter
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    """Trả 429 + Retry-After header thân thiện với FE.
+
+    FE Flutter có thể đọc header này để hiện toast "Thử lại sau X giây".
+    """
+    retry_after = int(exc.detail.split(" ")[-1]) if exc.detail else 60
+    return JSONResponse(
+        status_code=429,
+        content={
+            "detail": f"Quá nhiều request — giới hạn {exc.detail}. Thử lại sau ít phút.",
+            "retry_after_seconds": retry_after,
+        },
+        headers={"Retry-After": str(retry_after)},
+    )
+
+
+app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(AuditASGIMiddleware)
 
 app.add_middleware(

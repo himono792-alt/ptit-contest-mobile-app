@@ -21,6 +21,10 @@ dependencies = [
     "python-multipart>=0.0.18",
     # Phase 1 step 1 (2026-05-06): Sentry error tracking + performance monitoring
     "sentry-sdk[fastapi]>=2.18.0",
+    # Phase 1 step 2 (2026-05-06): rate limit để chống brute force + DDoS
+    # slowapi storage default = memory (đủ cho 1 replica), upgrade sang Redis qua REDIS_URL
+    "slowapi>=0.1.9",
+    "redis>=5.2.0",   # optional, chỉ dùng nếu REDIS_URL env var có
 ]
 
 [project.optional-dependencies]
