@@ -52,7 +52,7 @@ app.add_middleware(
     allow_origins=settings.cors_origins_list,
     # Cho phép truy cập từ LAN (vd iPhone Safari trên cùng WiFi).
     # Pattern khớp: localhost / 127.0.0.1 / 10.x.x.x / 172.16-31.x.x / 192.168.x.x
-    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|192\.168\.\d+\.\d+)(:\d+)?$",
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|192\.168\.\d+\.\d+|[a-z0-9-]+\.netlify\.app|[a-z0-9-]+\.vercel\.app|[a-z0-9-]+\.up\.railway\.app)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
