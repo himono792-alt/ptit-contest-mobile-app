@@ -2,11 +2,14 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:intl/intl.dart';
+
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_top_bar.dart';
 import 'cert_verify_screen.dart';
+import 'edit_profile_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -89,11 +92,57 @@ class ProfileScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
 
+          // ============ Thông tin cá nhân (đọc) ============
+          MCard(
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    const Icon(Icons.badge_outlined,
+                        size: 16, color: ptitRed),
+                    const SizedBox(width: 6),
+                    const Expanded(
+                      child: Text('Thông tin cá nhân',
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: textPrimary)),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined,
+                          size: 16, color: ptitRed),
+                      tooltip: 'Cập nhật thông tin',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (_) => const EditProfileScreen())),
+                    ),
+                  ]),
+                  const Divider(color: cardBorder, height: 16),
+                  _infoRow('Ngày sinh',
+                      user.dob != null
+                          ? DateFormat('dd/MM/yyyy').format(user.dob!)
+                          : '—'),
+                  _infoRow('Giới tính', user.gender ?? '—'),
+                  _infoRow('Số CMND/CCCD', user.citizenId ?? '—'),
+                  _infoRow('Nơi sinh', user.placeOfBirth ?? '—'),
+                  _infoRow('Quốc tịch', user.nationality ?? '—'),
+                  _infoRow('Dân tộc', user.ethnicity ?? '—'),
+                  _infoRow('Tôn giáo', user.religion ?? '—'),
+                  _infoRow('SĐT', user.phone ?? '—'),
+                  _infoRow('Email cá nhân', user.secondaryEmail ?? '—'),
+                  _infoRow('Địa chỉ', user.address ?? '—'),
+                ]),
+          ),
+          const SizedBox(height: 8),
+
           // Menu list
           MCard(
             padding: EdgeInsets.zero,
             child: Column(children: [
-              _menuTile(Icons.edit_outlined, 'Cập nhật thông tin', () => _editProfileDialog(context, ref)),
+              _menuTile(Icons.edit_outlined, 'Cập nhật thông tin',
+                  () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const EditProfileScreen()))),
               const Divider(height: 1, color: cardBorder),
               _menuTile(Icons.lock_outline, 'Đổi mật khẩu', () => _changePasswordDialog(context, ref)),
               const Divider(height: 1, color: cardBorder),
@@ -135,6 +184,30 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _infoRow(String k, String v) {
+    final isPlaceholder = v == '—';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(
+          width: 110,
+          child: Text(k,
+              style: const TextStyle(fontSize: 11, color: textMuted)),
+        ),
+        Expanded(
+          child: Text(
+            v,
+            style: TextStyle(
+              fontSize: 12.5,
+              color: isPlaceholder ? textFaint : textPrimary,
+              fontWeight: isPlaceholder ? FontWeight.w400 : FontWeight.w600,
+            ),
+          ),
+        ),
+      ]),
     );
   }
 

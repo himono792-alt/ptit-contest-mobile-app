@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -33,6 +34,24 @@ class ContestDetailScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back, color: textMuted),
           onPressed: () => context.pop(),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share_outlined, color: textMuted, size: 20),
+            tooltip: 'Sao chép link',
+            onPressed: () async {
+              final url =
+                  'https://luxury-crostata-3c5c69.netlify.app/contests/$slug';
+              await Clipboard.setData(ClipboardData(text: url));
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Đã copy link: $url'),
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: asyncData.when(
         loading: () =>

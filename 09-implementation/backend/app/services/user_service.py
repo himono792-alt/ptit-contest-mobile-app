@@ -25,13 +25,27 @@ _PWD_RESET_EXPIRE = timedelta(minutes=15)
 
 
 async def update_me(db: AsyncSession, user: AppUser, data: UpdateMeIn) -> AppUser:
-    """SV-02 — Update các field tự sửa được."""
+    """SV-02 — Update các field tự sửa được.
+
+    Mở rộng 2026-05-05: nhận thêm DOB, gender, address, citizen_id, ethnicity,
+    religion, nationality, place_of_birth, secondary_email.
+    """
+    # Field cũ
     if data.full_name is not None:
         user.full_name = data.full_name
     if data.phone is not None:
         user.phone = data.phone
     if data.avatar_url is not None:
         user.avatar_url = data.avatar_url
+
+    # Profile mở rộng — set thẳng vào AppUser (đã ALTER TABLE ở startup)
+    for field in (
+        "dob", "gender", "citizen_id", "place_of_birth", "address",
+        "ethnicity", "religion", "nationality", "secondary_email",
+    ):
+        val = getattr(data, field, None)
+        if val is not None:
+            setattr(user, field, val)
 
     # Bio chỉ cho student
     if data.bio is not None:

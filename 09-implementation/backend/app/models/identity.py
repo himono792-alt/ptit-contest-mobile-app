@@ -1,10 +1,10 @@
 """Identity / RBAC: roles, app_users, user_roles."""
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
-    BigInteger, DateTime, Enum as SAEnum, ForeignKey, String, Text, func,
+    BigInteger, Date, DateTime, Enum as SAEnum, ForeignKey, String, Text, func,
 )
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -46,6 +46,16 @@ class AppUser(Base):
     )
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Profile mở rộng (theo mẫu PTIT student card) — thêm 2026-05-05
+    dob: Mapped[date | None] = mapped_column(Date)
+    gender: Mapped[str | None] = mapped_column(String(10), comment="Nam / Nữ / Khác")
+    citizen_id: Mapped[str | None] = mapped_column(String(20), comment="Số CMND/CCCD")
+    place_of_birth: Mapped[str | None] = mapped_column(String(150))
+    address: Mapped[str | None] = mapped_column(String(500))
+    ethnicity: Mapped[str | None] = mapped_column(String(50), comment="Dân tộc, vd: Kinh")
+    religion: Mapped[str | None] = mapped_column(String(50), comment="Tôn giáo, vd: Không")
+    nationality: Mapped[str | None] = mapped_column(String(50), comment="Quốc tịch, vd: Việt Nam")
+    secondary_email: Mapped[str | None] = mapped_column(String(255), comment="Email phụ cá nhân")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(),
     )

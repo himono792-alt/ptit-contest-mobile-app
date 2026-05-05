@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.config import settings
 from app.database import engine
@@ -26,10 +27,31 @@ from app.routers import (
 )
 
 
+_PROFILE_MIGRATION_SQL = """
+ALTER TABLE ptit_contest.app_users
+  ADD COLUMN IF NOT EXISTS dob DATE,
+  ADD COLUMN IF NOT EXISTS gender VARCHAR(10),
+  ADD COLUMN IF NOT EXISTS citizen_id VARCHAR(20),
+  ADD COLUMN IF NOT EXISTS place_of_birth VARCHAR(150),
+  ADD COLUMN IF NOT EXISTS address VARCHAR(500),
+  ADD COLUMN IF NOT EXISTS ethnicity VARCHAR(50),
+  ADD COLUMN IF NOT EXISTS religion VARCHAR(50),
+  ADD COLUMN IF NOT EXISTS nationality VARCHAR(50),
+  ADD COLUMN IF NOT EXISTS secondary_email VARCHAR(255);
+"""
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print(f"PTIT Contest API starting in {settings.app_env} mode")
     print(f"   DB: {settings.database_url.split('@')[-1]}")
+    # Idempotent migration cho profile fields mở rộng (2026-05-05)
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(text(_PROFILE_MIGRATION_SQL))
+        print("Profile fields migration: ok (idempotent)")
+    except Exception as e:
+        print(f"Profile fields migration WARN: {e}")
     yield
     await engine.dispose()
     print("Shutdown complete")

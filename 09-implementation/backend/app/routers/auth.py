@@ -72,4 +72,14 @@ def _to_me_out(user) -> MeOut:
         roles=sorted(user.role_codes),
         last_login_at=user.last_login_at,
         created_at=user.created_at,
+        # Profile mở rộng (đọc trực tiếp từ AppUser model)
+        dob=getattr(user, "dob", None),
+        gender=getattr(user, "gender", None),
+        citizen_id=getattr(user, "citizen_id", None),
+        place_of_birth=getattr(user, "place_of_birth", None),
+        address=getattr(user, "address", None),
+        ethnicity=getattr(user, "ethnicity", None),
+        religion=getattr(user, "religion", None),
+        nationality=getattr(user, "nationality", None),
+        secondary_email=getattr(user, "secondary_email", None),
     )

@@ -1,6 +1,6 @@
 """Pydantic v2 schemas cho auth endpoints (SV-01, GV-01, BCN-01, AD-01)."""
 
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -41,7 +41,11 @@ class RoleOut(BaseModel):
 
 
 class MeOut(BaseModel):
-    """SV-02 / GV-01 / BCN-01 GET /api/me — info user hiện tại + roles."""
+    """SV-02 / GV-01 / BCN-01 GET /api/me — info user hiện tại + roles.
+
+    Mở rộng 2026-05-05: trả thêm DOB, gender, address, citizen_id, ethnicity,
+    religion, nationality, place_of_birth, secondary_email.
+    """
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -54,3 +58,13 @@ class MeOut(BaseModel):
     roles: list[str] = Field(default_factory=list, description="role_code list, vd: ['STUDENT']")
     last_login_at: datetime | None = None
     created_at: datetime
+    # Profile mở rộng
+    dob: date | None = None
+    gender: str | None = None
+    citizen_id: str | None = None
+    place_of_birth: str | None = None
+    address: str | None = None
+    ethnicity: str | None = None
+    religion: str | None = None
+    nationality: str | None = None
+    secondary_email: str | None = None
