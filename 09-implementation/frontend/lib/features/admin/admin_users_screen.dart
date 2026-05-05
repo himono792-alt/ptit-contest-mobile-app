@@ -93,6 +93,14 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                 ],
               ),
             ),
+            OutlinedButton.icon(
+              onPressed: () => _openBulkImportDialog(),
+              icon: const Icon(Icons.upload_file, size: 16),
+              label: const Text('Import CSV SV'),
+              style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(140, 38)),
+            ),
+            const SizedBox(width: 8),
             FilledButton.icon(
               onPressed: () => _openCreateDialog(),
               icon: const Icon(Icons.person_add, size: 18),
@@ -221,6 +229,158 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
       builder: (_) => const _CreateUserDialog(),
     );
     if (ok == true) ref.invalidate(usersListProvider);
+  }
+
+  Future<void> _openBulkImportDialog() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => const _BulkImportDialog(),
+    );
+    if (ok == true) ref.invalidate(usersListProvider);
+  }
+}
+
+// ---------- Bulk Import CSV Dialog ----------
+//
+// Admin paste CSV vào textarea (header bắt buộc:
+//   student_code,ptit_email,full_name,faculty_code,major_code,class_code).
+// Parse client-side, POST /admin/students/import body { rows: [...] }.
+
+class _BulkImportDialog extends ConsumerStatefulWidget {
+  const _BulkImportDialog();
+  @override
+  ConsumerState<_BulkImportDialog> createState() => _BulkImportDialogState();
+}
+
+class _BulkImportDialogState extends ConsumerState<_BulkImportDialog> {
+  final _csv = TextEditingController(text:
+      'student_code,ptit_email,full_name,faculty_code,major_code,class_code\n'
+      'B22DCCN999,b22dccn999@ptit.edu.vn,Nguyễn Văn Demo,CNTT,KHMT,B22CN01\n');
+  bool _busy = false;
+  String? _resultMsg;
+
+  Future<void> _import() async {
+    final lines = _csv.text.trim().split(RegExp(r'\r?\n'));
+    if (lines.length < 2) {
+      setState(() => _resultMsg = 'CSV cần ít nhất 1 header + 1 dòng data');
+      return;
+    }
+    final header = lines.first
+        .split(',')
+        .map((s) => s.trim().toLowerCase())
+        .toList();
+    const required = ['student_code', 'ptit_email', 'full_name'];
+    for (final col in required) {
+      if (!header.contains(col)) {
+        setState(() => _resultMsg = 'Thiếu cột bắt buộc: $col');
+        return;
+      }
+    }
+    final rows = <Map<String, dynamic>>[];
+    for (var i = 1; i < lines.length; i++) {
+      final l = lines[i].trim();
+      if (l.isEmpty) continue;
+      final cells = l.split(',').map((s) => s.trim()).toList();
+      final m = <String, dynamic>{};
+      for (var j = 0; j < header.length && j < cells.length; j++) {
+        if (cells[j].isNotEmpty) m[header[j]] = cells[j];
+      }
+      if (m.containsKey('student_code') &&
+          m.containsKey('ptit_email') &&
+          m.containsKey('full_name')) {
+        rows.add(m);
+      }
+    }
+    if (rows.isEmpty) {
+      setState(() => _resultMsg = 'Không có dòng data hợp lệ');
+      return;
+    }
+
+    setState(() {
+      _busy = true;
+      _resultMsg = null;
+    });
+    try {
+      final api = ref.read(apiClientProvider);
+      final res =
+          await api.dio.post('/admin/students/import', data: {'rows': rows});
+      final d = res.data as Map<String, dynamic>;
+      setState(() => _resultMsg =
+          'Inserted ${d['inserted']} · Skipped ${d['skipped']}'
+          '${(d['errors'] as List).isEmpty ? "" : "\nErrors: ${(d['errors'] as List).join("; ")}"}');
+    } catch (e) {
+      final msg = e is DioException
+          ? (e.response?.data is Map ? '${e.response?.data['detail']}' : e.message ?? '')
+          : '$e';
+      setState(() => _resultMsg = 'Lỗi: $msg');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720, maxHeight: 600),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const Text('Bulk import student directory (CSV)',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 6),
+            const Text(
+                'Paste CSV với header: student_code, ptit_email, full_name, faculty_code, major_code, class_code',
+                style: TextStyle(fontSize: 11, color: textMuted)),
+            const SizedBox(height: 12),
+            Expanded(
+              child: TextField(
+                controller: _csv,
+                maxLines: null,
+                expands: true,
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+                decoration: const InputDecoration(
+                  contentPadding: EdgeInsets.all(12),
+                ),
+              ),
+            ),
+            if (_resultMsg != null) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF9FAFB),
+                  border: Border.all(color: cardBorder),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(_resultMsg!,
+                    style: const TextStyle(
+                        fontSize: 12, color: textPrimary, height: 1.5)),
+              ),
+            ],
+            const SizedBox(height: 14),
+            Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context, _resultMsg != null),
+                  child: const Text('Đóng')),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                onPressed: _busy ? null : _import,
+                icon: _busy
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.upload, size: 16),
+                label: const Text('Import'),
+                style: FilledButton.styleFrom(minimumSize: const Size(120, 38)),
+              ),
+            ])
+          ]),
+        ),
+      ),
+    );
   }
 }
 

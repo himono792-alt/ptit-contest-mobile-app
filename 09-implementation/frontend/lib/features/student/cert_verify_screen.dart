@@ -1,13 +1,17 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/auth/auth_provider.dart';
+import '../../core/config.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_top_bar.dart';
 import '../../core/widgets/pill.dart';
+import 'cert_open_stub.dart' if (dart.library.html) 'cert_open_web.dart';
 
 class CertVerifyScreen extends ConsumerStatefulWidget {
   const CertVerifyScreen({super.key});
@@ -143,6 +147,25 @@ class _ResultCard extends StatelessWidget {
   final Map<String, dynamic> data;
   const _ResultCard({required this.data});
 
+  Future<void> _openOrCopyRender(BuildContext context) async {
+    final qr = data['qr_code']?.toString() ?? '';
+    if (qr.isEmpty) return;
+    final url = '${AppConfig.api}/certificates/$qr/render';
+    final opened = openCertUrl(url);
+    if (opened) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã mở chứng nhận trong tab mới — Ctrl+P để in/save PDF')),
+      );
+    } else {
+      // Mobile fallback: copy URL
+      await Clipboard.setData(ClipboardData(text: url));
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Đã copy URL vào clipboard:\n$url'), duration: const Duration(seconds: 5)),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final valid = data['valid'] == true;
@@ -196,6 +219,18 @@ class _ResultCard extends StatelessWidget {
                     fmt.format(DateTime.parse(data['issued_at']))),
               _kv('Mã QR',
                   data['qr_code'] ?? '', mono: true),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () => _openOrCopyRender(context),
+                  icon: const Icon(Icons.download, size: 18),
+                  label: Text(kIsWeb
+                      ? 'Mở/in chứng nhận (HTML)'
+                      : 'Copy URL chứng nhận'),
+                  style: FilledButton.styleFrom(backgroundColor: ptitRed),
+                ),
+              ),
             ],
           ]),
     );

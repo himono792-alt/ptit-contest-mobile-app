@@ -142,6 +142,43 @@ async def delete_contest(
     await contest_service.delete_contest(db, user, contest_id)
 
 
+# Lifecycle transitions BTC chủ động (không qua BCN approval).
+# PUBLISHED → REG_OPEN → REG_CLOSED → ONGOING → FINISHED.
+_ALLOWED_TRANSITIONS: dict[ContestStatus, set[ContestStatus]] = {
+    ContestStatus.PUBLISHED: {ContestStatus.REG_OPEN, ContestStatus.CANCELLED},
+    ContestStatus.REG_OPEN: {ContestStatus.REG_CLOSED, ContestStatus.ONGOING, ContestStatus.CANCELLED},
+    ContestStatus.REG_CLOSED: {ContestStatus.ONGOING, ContestStatus.CANCELLED},
+    ContestStatus.ONGOING: {ContestStatus.FINISHED, ContestStatus.CANCELLED},
+}
+
+
+@router.post("/{contest_id}/transition-status", response_model=ContestDetail)
+async def transition_contest_status(
+    contest_id: int,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    target: Annotated[ContestStatus, Query(description="Status mới")],
+) -> ContestDetail:
+    """GV-02 — BTC chuyển contest qua các state lifecycle (mở reg, đóng reg, ongoing, finished, hủy).
+
+    Không áp dụng cho DRAFT→PROPOSED→PUBLISHED (đó là workflow BCN approval).
+    """
+    contest = await contest_service._get_contest_or_404(db, contest_id)
+    contest_service._ensure_owner(contest, user)
+    current = contest.status
+    allowed = _ALLOWED_TRANSITIONS.get(current, set())
+    if target not in allowed:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"Không thể chuyển từ {current.value} sang {target.value}. "
+            f"Cho phép: {sorted(s.value for s in allowed)}",
+        )
+    contest.status = target
+    await db.commit()
+    await db.refresh(contest)
+    return ContestDetail.model_validate(contest)
+
+
 # ---------- ROUNDS ----------
 
 @router.get("/{contest_id}/rounds", response_model=list[ContestRoundOut])

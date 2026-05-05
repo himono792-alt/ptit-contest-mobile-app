@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/auth/auth_provider.dart';
@@ -8,6 +9,7 @@ import '../../core/models/contest.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/pill.dart';
+import 'create_contest_dialog.dart';
 
 final adminContestsParamsProvider = StateProvider<_AdminContestsParams>(
   (ref) => const _AdminContestsParams(),
@@ -76,9 +78,12 @@ class _AdminContestsScreenState extends ConsumerState<AdminContestsScreen> {
             ),
             if (user.isOrganizer || user.isAdmin)
               FilledButton.icon(
-                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Tạo cuộc thi — Phase F7')),
-                ),
+                onPressed: () async {
+                  final created = await showCreateContestDialog(context);
+                  if (created == true) {
+                    ref.invalidate(adminContestsProvider);
+                  }
+                },
                 icon: const Icon(Icons.add, size: 18),
                 label: const Text('Tạo cuộc thi'),
                 style: FilledButton.styleFrom(
@@ -210,6 +215,7 @@ class _ContestsTable extends StatelessWidget {
           Expanded(flex: 2, child: _Th('Thời gian')),
           Expanded(flex: 2, child: _Th('Hình thức')),
           SizedBox(width: 80, child: _Th('Số entry')),
+          SizedBox(width: 60, child: _Th('')),
         ]),
       ),
       // Rows
@@ -243,17 +249,46 @@ class _Th extends StatelessWidget {
       );
 }
 
-class _ContestRow extends StatelessWidget {
+class _ContestRow extends ConsumerStatefulWidget {
   final ContestSummary c;
   const _ContestRow({required this.c});
+  @override
+  ConsumerState<_ContestRow> createState() => _ContestRowState();
+}
+
+class _ContestRowState extends ConsumerState<_ContestRow> {
+  bool _busy = false;
+
+  Future<void> _submitForApproval() async {
+    setState(() => _busy = true);
+    try {
+      final api = ref.read(apiClientProvider);
+      await api.dio.post('/contests/${widget.c.contestId}/submit-for-approval', data: {
+        'note': 'Submit từ admin contests list.',
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Đã submit #${widget.c.contestId} cho BCN duyệt')),
+      );
+      ref.invalidate(adminContestsProvider);
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e is DioException
+          ? (e.response?.data is Map ? '${e.response?.data['detail']}' : e.message ?? '')
+          : '$e';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $msg')));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final c = widget.c;
     final fmt = DateFormat('dd/MM/yy');
+    final canSubmit = c.status == 'DRAFT' || c.status == 'REVISION_REQUESTED';
     return InkWell(
-      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Chi tiết: ${c.slug} — Phase F7')),
-      ),
+      onTap: () => context.push('/admin/contests/${c.contestId}/manage'),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: const BoxDecoration(
@@ -302,6 +337,28 @@ class _ContestRow extends StatelessWidget {
               c.maxEntries != null ? 'max ${c.maxEntries}' : '—',
               style: const TextStyle(fontSize: 12, color: textMuted),
             ),
+          ),
+          // Action: Submit cho BCN duyệt (chỉ nếu DRAFT/REVISION_REQUESTED)
+          SizedBox(
+            width: 60,
+            child: canSubmit
+                ? (_busy
+                    ? const Padding(
+                        padding: EdgeInsets.only(left: 16),
+                        child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: ptitRed)),
+                      )
+                    : IconButton(
+                        tooltip: 'Submit cho BCN duyệt',
+                        iconSize: 18,
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.send, color: ptitRed),
+                        onPressed: _submitForApproval,
+                      ))
+                : const SizedBox.shrink(),
           ),
         ]),
       ),

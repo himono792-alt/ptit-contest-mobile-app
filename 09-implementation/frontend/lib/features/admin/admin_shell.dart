@@ -12,6 +12,7 @@ import 'configs_screen.dart';
 import 'judge_screen.dart';
 import 'master_data_screen.dart';
 import 'monitor_screen.dart';
+import 'review_moderation_screen.dart';
 
 class AdminShell extends ConsumerStatefulWidget {
   const AdminShell({super.key});
@@ -45,6 +46,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
     if (user.isAdmin) {
       items.add(_NavItem('Quản lý user', Icons.people_outline, const AdminUsersScreen()));
       items.add(_NavItem('Khoa/Ngành', Icons.school_outlined, const MasterDataScreen()));
+      items.add(_NavItem('Bình luận', Icons.comment_outlined, const ReviewModerationScreen()));
       items.add(_NavItem('Cấu hình', Icons.settings_outlined, const ConfigsScreen()));
       items.add(_NavItem('Audit log', Icons.history, const AuditLogScreen()));
     }

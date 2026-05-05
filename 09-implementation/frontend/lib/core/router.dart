@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/admin/admin_shell.dart';
+import '../features/admin/contest_admin_detail_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/student/contest_detail_screen.dart';
 import '../features/student/register_screen.dart';
@@ -65,6 +66,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/contests/:slug',
         builder: (_, state) =>
             ContestDetailScreen(slug: state.pathParameters['slug']!),
+      ),
+      GoRoute(
+        path: '/admin/contests/:id/manage',
+        builder: (_, state) => ContestAdminDetailScreen(
+          contestId: int.parse(state.pathParameters['id']!),
+        ),
       ),
       GoRoute(
         path: '/contests/:slug/register',

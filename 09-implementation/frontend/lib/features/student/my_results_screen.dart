@@ -8,6 +8,7 @@ import '../../core/models/result.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_top_bar.dart';
+import 'cert_verify_screen.dart';
 import 'review_dialog.dart';
 
 final myResultsProvider = FutureProvider.autoDispose<List<MyResultModel>>((ref) async {
@@ -109,13 +110,10 @@ class _ResultCard extends StatelessWidget {
             width: double.infinity,
             child: FilledButton.icon(
               icon: const Icon(Icons.qr_code, size: 18),
-              label: const Text('Xem mã QR chứng nhận'),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text(
-                        'Vào "Tôi → Xác thực chứng nhận" để tra mã QR. (Tải PDF: render qua /api/certificates/{qr}/render)'),
-                    duration: Duration(seconds: 4)));
-              },
+              label: const Text('Xác thực / Tải chứng nhận'),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const CertVerifyScreen()),
+              ),
             ),
           ),
           const SizedBox(height: 8),
