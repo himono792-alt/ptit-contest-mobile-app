@@ -26,11 +26,24 @@ class LoginIn(BaseModel):
 # ---------- Output ----------
 
 class TokenOut(BaseModel):
-    """JWT trả về sau khi login."""
+    """JWT trả về sau khi login — gồm access token + refresh token.
+
+    Phase 1 step 3: refresh token stateless JWT TTL 7 ngày.
+    Flutter biometric login: lưu refresh_token trong flutter_secure_storage,
+    khi biometric unlock thì POST /api/auth/refresh để lấy access token mới.
+    """
 
     access_token: str
     token_type: str = "bearer"
-    expires_in: int = Field(..., description="Seconds until expiry")
+    expires_in: int = Field(..., description="Seconds cho đến khi access token hết hạn")
+    refresh_token: str = Field(..., description="Dùng để lấy access token mới (POST /auth/refresh)")
+    refresh_expires_in: int = Field(..., description="Seconds cho đến khi refresh token hết hạn")
+
+
+class RefreshIn(BaseModel):
+    """Body cho POST /auth/refresh."""
+
+    refresh_token: str
 
 
 class RoleOut(BaseModel):
@@ -50,21 +63,4 @@ class MeOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     user_id: int
-    email: str
-    full_name: str
-    phone: str | None = None
-    avatar_url: str | None = None
-    status: str
-    roles: list[str] = Field(default_factory=list, description="role_code list, vd: ['STUDENT']")
-    last_login_at: datetime | None = None
-    created_at: datetime
-    # Profile mở rộng
-    dob: date | None = None
-    gender: str | None = None
-    citizen_id: str | None = None
-    place_of_birth: str | None = None
-    address: str | None = None
-    ethnicity: str | None = None
-    religion: str | None = None
-    nationality: str | None = None
-    secondary_email: str | None = None
+ 

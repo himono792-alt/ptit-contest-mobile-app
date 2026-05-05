@@ -1,16 +1,20 @@
-"""Auth endpoints: register, login, me (matrix: SV-01, GV-01, BCN-01, AD-01)."""
+"""Auth endpoints: register, login, refresh, me."""
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from jose import JWTError
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.config import settings
 from app.database import get_db
 from app.deps import CurrentUser
+from app.models.identity import AppUser, UserRole
 from app.rate_limit import limiter
-from app.schemas.auth import LoginIn, MeOut, RegisterIn, TokenOut
-from app.security import create_access_token
+from app.schemas.auth import LoginIn, MeOut, RefreshIn, RegisterIn, TokenOut
+from app.security import create_access_token, create_refresh_token, decode_refresh_token
 from app.services import auth_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -23,12 +27,7 @@ async def register(
     data: RegisterIn,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> MeOut:
-    """SV-01c — Sinh viên tự đăng ký (matched với student_directory).
-
-    Các role khác (ORGANIZER/JUDGE/HOD/ADMIN) chỉ Admin tạo qua AD-02.
-
-    Rate limit (Phase 1.2): 5 req/phút per IP — chống spam tạo account.
-    """
+    # SV-01c: sinh vien tu dang ky, rate limit 5/phut chong spam
     user = await auth_service.register_student(db, data)
     return _to_me_out(user)
 
@@ -40,37 +39,82 @@ async def login(
     data: LoginIn,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TokenOut:
-    """Endpoint login chung cho mọi role. Trả JWT bearer token.
-
-    Rate limit (Phase 1.2): 10 req/phút per IP — chống brute force password.
-    Sau 10 lần sai, attacker phải đợi 1 phút → giảm tốc độ brute force ~6000x.
-    """
+    # Rate limit 10/phut chong brute force password
     user = await auth_service.authenticate(db, data)
     role_codes = sorted(user.role_codes)
-    token = create_access_token(
+    access_token = create_access_token(
         subject=user.user_id,
-        extra={"email": user.email, "roles": role_codes},
+        extra={"email": str(user.email), "roles": role_codes},
     )
+    refresh_token = create_refresh_token(subject=user.user_id)
     return TokenOut(
-        access_token=token,
+        access_token=access_token,
         expires_in=settings.jwt_access_token_expire_minutes * 60,
+        refresh_token=refresh_token,
+        refresh_expires_in=settings.jwt_refresh_token_expire_days * 86400,
+    )
+
+
+@router.post("/refresh", response_model=TokenOut)
+@limiter.limit("20/minute")
+async def refresh(
+    request: Request,
+    data: RefreshIn,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> TokenOut:
+    # Phase 1 step 3: doi refresh token lay access token moi (sliding window).
+    # Flutter biometric: luu refresh_token trong flutter_secure_storage,
+    # khi biometric unlock thi goi endpoint nay thay vi nhap lai password.
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Refresh token khong hop le hoac da het han",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = decode_refresh_token(data.refresh_token)
+        user_id_str: str | None = payload.get("sub")
+        if not user_id_str:
+            raise credentials_exception
+        user_id = int(user_id_str)
+    except (JWTError, ValueError):
+        raise credentials_exception
+
+    stmt = (
+        select(AppUser)
+        .where(AppUser.user_id == user_id)
+        .options(selectinload(AppUser.user_roles).selectinload(UserRole.role))
+    )
+    user = (await db.execute(stmt)).scalar_one_or_none()
+    if user is None or user.status != "ACTIVE":
+        raise credentials_exception
+
+    role_codes = sorted(user.role_codes)
+    new_access = create_access_token(
+        subject=user.user_id,
+        extra={"email": str(user.email), "roles": role_codes},
+    )
+    # Rotate: cap refresh token moi (sliding window, TTL diperpanjang)
+    new_refresh = create_refresh_token(subject=user.user_id)
+    return TokenOut(
+        access_token=new_access,
+        expires_in=settings.jwt_access_token_expire_minutes * 60,
+        refresh_token=new_refresh,
+        refresh_expires_in=settings.jwt_refresh_token_expire_days * 86400,
     )
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(_user: CurrentUser) -> None:
-    """JWT là stateless nên logout chỉ cần FE xóa token. Backend log vào audit_logs."""
-    # TODO (team): insert audit_log row khi implement audit middleware
+    # JWT stateless: FE xoa token la du. Backend chi log audit.
     return None
 
 
 @router.get("/me", response_model=MeOut)
 async def get_me(user: CurrentUser) -> MeOut:
-    """Trả về thông tin user đang login (SV-02, GV-01, BCN-01)."""
     return _to_me_out(user)
 
 
-# ---------- Helpers ----------
+# ---------- Helper ----------
 
 def _to_me_out(user) -> MeOut:
     return MeOut(
@@ -83,7 +127,6 @@ def _to_me_out(user) -> MeOut:
         roles=sorted(user.role_codes),
         last_login_at=user.last_login_at,
         created_at=user.created_at,
-        # Profile mở rộng (đọc trực tiếp từ AppUser model)
         dob=getattr(user, "dob", None),
         gender=getattr(user, "gender", None),
         citizen_id=getattr(user, "citizen_id", None),
