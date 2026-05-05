@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>PTIT Contest — Mockup GV/BTC (Web) — v01</title>
+<style>
+  :root {
+    --red: #C8102E;
+    --red-soft: #FEE5E9;
+    --bg: #f3f4f6;
+    --white: #ffffff;
+    --border: #e5e7eb;
+    --text: #111827;
+    --muted: #6b7280;
+    --success: #16a34a;
+    --warning: #d97706;
+    --info: #2563eb;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    padding: 24px 16px 80px; -webkit-font-smoothing: antialiased; font-size: 13px;
+  }
+  .doc-header {
+    max-width: 1340px; margin: 0 auto 32px;
+    background: var(--white); border: 1px solid var(--border);
+    padding: 20px 24px; border-radius: 12px;
+  }
+  .doc-header h1 { font-size: 20px; margin-bottom: 6px; }
+  .doc-header p { color: var(--muted); font-size: 13px; line-height: 1.6; }
+  .doc-header .meta { display: inline-flex; gap: 8px; margin-top: 12px; font-size: 12px; }
+  .badge { background: var(--red); color: #fff; padding: 4px 10px; border-radius: 6px; font-weight: 600; }
+  .badge.gray { background: #6b7280; }
+  .badge.outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+
+  .stack { max-width: 1340px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+  .screen-wrap { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+  .screen-label {
+    font-size: 13px; font-weight: 600; text-align: center; max-width: 1280px;
+  }
+  .screen-label .code {
+    color: var(--muted); font-weight: 500; font-size: 11px; display: block; margin-top: 2px;
+  }
+
+  /* Browser frame */
+  .browser {
+    width: 1280px; min-height: 720px;
+    background: var(--white); border: 1px solid var(--border); border-radius: 8px;
+    overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    display: flex; flex-direction: column;
+  }
+  .browser-bar {
+    display: flex; align-items: center; gap: 6px;
+    padding: 10px 14px; background: #e5e7eb; border-bottom: 1px solid #d1d5db;
+  }
+  .browser-bar .dot { width: 11px; height: 11px; border-radius: 50%; background: #9ca3af; }
+  .browser-bar .dot:nth-child(1) { background: #ef4444; }
+  .browser-bar .dot:nth-child(2) { background: #f59e0b; }
+  .browser-bar .dot:nth-child(3) { background: #10b981; }
+  .browser-bar .url {
+    flex: 1; background: var(--white); border-radius: 6px;
+    padding: 6px 12px; font-size: 12px; color: var(--muted);
+    margin-left: 14px; font-family: monospace;
+  }
+  .layout { display: flex; flex: 1; min-height: 680px; }
+
+  /* Sidebar */
+  .sidebar {
+    width: 240px; background: #1f2937; color: #d1d5db;
+    padding: 18px 0; display: flex; flex-direction: column;
+  }
+  .sidebar .brand {
+    display: flex; align-items: center; gap: 10px; padding: 0 18px 18px;
+    border-bottom: 1px solid #374151;
+  }
+  .sidebar .brand .logo {
+    width: 32px; height: 32px; background: var(--red); border-radius: 7px;
+    display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 14px;
+  }
+  .sidebar .brand b { font-size: 13px; color: #fff; }
+  .sidebar .brand p { font-size: 10px; color: #9ca3af; margin-top: 2px; }
+  .sidebar nav { padding: 10px 0; flex: 1; }
+  .sidebar nav .item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 18px; cursor: pointer; font-size: 13px;
+    border-left: 3px solid transparent;
+  }
+  .sidebar nav .item:hover { background: #374151; }
+  .sidebar nav .item.active { background: rgba(200,16,46,0.15); color: #fff; border-left-color: var(--red); }
+  .sidebar nav .item .ico { width: 18px; text-align: center; font-size: 13px; }
+  .sidebar nav .section {
+    font-size: 10px; text-transform: uppercase; color: #6b7280;
+    padding: 12px 18px 6px; letter-spacing: .5px;
+  }
+  .sidebar .footer {
+    padding: 14px 18px; border-top: 1px solid #374151;
+    display: flex; align-items: center; gap: 10px; font-size: 12px;
+  }
+  .sidebar .footer .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--red-soft); color: var(--red);
+    display: grid; place-items: center; font-weight: 700;
+  }
+
+  /* Main */
+  .main { flex: 1; padding: 24px 32px; overflow-y: auto; background: #fafafa; }
+  .page-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .page-head h2 { font-size: 20px; }
+  .page-head .crumbs { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border: none; border-radius: 6px;
+    font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+    background: var(--red); color: #fff;
+  }
+  .btn.outline { background: var(--white); color: var(--text); border: 1px solid var(--border); }
+  .btn.success { background: var(--success); }
+  .btn.warn { background: var(--warning); }
+  .btn.gray { background: #6b7280; }
+  .btn.danger { background: #fee2e2; color: #dc2626; }
+  .btn.sm { padding: 5px 10px; font-size: 12px; }
+
+  /* Card */
+  .card {
+    background: var(--white); border: 1px solid var(--border); border-radius: 8px;
+    padding: 18px;
+  }
+  .card .title { font-weight: 700; font-size: 14px; margin-bottom: 12px; }
+
+  /* Pills */
+  .pill { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 11px; font-weight: 500; background: #f3f4f6; color: var(--muted); }
+  .pill.green { background: #dcfce7; color: var(--success); }
+  .pill.yellow { background: #fef3c7; color: var(--warning); }
+  .pill.red { background: var(--red-soft); color: var(--red); }
+  .pill.blue { background: #dbeafe; color: #1d4ed8; }
+  .pill.gray { background: #e5e7eb; color: var(--muted); }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 10px 12px; background: #f9fafb; font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 600; border-bottom: 1px solid var(--border); }
+  td { padding: 12px; border-bottom: 1px solid var(--border); }
+  tr:hover td { background: #f9fafb; }
+
+  /* Inputs */
+  .input {
+    width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 13px; font-family: inherit; background: var(--white);
+  }
+  .label { font-size: 12px; color: var(--muted); margin-bottom: 5px; display: block; font-weight: 500; }
+  .form-row { margin-bottom: 14px; }
+
+  /* Stats grid */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+  .stat {
+    background: var(--white); border: 1px solid var(--border); border-radius: 8px;
+    padding: 16px;
+  }
+  .stat .label { font-size: 11px; color: var(--muted); text-transform: uppercase; }
+  .stat .num { font-size: 24px; font-weight: 700; margin-top: 4px; }
+  .stat .delta { font-size: 11px; color: var(--success); margin-top: 4px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .tab {
+    padding: 10px 16px; font-size: 13px; font-weight: 500; cursor: pointer;
+    color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .tab.active { color: var(--red); border-bottom-color: var(--red); font-weight: 600; }
+
+  /* Status banner */
+  .banner {
+    border-left: 4px solid var(--info); background: #eff6ff;
+    padding: 12px 16px; border-radius: 6px; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 12px; font-size: 13px;
+  }
+  .banner.warn { border-color: var(--warning); background: #fef3c7; }
+  .banner.green { border-color: var(--success); background: #dcfce7; }
+  .banner.red { border-color: var(--red); background: var(--red-soft); }
+
+  hr.div { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+  /* Login full page */
+  .login-page {
+    flex: 1; display: grid; place-items: center; background: var(--bg);
+  }
+  .login-box {
+    width: 380px; background: var(--white); border: 1px solid var(--border);
+    border-radius: 12px; padding: 32px;
+  }
+</style>
+</head>
+<body>
+
+<div class="doc-header">
+  <h1>💻 Mockup Giảng viên / Ban tổ chức — Web (v01)</h1>
+  <p>Desktop sidebar layout 1280×720. 9 màn hình cover 7 chức năng (GV-01 đến GV-07). Render qua Flutter Web build. Bare-bones style.</p>
+  <div class="meta">
+    <span class="badge">GV/BTC (Organizer)</span>
+    <span class="badge gray">7 chức năng</span>
+    <span class="badge outline">Schema: ptit_contest v03</span>
+  </div>
+</div>
+
+<div class="stack">
+
+  <!-- 1. Login -->
+  <div class="screen-wrap">
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">https://contest.ptit.edu.vn/login</span>
+      </div>
+      <div class="layout">
+        <div class="login-page">
+          <div class="login-box">
+            <div style="text-align:center;margin-bottom:24px">
+              <div style="width:56px;height:56px;background:var(--red);border-radius:14px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:22px;margin:0 auto 12px">P</div>
+              <h2 style="font-size:18px">PTIT Contest — Cổng quản lý</h2>
+              <p style="font-size:12px;color:var(--muted);margin-top:4px">Dành cho Giảng viên / BCN / Admin</p>
+            </div>
+            <div class="form-row">
+              <label class="label">Email</label>
+              <input class="input" placeholder="giangvien.a@ptit.edu.vn" />
+            </div>
+            <div class="form-row">
+              <label class="label">Mật khẩu</label>
+              <input class="input" type="password" placeholder="••••••••" />
+            </div>
+            <button class="btn" style="width:100%;justify-content:center;padding:10px">Đăng nhập</button>
+            <p style="text-align:center;font-size:12px;color:var(--muted);margin-top:14px">
+              Quên mật khẩu? <a style="color:var(--red);text-decoration:none">Liên hệ Admin</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">Đăng nhập (chung cho 3 role admin)<span class="code">GV-01 / BCN-01 / AD-01 · POST /api/auth/login</span></div>
+  </div>
+
+  <!-- 2. Dashboard -->
+  <div class="screen-wrap">
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">https://contest.ptit.edu.vn/dashboard</span>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand">
+            <div class="logo">P</div>
+            <div><b>PTIT Contest</b><p>Cổng GV/BTC</p></div>
+          </div>
+          <nav>
+            <div class="item active"><span class="ico">📊</span>Dashboard</div>
+            <div class="section">Cuộc thi</div>
+            <div class="item"><span class="ico">📋</span>Cuộc thi của tôi</div>
+            <div class="item"><span class="ico">➕</span>Tạo cuộc thi mới</div>
+            <div class="section">Quản lý</div>
+            <div class="item"><span class="ico">👥</span>Phê duyệt đăng ký</div>
+            <div class="item"><span class="ico">📝</span>Chấm bài</div>
+            <div class="item"><span class="ico">🏆</span>Kết quả</div>
+            <div class="section">Khác</div>
+            <div class="item"><span class="ico">📈</span>Thống kê</div>
+            <div class="item"><span class="ico">🔔</span>Thông báo</div>
+          </nav>
+          <div class="footer">
+            <div class="avatar">GA</div>
+            <div><b style="color:#fff">GV. Nguyễn A</b><br/><span style="color:#9ca3af;font-size:10px">ORGANIZER · CNTT</span></div>
+          </div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div>
+              <div class="crumbs">Trang chủ</div>
+              <h2>Dashboard</h2>
+            </div>
+            <button class="btn">➕ Tạo cuộc thi mới</button>
+          </div>
+          <div class="stats">
+            <div class="stat"><div class="label">Cuộc thi đang vận hành</div><div class="num">3</div><div class="delta">+1 tháng này</div></div>
+            <div class="stat"><div class="label">Đăng ký chờ duyệt</div><div class="num" style="color:var(--warning)">12</div><div class="delta" style="color:var(--warning)">Cần xử lý</div></div>
+            <div class="stat"><div class="label">Bài chưa chấm</div><div class="num" style="color:var(--info)">28</div></div>
+            <div class="stat"><div class="label">Tổng SV tham gia (năm)</div><div class="num">347</div></div>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px">
+            <div class="card">
+              <div class="title">Cuộc thi gần đây</div>
+              <table>
+                <thead><tr><th>Cuộc thi</th><th>Trạng thái</th><th>Đăng ký</th><th>Hành động</th></tr></thead>
+                <tbody>
+                  <tr><td><b>Olympic Tin học 2026</b></td><td><span class="pill green">REG_OPEN</span></td><td>124/200</td><td><a style="color:var(--red);font-weight:600">Mở →</a></td></tr>
+                  <tr><td><b>Hackathon Mùa hè 2026</b></td><td><span class="pill yellow">PROPOSED</span></td><td>—</td><td><a style="color:var(--red);font-weight:600">Mở →</a></td></tr>
+                  <tr><td><b>Đồ án CNPM 2026</b></td><td><span class="pill blue">DRAFT</span></td><td>—</td><td><a style="color:var(--red);font-weight:600">Mở →</a></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="card">
+              <div class="title">Hoạt động hôm nay</div>
+              <ul style="list-style:none;font-size:12px;line-height:1.8">
+                <li>🟢 8 đăng ký mới (Olympic)</li>
+                <li>🟡 3 bài nộp Vòng loại</li>
+                <li>🔵 BCN đã duyệt QĐ1 cho Hackathon</li>
+                <li>🟠 12 đăng ký chờ duyệt</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">Dashboard tổng quan<span class="code">GV (sau login)</span></div>
+  </div>
+
+  <!-- 3. Danh sách cuộc thi -->
+  <div class="screen-wrap">
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">https://contest.ptit.edu.vn/contests</span>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand"><div class="logo">P</div><div><b>PTIT Contest</b><p>Cổng GV/BTC</p></div></div>
+          <nav>
+            <div class="item"><span class="ico">📊</span>Dashboard</div>
+            <div class="section">Cuộc thi</div>
+            <div class="item active"><span class="ico">📋</span>Cuộc thi của tôi</div>
+            <div class="item"><span class="ico">➕</span>Tạo cuộc thi mới</div>
+            <div class="section">Quản lý</div>
+            <div class="item"><span class="ico">👥</span>Phê duyệt đăng ký</div>
+            <div class="item"><span class="ico">📝</span>Chấm bài</div>
+            <div class="item"><span class="ico">🏆</span>Kết quả</div>
+          </nav>
+          <div class="footer"><div class="avatar">GA</div><div><b style="color:#fff">GV. Nguyễn A</b></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><div class="crumbs">Cuộc thi</div><h2>Cuộc thi của tôi</h2></div>
+            <button class="btn">➕ Tạo cuộc thi mới</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:16px">
+            <input class="input" placeholder="🔎 Tìm theo tên..." style="flex:1;max-width:300px" />
+            <select class="input" style="width:auto"><option>Tất cả trạng thái</option></select>
+            <select class="input" style="width:auto"><option>Năm 2026</option></select>
+          </div>
+          <div class="card" style="padding:0;overflow:hidden">
+            <table>
+              <thead>
+                <tr>
+                  <th>Cuộc thi</th><th>Trạng thái</th><th>Loại</th><th>Đăng ký</th><th>Bắt đầu</th><th>Workflow QĐ1</th><th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><b>Olympic Tin học PTIT 2026</b><br/><span style="font-size:11px;color:var(--muted)">olympic-tin-hoc-2026</span></td>
+                  <td><span class="pill green">REG_OPEN</span></td>
+                  <td>Cá nhân · Online</td>
+                  <td>124/200</td>
+                  <td>15/05/2026</td>
+                  <td><span class="pill green">✓ Approved</span></td>
+                  <td><button class="btn sm outline">Mở</button></td>
+                </tr>
+                <tr>
+                  <td><b>Hackathon Mùa hè 2026</b><br/><span style="font-size:11px;color:var(--muted)">hackathon-2026</span></td>
+                  <td><span class="pill yellow">PROPOSED</span></td>
+                  <td>Đội · Hybrid</td>
+                  <td>—</td>
+                  <td>01/06/2026</td>
+                  <td><span class="pill yellow">⏱ Đang chờ BCN</span></td>
+                  <td><button class="btn sm outline">Mở</button></td>
+                </tr>
+                <tr>
+                  <td><b>Đồ án CNPM 2026</b><br/><span style="font-size:11px;color:var(--muted)">do-an-cnpm-2026</span></td>
+                  <td><span class="pill blue">DRAFT</span></td>
+                  <td>Đội · Offline</td>
+                  <td>—</td>
+                  <td>15/07/2026</td>
+                  <td><span class="pill gray">— Chưa submit</span></td>
+                  <td><button class="btn sm outline">Sửa</button></td>
+                </tr>
+                <tr>
+                  <td><b>Cuộc thi LT C++ 2026</b><br/><span style="font-size:11px;color:var(--muted)">cpp-2026</span></td>
+                  <td><span class="pill red">REVISION_REQUESTED</span></td>
+                  <td>Cá nhân · Offline</td>
+                  <td>—</td>
+                  <td>20/05/2026</td>
+                  <td><span class="pill red">⚠️ BCN yêu cầu sửa (lần 2)</span></td>
+                  <td><button class="btn sm">Sửa & gửi lại</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">Danh sách cuộc thi của GV<span class="code">GV-02 · GET /api/contests?created_by=me</span></div>
+  </div>
+
+  <!-- 4. Tạo cuộc thi -->
+  <div class="screen-wrap">
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">https://contest.ptit.edu.vn/contests/new</span>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand"><div class="logo">P</div><div><b>PTIT Contest</b><p>Cổng GV/BTC</p></div></div>
+          <nav>
+            <div class="item"><span class="ico">📊</span>Dashboard</div>
+            <div class="item"><span class="ico">📋</span>Cuộc thi của tôi</div>
+            <div class="item active"><span class="ico">➕</span>Tạo cuộc thi mới</div>
+          </nav>
+          <div class="footer"><div class="avatar">GA</div><div><b style="color:#fff">GV. Nguyễn A</b></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><div class="crumbs">Cuộc thi › Tạo mới</div><h2>Tạo cuộc thi mới</h2></div>
+            <div style="display:flex;gap:8px">
+              <button class="btn outline">💾 Lưu nháp</button>
+              <button class="btn">📤 Gửi BCN duyệt (BCN_QĐ1)</button>
+            </div>
+          </div>
+          <div class="banner">
+            <span>ℹ️</span>
+            <span>Cuộc thi mới sẽ ở trạng thái <b>DRAFT</b>. Khi sẵn sàng, click "Gửi BCN duyệt" để chuyển sang <b>PROPOSED</b> và chờ Ban Chủ nhiệm khoa duyệt (BCN_QĐ1).</span>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px">
+            <div class="card">
+              <div class="title">📌 Thông tin cơ bản</div>
+              <div class="form-row"><label class="label">Tên cuộc thi *</label><input class="input" placeholder="VD: Olympic Tin học PTIT 2026" /></div>
+              <div class="form-row"><label class="label">Slug *</label><input class="input" placeholder="olympic-tin-hoc-2026" /></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                <div class="form-row"><label class="label">Hình thức tham gia *</label><select class="input"><option>Cá nhân</option><option>Đội</option></select></div>
+                <div class="form-row"><label class="label">Hình thức tổ chức *</label><select class="input"><option>Online</option><option>Offline</option><option>Hybrid</option></select></div>
+              </div>
+              <div class="form-row"><label class="label">Mô tả</label><textarea class="input" rows="3" placeholder="Giới thiệu cuộc thi..."></textarea></div>
+              <div class="form-row"><label class="label">Thể lệ</label><textarea class="input" rows="3" placeholder="Quy định, luật chơi..."></textarea></div>
+              <div class="form-row"><label class="label">Giải thưởng</label><textarea class="input" rows="2" placeholder="Giải Nhất 5 triệu, Nhì 3 triệu..."></textarea></div>
+            </div>
+            <div>
+              <div class="card" style="margin-bottom:14px">
+                <div class="title">📅 Thời gian</div>
+                <div class="form-row"><label class="label">Mở đăng ký</label><input class="input" type="datetime-local" /></div>
+                <div class="form-row"><label class="label">Đóng đăng ký</label><input class="input" type="datetime-local" /></div>
+                <div class="form-row"><label class="label">Bắt đầu thi</label><input class="input" type="datetime-local" /></div>
+                <div class="form-row"><label class="label">Kết thúc</label><input class="input" type="datetime-local" /></div>
+              </div>
+              <div class="card">
+                <div class="title">🎯 Cấu hình</div>
+                <div class="form-row"><label class="label">Số slot tối đa</label><input class="input" placeholder="200" /></div>
+                <div class="form-row"><label class="label">Khoa chủ trì</label><select class="input"><option>Khoa CNTT</option></select></div>
+                <div class="form-row"><label style="font-size:13px"><input type="checkbox" checked /> Yêu cầu nộp bài</label></div>
+                <div class="form-row"><label style="font-size:13px"><input type="checkbox" checked /> Công khai</label></div>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:16px">
+            <div class="title">🔄 Vòng thi (rounds)</div>
+            <table>
+              <thead><tr><th>#</th><th>Tên vòng</th><th>Loại</th><th>Bắt đầu</th><th>Kết thúc</th><th>Loại trực tiếp?</th><th></th></tr></thead>
+              <tbody>
+                <tr><td>1</td><td>Vòng loại</td><td>QUALIFIER</td><td>15/05 08:00</td><td>15/05 17:00</td><td>✓</td><td><button class="btn sm outline">Sửa</button></td></tr>
+                <tr><td>2</td><td>Bán kết</td><td>SEMI_FINAL</td><td>16/05 08:00</td><td>16/05 17:00</td><td>✓</td><td><button class="btn sm outline">Sửa</button></td></tr>
+                <tr><td>3</td><td>Chung kết</td><td>FINAL</td><td>20/05 08:00</td><td>20/05 17:00</td><td>—</td><td><button class="btn sm outline">Sửa</button></td></tr>
+              </tbody>
+            </table>
+            <button class="btn outline sm" style="margin-top:12px">➕ Thêm vòng thi</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">Tạo cuộc thi mới<span class="code">GV-02 · POST /api/contests + /rounds + /submit-for-approval</span></div>
+  </div>
+
+  <!-- 5. Detail contest with tabs -->
+  <div class="screen-wrap">
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">https://contest.ptit.edu.vn/contests/42</span>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand"><div class="logo">P</div><div><b>PTIT Contest</b><p>Cổng GV/BTC</p></div></div>
+          <nav>
+            <div class="item"><span class="ico">📊</span>Dashboard</div>
+            <div class="item active"><span class="ico">📋</span>Cuộc thi của tôi</div>
+            <div class="item"><span class="ico">➕</span>Tạo cuộc thi mới</div>
+          </nav>
+          <div class="footer"><div class="avatar">GA</div><div><b style="color:#fff">GV. Nguyễn A</b></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div>
+              <div class="crumbs">Cuộc thi › Olympic Tin học 2026</div>
+              <h2>Olympic Tin học PTIT 2026 <span class="pill green" style="vertical-align:middle;font-size:13px">REG_OPEN</span></h2>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn outline">📊 Báo cáo .xlsx</button>
+              <button class="btn outline">⚙️ Sửa thông tin</button>
+            </div>
+          </div>
+          <div class="banner green">
+            <span>✓</span>
+            <span>BCN_QĐ1 đã <b>APPROVED</b> bởi <b>BCN. Trần B</b> (Trưởng khoa CNTT) — 12/05 14:30</span>
+          </div>
+          <div class="tabs">
+            <div class="tab">📌 Thông tin</div>
+            <div class="tab active">👥 Đăng ký (124)</div>
+            <div class="tab">📝 Bài nộp (89)</div>
+            <div class="tab">⚖️ Chấm điểm</div>
+            <div class="tab">🏆 Kết quả</div>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:14px">
+            <input class="input" placeholder="🔎 Tìm theo MSSV/tên..." style="flex:1;max-width:300px" />
+            <select class="input" style="width:auto"><option>Tất cả trạng thái</option><option>PENDING (12)</option><option>APPROVED (98)</option></select>
+            <button class="btn outline">⬇️ Export .xlsx</button>
+            <button class="btn">✓ Duyệt hàng loạt (5)</button>
+          </div>
+          <div class="card" style="padding:0;overflow:hidden">
+            <table>
+              <thead><tr><th><input type="checkbox" /></th><th>MSSV</th><th>Họ tên</th><th>Khoa</th><th>Đăng ký lúc</th><th>Trạng thái</th><th>Hành động</th></tr></thead>
+              <tbody>
+                <tr><td><input type="checkbox" checked /></td><td>B22DCCN001</td><td>Nguyễn Văn A</td><td>CNTT</td><td>12/05 14:23</td><td><span class="pill yellow">PENDING</span></td><td><button class="btn sm success">✓</button> <button class="btn sm danger">✗</button></td></tr>
+                <tr><td><input type="checkbox" checked /></td><td>B22DCCN045</td><td>Trần Thị B</td><td>CNTT</td><td>12/05 15:01</td><td><span class="pill yellow">PENDING</span></td><td><button class="btn sm success">✓</button> <button class="btn sm danger">✗</button></td></tr>
+                <tr><td><input type="checkbox" /></td><td>B22DCCN112</td><td>Lê Văn C</td><td>ĐTVT</td><td>13/05 09:14</td><td><span class="pill green">APPROVED</span></td><td><span style="color:var(--muted);font-size:11px">Duyệt 13/05</span></td></tr>
+                <tr><td><input type="checkbox" /></td><td>B22DCCN087</td><td>Phạm Thị D</td><td>CNTT</td><td>13/05 11:42</td><td><span class="pill red">REJECTED</span></td><td><span style="color:var(--muted);font-size:11px">Quá hạn ĐK</span></td></tr>
+                <tr><td><input type="checkbox" /></td><td>B22DCCN203</td><td>Hoàng Văn E</td><td>CNTT</td><td>14/05 08:05</td><td><span class="pill">CANCELLED</span></td><td><span style="color:var(--muted);font-size:11px">SV tự hủy</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">Quản lý đăng ký SV (tab "Đăng ký" trong contest detail)<span class="code">GV-03 · GET/PATCH /api/contests/{id}/entries</span></div>
+  </div>
+
+  <!-- 6. Chấm bài -->
+  <div class="screen-wrap">
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">https://contest.ptit.edu.vn/judging/assignment/77</span>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand"><div class="logo">P</div><div><b>PTIT Contest</b><p>Cổng GV/BTC</p></div></div>
+          <nav>
+            <div class="item"><span class="ico">📊</span>Dashboard</div>
+            <div class="item"><span class="ico">📋</span>Cuộc thi của tôi</div>
+            <div class="item active"><span class="ico">📝</span>Chấm bài</div>
+          </nav>
+          <div class="footer"><div class="avatar">GA</div><div><b style="color:#fff">GV. Nguyễn A</b><br/><span style="color:#9ca3af;font-size:10px">JUDGE assignment</span></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><div class="crumbs">Chấm bài › Olympic 2026 / Vòng loại / Entry #87</div><h2>Chấm bài thi #87 (anonymized)</h2></div>
+            <div><button class="btn outline">← Bài trước</button> <button class="btn">Bài sau →</button></div>
+          </div>
+          <div class="banner warn">
+            <span>🔒</span><span><b>Blind judging</b> — Bạn không thấy danh tính SV. Anonymous code: <code>ENT-87-XKQ</code></span>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px">
+            <div class="card">
+              <div class="title">📄 Bài làm — Version 3 (mới nhất)</div>
+              <div style="background:#f9fafb;border:1px solid var(--border);border-radius:6px;padding:14px;font-family:monospace;font-size:12px;color:var(--text);min-height:300px;line-height:1.6">
+[Preview file solution_v3.pdf]<br/>
+<br/>
+Title: Solution for Round 1 Problem A<br/>
+Author: ENT-87-XKQ (anonymized)<br/>
+Submitted: 14/05 22:14<br/>
+Checksum: a3f9...<br/>
+<br/>
+=== Content preview ===<br/>
+def solve(n):<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;dp = [0] * (n + 1)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;dp[0] = 1<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;for i in range(1, n + 1):<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dp[i] = dp[i-1] + (i*2)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;return dp[n]<br/>
+...
+              </div>
+              <div style="margin-top:12px;display:flex;gap:8px">
+                <button class="btn outline sm">⬇️ Tải file gốc</button>
+                <button class="btn outline sm">📜 Xem version cũ (v1, v2)</button>
+              </div>
+            </div>
+            <div class="card">
+              <div class="title">⚖️ Rubric chấm</div>
+              <div class="form-row">
+                <label class="label">1. Đúng thuật toán (max 40, weight 40%)</label>
+                <input class="input" type="number" value="35" />
+                <textarea class="input" rows="2" placeholder="Nhận xét..." style="margin-top:6px;font-size:12px">Thuật toán đúng nhưng chưa tối ưu cho n lớn</textarea>
+              </div>
+              <div class="form-row">
+                <label class="label">2. Code style (max 20, weight 20%)</label>
+                <input class="input" type="number" value="18" />
+              </div>
+              <div class="form-row">
+                <label class="label">3. Hiệu năng (max 30, weight 30%)</label>
+                <input class="input" type="number" value="22" />
+              </div>
+              <div class="form-row">
+                <label class="label">4. Documentation (max 10, weight 10%)</label>
+                <input class="input" type="number" value="9" />
+              </div>
+              <hr class="div"/>
+              <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:14px"><b>Tổng điểm</b><b style="color:var(--red);font-size:18px">84.0 / 100</b></div>
+              <button class="btn" style="width:100%;justify-content:center">💾 Lưu điểm + Bài tiếp theo</button>
+              <p style="text-align:center;font-size:11px;color:var(--muted);margin-top:8px">Còn 12/45 bài chưa chấm trong assignment này</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">Chấm bài (blind judging)<span class="code">GV-05 · GET /api/me/judge-assignments + POST /assignments/{id}/scores</span></div>
+  </div>
+
+  <!-- 7. Tổng hợp kết quả + submit BCN -->
+  <div class="screen-wrap">
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">https://contest.ptit.edu.vn/contests/42/results</span>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand"><div class="logo">P</div><div><b>PTIT Contest</b><p>Cổng GV/BTC</p></div></div>
+          <nav>
+            <div class="item"><span class="ico">📊</span>Dashboard</div>
+            <div class="item active"><span class="ico">📋</span>Cuộc thi của tôi</div>
+          </nav>
+          <div class="footer"><div class="avatar">GA</div><div><b style="color:#fff">GV. Nguyễn A</b></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><div class="crumbs">Cuộc thi › Olympic 2026 › Kết quả chung cuộc</div><h2>Kết quả chung cuộc</h2></div>
+            <div style="display:flex;gap:8px">
+              <button class="btn outline">🔄 Tính lại từ rounds</button>
+              <button class="btn warn">📤 Gửi BCN duyệt (BCN_QĐ2)</button>
+            </div>
+          </div>
+          <div class="banner warn">
+            <span>⏱</span>
+            <span>Đã <b>compute</b> kết quả từ 3 rounds. Trạng thái BCN_QĐ2: <b>Chưa submit</b>. Vui lòng review + chỉnh giải thưởng → submit BCN duyệt → mới publish được.</span>
+          </div>
+          <div class="card" style="padding:0;overflow:hidden">
+            <table>
+              <thead>
+                <tr><th>Hạng</th><th>MSSV / Đội</th><th>Họ tên / Tên đội</th><th>V1</th><th>V2</th><th>V3</th><th>Tổng</th><th>Giải</th></tr>
+              </thead>
+              <tbody>
+                <tr style="background:#fff7ed">
+                  <td><b style="color:var(--red)">🥇 1</b></td><td>B22DCCN033</td><td>Lê Quang B</td><td>92</td><td>95</td><td>94</td><td><b>93.7</b></td>
+                  <td><input class="input" value="Giải Nhất" style="font-size:12px;padding:4px 8px" /></td>
+                </tr>
+                <tr style="background:#f9fafb">
+                  <td><b>🥈 2</b></td><td>B22DCCN087</td><td>Trần Thị C</td><td>90</td><td>91</td><td>92</td><td><b>91.0</b></td>
+                  <td><input class="input" value="Giải Nhì" style="font-size:12px;padding:4px 8px" /></td>
+                </tr>
+                <tr style="background:#fef3c7">
+                  <td><b>🥉 3</b></td><td>B22DCCN112</td><td>Phạm Văn D</td><td>87</td><td>89</td><td>90</td><td><b>88.7</b></td>
+                  <td><input class="input" value="Giải Ba" style="font-size:12px;padding:4px 8px" /></td>
+                </tr>
+                <tr><td>4</td><td>B22DCCN001</td><td>Nguyễn Văn A</td><td>85</td><td>87</td><td>85</td><td>85.7</td><td><input class="input" placeholder="—" style="font-size:12px;padding:4px 8px" /></td></tr>
+                <tr><td>5</td><td>B22DCCN045</td><td>Hoàng Thị E</td><td>83</td><td>85</td><td>84</td><td>84.0</td><td><input class="input" placeholder="—" style="font-size:12px;padding:4px 8px" /></td></tr>
+                <tr style="color:var(--muted)"><td colspan="8" style="text-align:center;padding:14px">... 119 entries khác</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">Tổng hợp kết quả + Submit BCN_QĐ2<span class="code">GV-06 · POST /results/compute + /submit-for-approval</span></div>
+  </div>
+
+  <!-- 8. Statistics -->
+  <div class="screen-wrap">
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">https://contest.ptit.edu.vn/stats</span>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand"><div class="logo">P</div><div><b>PTIT Contest</b><p>Cổng GV/BTC</p></div></div>
+          <nav>
+            <div class="item"><span class="ico">📊</span>Dashboard</div>
+            <div class="item"><span class="ico">📋</span>Cuộc thi của tôi</div>
+            <div class="item active"><span class="ico">📈</span>Thống kê</div>
+          </nav>
+          <div class="footer"><div class="avatar">GA</div><div><b style="color:#fff">GV. Nguyễn A</b></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><div class="crumbs">Thống kê</div><h2>Thống kê hoạt động</h2></div>
+            <div style="display:flex;gap:8px">
+              <select class="input" style="width:auto"><option>2026</option></select>
+              <button class="btn outline">📥 Export .xlsx</button>
+            </div>
+          </div>
+          <div class="stats">
+            <div class="stat"><div class="label">Tổng cuộc thi đã tổ chức</div><div class="num">8</div></div>
+            <div class="stat"><div class="label">Tổng SV tham gia</div><div class="num">347</div></div>
+            <div class="stat"><div class="label">Tỷ lệ hoàn thành TB</div><div class="num">78%</div></div>
+            <div class="stat"><div class="label">Đánh giá TB</div><div class="num">⭐ 4.4</div></div>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px">
+            <div class="card">
+              <div class="title">Số bài nộp / cuộc thi</div>
+              <div style="height:240px;background:linear-gradient(180deg,#f9fafb 0%,#fff 100%);border:1px dashed var(--border);border-radius:6px;display:grid;place-items:center;color:var(--muted);font-size:12px">
+                [Bar chart — số bài nộp theo từng cuộc thi]
+              </div>
+            </div>
+            <div class="card">
+              <div class="title">Phân bố trạng thái</div>
+              <div style="font-size:12px;line-height:2">
+                <div class="row"><span class="pill green">FINISHED</span><div class="spacer"></div><b>5 (62%)</b></div>
+                <div class="row"><span class="pill yellow">ONGOING</span><div class="spacer"></div><b>2 (25%)</b></div>
+                <div class="row"><span class="pill blue">DRAFT</span><div class="spacer"></div><b>1 (13%)</b></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">Thống kê & báo cáo<span class="code">GV-07 · GET /api/contests/{id}/stats + /report.xlsx</span></div>
+  </div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,468 @@
+%% =========================================================
+%% PTIT Contest Management System — ER Diagram (v02)
+%% Schema: ptit_contest (PostgreSQL) — based on sqlapp_v03
+%% Tổng cộng 43 bảng, chia 11 nhóm chức năng
+%% Thay đổi so với v01 (cover sqlapp_v02):
+%%   + 4 entity mới: CONTEST_REVIEWS, CERTIFICATE_TEMPLATES,
+%%                    ISSUED_CERTIFICATES, SYSTEM_CONFIGS
+%%   + 9 relationship mới (review, certificate, config)
+%%   + Group 8 đổi tên: + CERTIFICATE
+%%   + Group 10 đổi tên: + REVIEW
+%%   + Group 12 mới: SYSTEM CONFIG
+%% =========================================================
+
+erDiagram
+
+    %% ===== 1) RBAC / IDENTITY =====
+    ROLES ||--o{ USER_ROLES : "assigned to"
+    APP_USERS ||--o{ USER_ROLES : "has"
+    APP_USERS ||--o| STUDENTS : "profile"
+    APP_USERS ||--o| ORGANIZERS : "profile"
+    APP_USERS ||--o| JUDGES : "profile"
+    APP_USERS ||--o| DEPARTMENT_HEADS : "profile"
+
+    %% ===== 2) MASTER DATA =====
+    FACULTIES ||--o{ MAJORS : "contains"
+    FACULTIES ||--o{ ACADEMIC_CLASSES : "contains"
+    FACULTIES ||--o{ STUDENT_DIRECTORY : "manages"
+    FACULTIES ||--o{ ORGANIZERS : "from"
+    FACULTIES ||--o{ DEPARTMENT_HEADS : "headed by"
+    MAJORS ||--o{ ACADEMIC_CLASSES : "of"
+    MAJORS ||--o{ STUDENT_DIRECTORY : "of"
+    ACADEMIC_CLASSES ||--o{ STUDENT_DIRECTORY : "in"
+    STUDENT_DIRECTORY ||--|| STUDENTS : "linked to"
+
+    %% ===== 3) CONTEST CORE =====
+    APP_USERS ||--o{ CONTESTS : "creates / proposes"
+    FACULTIES ||--o{ CONTESTS : "hosts"
+    CONTESTS ||--o{ CONTEST_ORGANIZERS : "managed by"
+    ORGANIZERS ||--o{ CONTEST_ORGANIZERS : "manages"
+    CONTESTS ||--o{ CONTEST_ROUNDS : "has"
+    CONTESTS ||--o{ CONTEST_SESSIONS : "has"
+    CONTEST_ROUNDS ||--o{ CONTEST_SESSIONS : "schedules"
+    CONTESTS ||--o{ CONTEST_JUDGES : "judged by"
+    JUDGES ||--o{ CONTEST_JUDGES : "judges"
+
+    %% ===== 4) TEAM / ENTRY =====
+    CONTESTS ||--o{ TEAMS : "has"
+    STUDENTS ||--o{ TEAMS : "leads"
+    TEAMS ||--o{ TEAM_MEMBERS : "has"
+    STUDENTS ||--o{ TEAM_MEMBERS : "joins"
+    CONTESTS ||--o{ CONTEST_ENTRIES : "registers"
+    STUDENTS ||--o{ CONTEST_ENTRIES : "as individual"
+    TEAMS ||--o{ CONTEST_ENTRIES : "as team"
+    CONTEST_ENTRIES ||--o{ ENTRY_STATUS_LOGS : "history"
+    CONTEST_SESSIONS ||--o{ SESSION_ENTRIES : "assigns"
+    CONTEST_ENTRIES ||--o{ SESSION_ENTRIES : "assigned to"
+
+    %% ===== 5) SUBMISSION =====
+    CONTEST_ROUNDS ||--o{ SUBMISSIONS : "of"
+    CONTEST_ENTRIES ||--o{ SUBMISSIONS : "submits"
+    SUBMISSIONS ||--o{ SUBMISSION_VERSIONS : "versioned"
+    SUBMISSION_VERSIONS ||--o{ SUBMISSION_FILES : "attaches"
+
+    %% ===== 6) JUDGING / SCORE / RESULT / CERTIFICATE =====
+    CONTEST_ROUNDS ||--o{ ROUND_SCORE_CRITERIA : "rubric"
+    CONTEST_ROUNDS ||--o{ JUDGE_ASSIGNMENTS : "assigns"
+    CONTEST_ENTRIES ||--o{ JUDGE_ASSIGNMENTS : "judged"
+    JUDGES ||--o{ JUDGE_ASSIGNMENTS : "graded by"
+    SUBMISSIONS ||--o{ JUDGE_ASSIGNMENTS : "evaluated"
+    JUDGE_ASSIGNMENTS ||--o{ SCORES : "scored"
+    ROUND_SCORE_CRITERIA ||--o{ SCORES : "per criterion"
+    CONTEST_ROUNDS ||--o{ ROUND_RESULTS : "result"
+    CONTEST_ENTRIES ||--o{ ROUND_RESULTS : "of entry"
+    CONTESTS ||--o{ CONTEST_RESULTS : "final result"
+    CONTEST_ENTRIES ||--o{ CONTEST_RESULTS : "ranked"
+    CONTESTS ||--o{ RESULT_APPEALS : "appealed"
+    CONTEST_ENTRIES ||--o{ RESULT_APPEALS : "for entry"
+    STUDENTS ||--o{ RESULT_APPEALS : "submitted by"
+    %% NEW v02: certificate
+    CONTESTS ||--o{ CERTIFICATE_TEMPLATES : "has template"
+    APP_USERS ||--o{ CERTIFICATE_TEMPLATES : "approves / creates"
+    CONTEST_RESULTS ||--|| ISSUED_CERTIFICATES : "issued for"
+    CERTIFICATE_TEMPLATES ||--o{ ISSUED_CERTIFICATES : "uses"
+    APP_USERS ||--o{ ISSUED_CERTIFICATES : "issued / revoked by"
+
+    %% ===== 7) CHECK-IN / QR =====
+    CONTEST_SESSIONS ||--o{ CHECKIN_QR_TOKENS : "QR token"
+    CONTEST_SESSIONS ||--o{ CHECKINS : "check-in"
+    STUDENTS ||--o{ CHECKINS : "checks in"
+    CHECKIN_QR_TOKENS ||--o{ CHECKINS : "via QR"
+
+    %% ===== 8) NOTIFICATION / ARTICLE / Q&A / REVIEW =====
+    CONTESTS ||--o{ NOTIFICATIONS : "publishes"
+    NOTIFICATIONS ||--o{ NOTIFICATION_RECIPIENTS : "sent to"
+    APP_USERS ||--o{ NOTIFICATION_RECIPIENTS : "receives"
+    CONTESTS ||--o{ ARTICLES : "has"
+    CONTESTS ||--o{ QUESTIONS : "Q&A"
+    STUDENTS ||--o{ QUESTIONS : "asks"
+    QUESTIONS ||--o{ QUESTION_ANSWERS : "answered"
+    APP_USERS ||--o{ QUESTION_ANSWERS : "answers"
+    %% NEW v02: review
+    CONTESTS ||--o{ CONTEST_REVIEWS : "reviewed"
+    STUDENTS ||--o{ CONTEST_REVIEWS : "writes"
+    APP_USERS ||--o{ CONTEST_REVIEWS : "moderates"
+
+    %% ===== 9) WORKFLOW APPROVAL (BTC ↔ BCN) =====
+    CONTESTS ||--o{ WORKFLOW_APPROVALS : "needs approval"
+    APP_USERS ||--o{ WORKFLOW_APPROVALS : "submits / reviews"
+
+    %% ===== 10) SYSTEM CONFIG -- NEW v02 =====
+    APP_USERS ||--o{ SYSTEM_CONFIGS : "updates"
+
+    %% ===== 11) AUDIT LOG =====
+    APP_USERS ||--o{ AUDIT_LOGS : "audit trail"
+
+    %% =========================================================
+    %% ENTITY FIELDS (PK + FK + cột đặc trưng)
+    %% =========================================================
+
+    ROLES {
+        bigint role_id PK
+        enum role_code "ADMIN/ORGANIZER/JUDGE/HOD/STUDENT"
+        varchar role_name
+    }
+
+    APP_USERS {
+        bigint user_id PK
+        citext email UK
+        varchar password_hash
+        varchar full_name
+        enum status "ACTIVE/LOCKED/DELETED"
+        timestamptz last_login_at
+    }
+
+    USER_ROLES {
+        bigint user_id PK,FK
+        bigint role_id PK,FK
+        timestamptz assigned_at
+    }
+
+    FACULTIES {
+        bigint faculty_id PK
+        varchar faculty_code UK
+        varchar faculty_name
+    }
+
+    MAJORS {
+        bigint major_id PK
+        varchar major_code UK
+        varchar major_name
+        bigint faculty_id FK
+    }
+
+    ACADEMIC_CLASSES {
+        bigint class_id PK
+        varchar class_code UK
+        bigint faculty_id FK
+        bigint major_id FK
+    }
+
+    STUDENT_DIRECTORY {
+        bigint directory_id PK
+        varchar student_code UK "MSSV"
+        citext ptit_email UK
+        bigint faculty_id FK
+        bigint major_id FK
+        bigint class_id FK
+        boolean is_active
+    }
+
+    STUDENTS {
+        bigint student_id PK
+        bigint user_id FK,UK
+        bigint directory_id FK,UK
+        text bio
+    }
+
+    ORGANIZERS {
+        bigint organizer_id PK
+        bigint user_id FK,UK
+        bigint faculty_id FK
+        varchar organization_name
+    }
+
+    JUDGES {
+        bigint judge_id PK
+        bigint user_id FK,UK
+        varchar expertise
+    }
+
+    DEPARTMENT_HEADS {
+        bigint dept_head_id PK
+        bigint user_id FK,UK
+        bigint faculty_id FK
+        varchar title "Trưởng/Phó khoa"
+        boolean is_primary_approver
+    }
+
+    CONTESTS {
+        bigint contest_id PK
+        varchar slug UK
+        varchar title
+        enum delivery_mode "ONLINE/OFFLINE/HYBRID"
+        enum participation_mode "INDIVIDUAL/TEAM"
+        enum status "DRAFT/PROPOSED/REVISION_REQUESTED/PUBLISHED/REG_OPEN/REG_CLOSED/ONGOING/FINISHED/CANCELLED"
+        timestamptz start_at
+        timestamptz end_at
+        bigint proposed_by FK
+        bigint host_faculty_id FK
+        bigint created_by FK
+    }
+
+    CONTEST_ORGANIZERS {
+        bigint contest_id PK,FK
+        bigint organizer_id PK,FK
+    }
+
+    CONTEST_ROUNDS {
+        bigint round_id PK
+        bigint contest_id FK
+        int round_no
+        enum round_type "QUALIFIER/PRELIMINARY/SEMI_FINAL/FINAL/OTHER"
+        boolean is_elimination_round
+    }
+
+    CONTEST_SESSIONS {
+        bigint session_id PK
+        bigint contest_id FK
+        bigint round_id FK
+        enum session_type "ONLINE/OFFLINE"
+        text online_meeting_url
+    }
+
+    CONTEST_JUDGES {
+        bigint contest_id PK,FK
+        bigint judge_id PK,FK
+    }
+
+    TEAMS {
+        bigint team_id PK
+        bigint contest_id FK
+        varchar team_name
+        bigint leader_student_id FK
+    }
+
+    TEAM_MEMBERS {
+        bigint team_id PK,FK
+        bigint student_id PK,FK
+        boolean is_leader
+    }
+
+    CONTEST_ENTRIES {
+        bigint entry_id PK
+        bigint contest_id FK
+        enum entry_type "INDIVIDUAL/TEAM"
+        bigint student_id FK "if INDIVIDUAL"
+        bigint team_id FK "if TEAM"
+        enum registration_status "PENDING/APPROVED/REJECTED/CANCELLED"
+        enum participant_status "REGISTERED/CHECKED_IN/SUBMITTED/ELIMINATED/COMPLETED"
+        varchar anonymous_code UK
+    }
+
+    ENTRY_STATUS_LOGS {
+        bigint entry_status_log_id PK
+        bigint entry_id FK
+        enum old_status
+        enum new_status
+        bigint changed_by FK
+    }
+
+    SESSION_ENTRIES {
+        bigint session_id PK,FK
+        bigint entry_id PK,FK
+        varchar seat_no
+    }
+
+    SUBMISSIONS {
+        bigint submission_id PK
+        bigint round_id FK
+        bigint entry_id FK
+        enum status "DRAFT/SUBMITTED/LOCKED/LATE/CANCELLED"
+        boolean is_locked
+        int current_version_no
+    }
+
+    SUBMISSION_VERSIONS {
+        bigint submission_version_id PK
+        bigint submission_id FK
+        int version_no
+        text external_link
+        varchar checksum_value
+    }
+
+    SUBMISSION_FILES {
+        bigint submission_file_id PK
+        bigint submission_version_id FK
+        text file_url
+        varchar mime_type
+    }
+
+    ROUND_SCORE_CRITERIA {
+        bigint criterion_id PK
+        bigint round_id FK
+        varchar criterion_name
+        numeric max_score
+        numeric weight_percent
+    }
+
+    JUDGE_ASSIGNMENTS {
+        bigint assignment_id PK
+        bigint round_id FK
+        bigint entry_id FK
+        bigint submission_id FK
+        bigint judge_id FK
+        boolean can_view_identity "blind judging"
+    }
+
+    SCORES {
+        bigint score_id PK
+        bigint assignment_id FK
+        bigint criterion_id FK
+        numeric score_value
+        text comment_text
+    }
+
+    ROUND_RESULTS {
+        bigint round_result_id PK
+        bigint round_id FK
+        bigint entry_id FK
+        numeric total_score
+        int rank_no
+        boolean is_passed
+    }
+
+    CONTEST_RESULTS {
+        bigint contest_result_id PK
+        bigint contest_id FK
+        bigint entry_id FK
+        numeric final_score
+        int rank_no
+        varchar award_title
+        enum bcn_approval_status "PENDING/APPROVED/REJECTED/REVISION_REQUESTED"
+    }
+
+    RESULT_APPEALS {
+        bigint appeal_id PK
+        bigint contest_id FK
+        bigint round_id FK
+        bigint entry_id FK
+        bigint submitted_by_student_id FK
+        enum status "PENDING/IN_REVIEW/ACCEPTED/REJECTED/CLOSED"
+    }
+
+    CERTIFICATE_TEMPLATES {
+        bigint template_id PK
+        bigint contest_id FK
+        varchar template_name
+        text html_template
+        text background_image_url
+        bigint approved_by FK
+        timestamptz approved_at
+        boolean is_active "1 active per contest"
+    }
+
+    ISSUED_CERTIFICATES {
+        bigint cert_id PK
+        bigint contest_result_id FK,UK
+        bigint template_id FK
+        varchar qr_code UK "public verify"
+        text pdf_url
+        bigint issued_by FK
+        timestamptz issued_at
+        timestamptz revoked_at
+        bigint revoked_by FK
+    }
+
+    CHECKIN_QR_TOKENS {
+        bigint qr_token_id PK
+        bigint session_id FK
+        varchar token_value UK
+        timestamptz expires_at
+        boolean is_active
+    }
+
+    CHECKINS {
+        bigint checkin_id PK
+        bigint session_id FK
+        bigint student_id FK
+        bigint entry_id FK
+        bigint qr_token_id FK
+        enum method "QR/MANUAL/ONLINE"
+        enum status "SUCCESS/FAILED"
+    }
+
+    NOTIFICATIONS {
+        bigint notification_id PK
+        enum scope "SYSTEM/CONTEST"
+        bigint contest_id FK
+        varchar title
+        boolean is_global
+    }
+
+    NOTIFICATION_RECIPIENTS {
+        bigint notification_id PK,FK
+        bigint user_id PK,FK
+        boolean is_read
+    }
+
+    ARTICLES {
+        bigint article_id PK
+        bigint contest_id FK
+        varchar title
+        boolean is_public
+    }
+
+    QUESTIONS {
+        bigint question_id PK
+        bigint contest_id FK
+        bigint asked_by_student_id FK
+        enum status "OPEN/ANSWERED/CLOSED"
+    }
+
+    QUESTION_ANSWERS {
+        bigint answer_id PK
+        bigint question_id FK
+        bigint answered_by FK
+    }
+
+    CONTEST_REVIEWS {
+        bigint review_id PK
+        bigint contest_id FK
+        bigint student_id FK
+        smallint rating "1-5 stars"
+        text comment_text
+        boolean is_visible "AD-06 moderation"
+        bigint moderated_by FK
+    }
+
+    WORKFLOW_APPROVALS {
+        bigint approval_id PK
+        enum target_type "CONTEST_PROPOSAL/CONTEST_RESULT"
+        bigint contest_id FK
+        enum step "BCN_QD1/BCN_QD2"
+        enum status "PENDING/APPROVED/REJECTED/REVISION_REQUESTED"
+        int revision_round
+        bigint submitted_by FK "BTC"
+        bigint reviewed_by FK "BCN"
+        jsonb snapshot_json
+    }
+
+    SYSTEM_CONFIGS {
+        varchar config_key PK
+        text config_value
+        enum value_type "INT/STRING/BOOL/JSON"
+        text description
+        boolean is_sensitive "mask in UI"
+        bigint updated_by FK
+    }
+
+    AUDIT_LOGS {
+        bigint log_id PK
+        bigint user_id FK
+        varchar action_type
+        varchar entity_name
+        varchar entity_id
+        inet ip_address
+        jsonb details_json
+    }

@@ -1,0 +1,224 @@
+import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
+import '../../core/auth/auth_provider.dart';
+import '../../core/theme.dart';
+import '../../core/widgets/m_card.dart';
+import '../../core/widgets/m_top_bar.dart';
+import '../../core/widgets/pill.dart';
+
+final notificationsProvider =
+    FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  final api = ref.watch(apiClientProvider);
+  final res = await api.dio.get('/me/notifications', queryParameters: {'limit': 50});
+  return res.data as Map<String, dynamic>;
+});
+
+/// Reusable badge để hiện ở top bar các màn khác.
+class NotificationBadge extends ConsumerWidget {
+  final VoidCallback onTap;
+  const NotificationBadge({super.key, required this.onTap});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncData = ref.watch(notificationsProvider);
+    final unread = asyncData.maybeWhen(
+      data: (d) => d['unread_count'] as int? ?? 0,
+      orElse: () => 0,
+    );
+    return Stack(clipBehavior: Clip.none, children: [
+      IconButton(
+        onPressed: onTap,
+        icon: const Icon(Icons.notifications_outlined, color: textMuted),
+        visualDensity: VisualDensity.compact,
+      ),
+      if (unread > 0)
+        Positioned(
+          right: 4,
+          top: 4,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+            decoration: BoxDecoration(
+                color: ptitRed, borderRadius: BorderRadius.circular(8)),
+            constraints: const BoxConstraints(minWidth: 16, minHeight: 14),
+            child: Text(
+              unread > 99 ? '99+' : '$unread',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700),
+            ),
+          ),
+        ),
+    ]);
+  }
+}
+
+class NotificationsScreen extends ConsumerWidget {
+  const NotificationsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncData = ref.watch(notificationsProvider);
+    final canPop = Navigator.canPop(context);
+    return Scaffold(
+      appBar: MTopBar(
+        title: 'Thông báo',
+        leading: canPop
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, color: textMuted),
+                onPressed: () => Navigator.maybePop(context),
+              )
+            : null,
+        actions: [
+          asyncData.when(
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+            data: (data) {
+              final unread = data['unread_count'] as int? ?? 0;
+              if (unread == 0) return const SizedBox.shrink();
+              return TextButton(
+                onPressed: () => _markAllRead(context, ref),
+                child: const Text('Đọc tất',
+                    style: TextStyle(color: ptitRed, fontSize: 12)),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: asyncData.when(
+        loading: () =>
+            const Center(child: CircularProgressIndicator(color: ptitRed)),
+        error: (e, _) => Center(
+            child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text('Lỗi: ${_msg(e)}',
+                    style: const TextStyle(color: ptitRed),
+                    textAlign: TextAlign.center))),
+        data: (data) {
+          final items = (data['items'] as List).cast<Map<String, dynamic>>();
+          if (items.isEmpty) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(40),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.notifications_off_outlined,
+                      size: 56, color: textMuted),
+                  SizedBox(height: 12),
+                  Text('Chưa có thông báo nào',
+                      style: TextStyle(color: textMuted, fontSize: 13)),
+                ]),
+              ),
+            );
+          }
+          return RefreshIndicator(
+            color: ptitRed,
+            onRefresh: () async => ref.invalidate(notificationsProvider),
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: items.length,
+              itemBuilder: (_, i) =>
+                  _NotificationCard(data: items[i], onTap: () => _markRead(context, ref, items[i])),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _markRead(
+      BuildContext context, WidgetRef ref, Map<String, dynamic> notif) async {
+    if (notif['is_read'] == true) return;
+    try {
+      final api = ref.read(apiClientProvider);
+      await api.dio.patch('/me/notifications/${notif['notification_id']}/read');
+      ref.invalidate(notificationsProvider);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Lỗi: ${_msg(e)}')));
+      }
+    }
+  }
+
+  Future<void> _markAllRead(BuildContext context, WidgetRef ref) async {
+    try {
+      final api = ref.read(apiClientProvider);
+      final res = await api.dio.post('/me/notifications/mark-all-read');
+      ref.invalidate(notificationsProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                'Đã đọc ${res.data['marked_read'] ?? 0} thông báo')));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Lỗi: ${_msg(e)}')));
+      }
+    }
+  }
+}
+
+class _NotificationCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final VoidCallback onTap;
+  const _NotificationCard({required this.data, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final fmt = DateFormat('dd/MM HH:mm');
+    final created = DateTime.parse(data['created_at']);
+    final isRead = data['is_read'] == true;
+    final scope = data['scope'] as String?;
+
+    return MCard(
+      onTap: onTap,
+      backgroundColor: isRead ? null : ptitRedSoft.withValues(alpha: 0.4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+            if (!isRead)
+              Container(
+                width: 8,
+                height: 8,
+                margin: const EdgeInsets.only(right: 8),
+                decoration: const BoxDecoration(
+                    color: ptitRed, shape: BoxShape.circle),
+              ),
+            Expanded(
+              child: Text(data['title'] ?? '',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: isRead ? FontWeight.w500 : FontWeight.w700,
+                      color: textPrimary)),
+            ),
+            if (scope != null) ...[
+              const SizedBox(width: 6),
+              Pill(
+                label: scope,
+                color: textMuted,
+                bg: const Color(0xFFF3F4F6),
+              ),
+            ],
+          ]),
+          const SizedBox(height: 4),
+          Text(data['message'] ?? '',
+              style: const TextStyle(fontSize: 12, color: textPrimary, height: 1.4)),
+          const SizedBox(height: 6),
+          Text(fmt.format(created),
+              style: const TextStyle(fontSize: 10, color: textMuted)),
+        ],
+      ),
+    );
+  }
+}
+
+String _msg(Object e) => e is DioException
+    ? (e.response?.data is Map ? '${e.response?.data['detail']}' : e.message ?? '')
+    : '$e';

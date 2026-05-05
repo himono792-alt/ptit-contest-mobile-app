@@ -1,0 +1,78 @@
+# PTIT Contest — Full stack docker-compose
+#
+# Cách dùng:
+#   cd 09-implementation
+#   docker compose up -d        # build + start tất cả service
+#   docker compose logs -f      # xem log
+#   docker compose down         # stop
+#   docker compose down -v      # stop + xóa data postgres
+#
+# Sau khi up:
+#   - Backend API:  http://localhost:8000/api/docs
+#   - Frontend web: http://localhost:8080
+#   - Postgres:     localhost:5432 (user/pass: ptit_contest / dev_password)
+#
+# LAN access (iPhone trên cùng WiFi):
+#   - Lấy IP máy: ipconfig | findstr IPv4
+#   - Build lại frontend: docker compose build --build-arg API_BASE=http://<IP>:8000 frontend
+#   - iPhone vào: http://<IP>:8080
+
+services:
+  # ============== PostgreSQL 16 ==============
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ptit_contest
+      POSTGRES_PASSWORD: dev_password
+      POSTGRES_DB: ptit_contest_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ../08-database/2026-05-04_sqlapp_v03.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ptit_contest -d ptit_contest_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============== Backend FastAPI ==============
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://ptit_contest:dev_password@postgres:5432/ptit_contest_db
+      JWT_SECRET_KEY: change-this-to-random-32-byte-string-for-prod
+      CORS_ORIGINS: http://localhost:8080,http://localhost:3000
+      APP_ENV: production
+      DEBUG: "false"
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+
+  # ============== Frontend Flutter web (nginx) ==============
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Sửa khi deploy: tới URL backend public
+        API_BASE: http://localhost:8000
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  pg_data:

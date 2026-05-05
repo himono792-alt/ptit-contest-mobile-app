@@ -1,0 +1,146 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PTIT Contest â€” Admin (Web)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="design-canvas-src/tokens.css">
+<link rel="stylesheet" href="design-canvas-src/web-shell.css">
+<style>
+  /* Admin-specific */
+  .health-card {
+    display: flex; flex-direction: column; gap: 6px;
+    padding: 14px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 10px;
+    border-top: 3px solid var(--ok);
+  }
+  .health-card.warn { border-top-color: var(--warn); }
+  .health-card.err { border-top-color: var(--err); }
+  .health-card .name { font-size: 11px; color: var(--fg-muted); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; }
+  .health-card .val { font-family: var(--font-display); font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+  .health-card .meta { font-size: 11px; color: var(--fg-muted); font-family: var(--font-mono); }
+  .dot-status { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .dot-status.ok { background: var(--ok); animation: pulse 2s infinite; }
+  .dot-status.warn { background: var(--warn); }
+  .dot-status.err { background: var(--err); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  /* Master tree */
+  .tree-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .tree-row:hover { background: var(--bg-sunken); }
+  .tree-row.l1 { font-weight: 600; }
+  .tree-row.l2 { padding-left: 30px; color: var(--fg-muted); }
+  .tree-row.l3 { padding-left: 50px; color: var(--fg-faint); font-size: 12px; }
+  .tree-row .badge {
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--fg-muted); background: var(--bg-sunken);
+    padding: 1px 6px; border-radius: 4px;
+    margin-left: auto;
+  }
+  .tree-row.l1 .badge { background: var(--accent-soft); color: var(--brand-700); }
+
+  /* Config row */
+  .config-row {
+    display: grid; grid-template-columns: 240px 1fr 100px 80px;
+    gap: 14px; align-items: center;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .config-row:last-child { border-bottom: 0; }
+  .config-row .key {
+    font-family: var(--font-mono); font-size: 12px;
+    color: var(--accent); font-weight: 600;
+  }
+  .config-row .desc { font-size: 11.5px; color: var(--fg-muted); margin-top: 2px; }
+  .config-row .v {
+    font-family: var(--font-mono); font-size: 12px;
+    background: var(--bg-sunken); padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    text-align: right;
+  }
+
+  /* RBAC matrix */
+  .rbac-table th.role-h, .rbac-table td.role-c { text-align: center; }
+  .rbac-table .check { color: var(--ok); font-weight: 700; }
+  .rbac-table .x { color: var(--ink-300); }
+  .rbac-table .partial { color: var(--warn); }
+
+  /* Audit log */
+  .audit-log {
+    background: var(--ink-950);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-family: var(--font-mono); font-size: 11.5px;
+    line-height: 1.7;
+    color: oklch(0.880 0.008 60);
+    max-height: 480px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .audit-log .row {
+    display: grid;
+    grid-template-columns: 110px 60px 130px 1fr;
+    gap: 12px; align-items: baseline;
+    padding: 2px 0;
+  }
+  .audit-log .ts { color: oklch(0.480 0.012 60); }
+  .audit-log .lvl { font-weight: 700; }
+  .audit-log .lvl.ok { color: oklch(0.770 0.150 150); }
+  .audit-log .lvl.info { color: oklch(0.760 0.130 250); }
+  .audit-log .lvl.warn { color: oklch(0.800 0.150 70); }
+  .audit-log .lvl.err { color: oklch(0.700 0.180 25); }
+  .audit-log .who { color: oklch(0.770 0.130 290); }
+  .audit-log .msg { color: oklch(0.880 0.008 60); }
+  .audit-log .arg { color: oklch(0.770 0.130 70); }
+  .audit-log .id { color: oklch(0.560 0.012 60); }
+
+  /* Form 2-col */
+  .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
+
+</style>
+</head>
+
+<body>
+
+<div class="doc-mast">
+  <div class="row">
+    <div class="logo">P</div>
+    <div>
+      <h1>PTIT Contest â€” Admin Console</h1>
+      <div class="sub">Quáº£n trá»‹ há»‡ thá»‘ng Â· Web app Â· 7 mÃ n chÃ­nh</div>
+    </div>
+  </div>
+  <div class="meta">
+    <span class="pill">ADMIN</span>
+    <span class="pill gray">7 screens</span>
+    <span class="pill outline">v01.1</span>
+    <span class="pill outline">1280 Ã— 720</span>
+  </div>
+</div>
+
+<div class="stack" id="stack"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script src="design-canvas-src/web-common.js"></script>
+<script type="text/babel" src="design-canvas-src/gv-screens.jsx"></script>
+<script type="text/babel" src="design-canvas-src/admin-screens.jsx"></script>
+<script type="text/babel">
+  const root = ReactDOM.createRoot(document.getElementById('stack'));
+  root.render(<window.AdminApp />);
+</script>
+
+</body>
+</html>

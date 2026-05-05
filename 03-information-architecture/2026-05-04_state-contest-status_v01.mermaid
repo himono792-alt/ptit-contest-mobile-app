@@ -1,0 +1,72 @@
+%% =========================================================
+%% State Diagram — Contest Status Lifecycle
+%% Phiên bản: v01 (2026-05-04)
+%% Schema reference: ptit_contest v03 — contest_status_enum (9 trạng thái)
+%%
+%% Bao gồm full lifecycle: từ lúc BTC tạo đến khi FINISHED/CANCELLED.
+%% Highlight các transition cần BCN approval (BCN_QD1, BCN_QD2).
+%% =========================================================
+
+stateDiagram-v2
+    direction TB
+
+    [*] --> DRAFT : BTC tạo cuộc thi<br/>(POST /api/contests)
+
+    DRAFT --> PROPOSED : BTC submit cho BCN duyệt<br/>(POST /submit-for-approval)<br/>+ tạo workflow_approvals<br/>(target=CONTEST_PROPOSAL, BCN_QD1)
+
+    PROPOSED --> PUBLISHED : BCN APPROVE (BCN_QD1)<br/>(POST /approvals/{id}/decide)
+
+    PROPOSED --> REVISION_REQUESTED : BCN request revision<br/>+ tăng revision_round
+
+    REVISION_REQUESTED --> PROPOSED : BTC sửa + re-submit<br/>(workflow_approvals record MỚI)
+
+    PROPOSED --> DRAFT : BCN REJECT<br/>(BTC quyết định: sửa hẳn hoặc hủy)
+
+    PUBLISHED --> REG_OPEN : Đến<br/>registration_open_at<br/>(scheduled job/auto)
+
+    REG_OPEN --> REG_CLOSED : Đến registration_close_at<br/>HOẶC max_entries reached
+
+    REG_CLOSED --> ONGOING : Đến contest.start_at
+
+    ONGOING --> FINISHED : Đến contest.end_at<br/>+ BCN APPROVE kết quả (BCN_QD2)<br/>+ BTC publish results
+
+    DRAFT --> CANCELLED : Admin/BTC hủy<br/>(chỉ DRAFT cho phép DELETE)
+
+    PROPOSED --> CANCELLED : Admin hủy<br/>(emergency)
+
+    PUBLISHED --> CANCELLED : Admin hủy<br/>(trước khi REG_OPEN)
+
+    REG_OPEN --> CANCELLED : Admin hủy<br/>(refund đăng ký)
+
+    REG_CLOSED --> CANCELLED : Admin hủy<br/>(refund đăng ký)
+
+    ONGOING --> CANCELLED : Admin hủy<br/>(rất hiếm — vd: dịch bệnh)
+
+    CANCELLED --> [*]
+    FINISHED --> [*]
+
+    note right of PROPOSED
+        Pending BCN_QD1 review.
+        Một contest có thể loop qua đây
+        nhiều lần (revision_round = 1, 2, 3...)
+    end note
+
+    note right of REVISION_REQUESTED
+        BTC nhận notify, sửa nội dung,
+        rồi submit lại → tạo workflow_approvals
+        record MỚI (không update record cũ)
+    end note
+
+    note right of FINISHED
+        Pre-condition để vào FINISHED:
+        1. now() > end_at
+        2. workflow_approvals(BCN_QD2) APPROVED
+        3. contest_results.published_at IS NOT NULL
+        Thiếu 1 trong 3 → vẫn ở ONGOING/REG_CLOSED
+    end note
+
+    note left of DRAFT
+        BTC có toàn quyền edit.
+        Có thể DELETE nếu chưa có
+        contest_entries.
+    end note

@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>PTIT Contest — Mockup Admin (Web) — v01</title>
+<style>
+  :root {
+    --red: #C8102E; --red-soft: #FEE5E9; --bg: #f3f4f6; --white: #ffffff;
+    --border: #e5e7eb; --text: #111827; --muted: #6b7280;
+    --success: #16a34a; --warning: #d97706; --info: #2563eb;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    padding: 24px 16px 80px; -webkit-font-smoothing: antialiased; font-size: 13px;
+  }
+  .doc-header {
+    max-width: 1340px; margin: 0 auto 32px;
+    background: var(--white); border: 1px solid var(--border);
+    padding: 20px 24px; border-radius: 12px;
+  }
+  .doc-header h1 { font-size: 20px; margin-bottom: 6px; }
+  .doc-header p { color: var(--muted); font-size: 13px; line-height: 1.6; }
+  .doc-header .meta { display: inline-flex; gap: 8px; margin-top: 12px; font-size: 12px; }
+  .badge { background: var(--red); color: #fff; padding: 4px 10px; border-radius: 6px; font-weight: 600; }
+  .badge.gray { background: #6b7280; }
+  .badge.outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+
+  .stack { max-width: 1340px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+  .screen-wrap { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+  .screen-label { font-size: 13px; font-weight: 600; text-align: center; max-width: 1280px; }
+  .screen-label .code { color: var(--muted); font-weight: 500; font-size: 11px; display: block; margin-top: 2px; }
+
+  .browser {
+    width: 1280px; min-height: 720px;
+    background: var(--white); border: 1px solid var(--border); border-radius: 8px;
+    overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    display: flex; flex-direction: column;
+  }
+  .browser-bar { display: flex; align-items: center; gap: 6px; padding: 10px 14px; background: #e5e7eb; border-bottom: 1px solid #d1d5db; }
+  .browser-bar .dot { width: 11px; height: 11px; border-radius: 50%; background: #9ca3af; }
+  .browser-bar .dot:nth-child(1) { background: #ef4444; }
+  .browser-bar .dot:nth-child(2) { background: #f59e0b; }
+  .browser-bar .dot:nth-child(3) { background: #10b981; }
+  .browser-bar .url { flex: 1; background: var(--white); border-radius: 6px; padding: 6px 12px; font-size: 12px; color: var(--muted); margin-left: 14px; font-family: monospace; }
+  .layout { display: flex; flex: 1; min-height: 680px; }
+
+  .sidebar { width: 240px; background: #1f2937; color: #d1d5db; padding: 18px 0; display: flex; flex-direction: column; }
+  .sidebar .brand { display: flex; align-items: center; gap: 10px; padding: 0 18px 18px; border-bottom: 1px solid #374151; }
+  .sidebar .brand .logo { width: 32px; height: 32px; background: var(--red); border-radius: 7px; display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 14px; }
+  .sidebar .brand b { font-size: 13px; color: #fff; }
+  .sidebar .brand p { font-size: 10px; color: #9ca3af; margin-top: 2px; }
+  .sidebar nav { padding: 10px 0; flex: 1; }
+  .sidebar nav .item { display: flex; align-items: center; gap: 10px; padding: 9px 18px; cursor: pointer; font-size: 13px; border-left: 3px solid transparent; }
+  .sidebar nav .item:hover { background: #374151; }
+  .sidebar nav .item.active { background: rgba(200,16,46,0.15); color: #fff; border-left-color: var(--red); }
+  .sidebar nav .item .ico { width: 18px; text-align: center; font-size: 13px; }
+  .sidebar nav .section { font-size: 10px; text-transform: uppercase; color: #6b7280; padding: 12px 18px 6px; letter-spacing: .5px; }
+  .sidebar .footer { padding: 14px 18px; border-top: 1px solid #374151; display: flex; align-items: center; gap: 10px; font-size: 12px; }
+  .sidebar .footer .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--red-soft); color: var(--red); display: grid; place-items: center; font-weight: 700; }
+
+  .main { flex: 1; padding: 24px 32px; overflow-y: auto; background: #fafafa; }
+  .page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .page-head h2 { font-size: 20px; }
+  .page-head .crumbs { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--red); color: #fff; }
+  .btn.outline { background: var(--white); color: var(--text); border: 1px solid var(--border); }
+  .btn.success { background: var(--success); }
+  .btn.warn { background: var(--warning); }
+  .btn.gray { background: #6b7280; }
+  .btn.danger { background: #fee2e2; color: #dc2626; }
+  .btn.sm { padding: 5px 10px; font-size: 12px; }
+
+  .card { background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 18px; }
+  .card .title { font-weight: 700; font-size: 14px; margin-bottom: 12px; }
+
+  .pill { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 11px; font-weight: 500; background: #f3f4f6; color: var(--muted); }
+  .pill.green { background: #dcfce7; color: var(--success); }
+  .pill.yellow { background: #fef3c7; color: var(--warning); }
+  .pill.red { background: var(--red-soft); color: var(--red); }
+  .pill.blue { background: #dbeafe; color: #1d4ed8; }
+  .pill.purple { background: #ede9fe; color: #6d28d9; }
+  .pill.gray { background: #e5e7eb; color: var(--muted); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 10px 12px; background: #f9fafb; font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 600; border-bottom: 1px solid var(--border); }
+  td { padding: 12px; border-bottom: 1px solid var(--border); }
+  tr:hover td { background: #f9fafb; }
+
+  .input { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-family: inherit; background: var(--white); }
+  .label { font-size: 12px; color: var(--muted); margin-bottom: 5px; display: block; font-weight: 500; }
+  .form-row { margin-bottom: 14px; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+  .stat { background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .stat .label { font-size: 11px; color: var(--muted); text-transform: uppercase; }
+  .stat .num { font-size: 24px; font-weight: 700; margin-top: 4px; }
+  .stat .delta { font-size: 11px; color: var(--success); margin-top: 4px; }
+
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .tab { padding: 10px 16px; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tab.active { color: var(--red); border-bottom-color: var(--red); font-weight: 600; }
+
+  .banner { border-left: 4px solid var(--info); background: #eff6ff; padding: 12px 16px; border-radius: 6px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; font-size: 13px; }
+  .banner.warn { border-color: var(--warning); background: #fef3c7; }
+  .banner.green { border-color: var(--success); background: #dcfce7; }
+  .banner.red { border-color: var(--red); background: var(--red-soft); }
+
+  hr.div { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+</style>
+</head>
+<body>
+
+<div class="doc-header">
+  <h1>⚙️ Mockup Admin — Web (v01)</h1>
+  <p>Desktop sidebar layout 1280×720. 7 màn hình cover 6 chức năng (AD-01 đến AD-06). Quản trị toàn hệ thống: user, khoa/ngành, config, audit, thống kê.</p>
+  <div class="meta">
+    <span class="badge">Admin</span>
+    <span class="badge gray">6 chức năng</span>
+    <span class="badge outline">role_code = ADMIN</span>
+  </div>
+</div>
+
+<div class="stack">
+
+  <!-- 1. Dashboard -->
+  <div class="screen-wrap">
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">https://contest.ptit.edu.vn/admin/dashboard</span>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand"><div class="logo">P</div><div><b>PTIT Contest</b><p>Cổng Admin</p></div></div>
+          <nav>
+            <div class="item active"><span class="ico">📊</span>Dashboard</div>
+            <div class="section">Quản lý người dùng</div>
+            <div class="item"><span class="ico">👥</span>Tài khoản</div>
+            <div class="item"><span class="ico">🎓</span>Sinh viên (directory)</div>
+            <div class="section">Master data</div>
+            <div class="item"><span class="ico">🏛</span>Khoa / Ngành / Lớp</div>
+            <div class="section">Hệ thống</div>
+            <div class="item"><span class="ico">⚙️</span>Cấu hình</div>
+            <div class="item"><span class="ico">💾</span>Backup / Restore</div>
+            <div class="item"><span class="ico">📋</span>Audit log</div>
+            <div class="item"><span class="ico">🔍</span>Kiểm duyệt review</div>
+            <div class="section">Báo cáo</div>
+            <div class="item"><span class="ico">📈</span>Thống kê toàn hệ thống</div>
+          </nav>
+          <div class="footer"><div class="avatar">AD</div><div><b style="color:#fff">Admin</b><br/><span style="color:#9ca3af;font-size:10px">superuser</span></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><div class="crumbs">Trang chủ</div><h2>Admin Dashboard</h2></div>
+            <div style="font-size:12px;color:var(--muted)">📅 04/05/2026 · Last backup: 03/05 02:00</div>
+          </div>
+          <div class="stats">
+            <div class="stat"><div class="label">Tổng tài khoản</div><div class="num">1,847</div><div class="delta">+34 tháng này</div></div>
+            <div class="stat"><div class="label">SV active</div><div class="num">1,720</div></div>
+            <div class="stat"><div class="label">GV / BCN / Admin</div><div class="num">127</div></div>
+            <div class="stat"><div class="label">Cuộc thi đang chạy</div><div class="num">12</div></div>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px">
+            <div class="card">
+              <div class="title">📊 Hoạt động hệ thống — 7 ngày qua</div>
+              <div style="height:200px;background:linear-gradient(180deg,#f9fafb 0%,#fff 100%);border:1px dashed var(--border);border-radius:6px;display:grid;place-items:center;color:var(--muted);font-size:12px">
+                [Line chart — login, register, contest_create, submission per day]
+              </div>
+            </div>
+            <div class="card">
+              <div class="title">⚠️ Cảnh báo</div>
+              <ul style="list-style:none;font-size:12px;line-height:2">
+                <li>🔴 <b>3 đăng nhập failed</b> liên tiếp từ IP lạ</li>
+                <li>🟡 <b>2 review</b> chờ kiểm duyệt</li>
+                <li>🟡 Database disk usage <b>72%</b></li>
+                <li>🟢 Tất cả service running</li>
+              </ul>
+            </div>
+          </div>
+          <div class="card">
+            <div class="title">📋 Audit log gần đây</div>
+            <table>
+              <thead><tr><th>Thời gian</th><th>User</th><th>Action</th><th>Entity</th><th>IP</th></tr></thead>
+              <tbody>
+                <tr><td>04/05 14:32</td><td>BCN. Trần B</td><td><span class="pill green">approval.decide</span></td><td>workflow_approvals#7 (APPROVE)</td><td>192.168.1.45</td></tr>
+                <tr><td>04/05 14:28</td><td>GV. Nguyễn A</td><td><span class="pill blue">contest.submit</span></td><td>contests#42</td><td>192.168.1.32</td></tr>
+                <tr><td>04/05 14:15</td><td>SV. B22DCCN033</td><td><span class="pill blue">submission.upload</span></td><td>submissions#187</td><td>113.176.4.21</td></tr>
+                <tr><td>04/05 13:50</td><td>Admin</td><td><span class="pill red">user.lock</span></td><td>app_users#892 (spam)</td><td>192.168.1.1</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">Admin Dashboard<span class="code">AD-01 (sau login) + AD-05 summary</span></div>
+  </div>
+
+  <!-- 2. User management -->
+  <div class="screen-wrap">
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">https://contest.ptit.edu.vn/admin/users</span>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand"><div class="logo">P</div><div><b>PTIT Contest</b><p>Cổng Admin</p></div></div>
+          <nav>
+            <div class="item"><span class="ico">📊</span>Dashboard</div>
+            <div class="section">Quản lý người dùng</div>
+            <div class="item active"><span class="ico">👥</span>Tài khoản</div>
+            <div class="item"><span class="ico">🎓</span>Sinh viên (directory)</div>
+          </nav>
+          <div class="footer"><div class="avatar">AD</div><div><b style="color:#fff">Admin</b></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><div class="crumbs">Người dùng › Tài khoản</div><h2>Quản lý tài khoản (1,847)</h2></div>
+            <div style="display:flex;gap:8px">
+              <button class="btn outline">📥 Import CSV</button>
+              <button class="btn">➕ Tạo tài khoản</button>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:16px">
+            <input class="input" placeholder="🔎 Tìm theo tên/email/MSSV..." style="flex:1;max-width:320px" />
+            <select class="input" style="width:auto"><option>Tất cả role</option><option>STUDENT (1,720)</option><option>ORGANIZER (98)</option><option>JUDGE (15)</option><option>HOD (12)</option><option>ADMIN (2)</option></select>
+            <select class="input" style="width:auto"><option>Tất cả status</option><option>ACTIVE</option><option>LOCKED</option><option>DELETED</option></select>
+          </div>
+          <div class="card" style="padding:0;overflow:hidden">
+            <table>
+              <thead><tr><th><input type="checkbox" /></th><th>ID</th><th>Họ tên</th><th>Email</th><th>Role</th><th>Khoa</th><th>Status</th><th>Last login</th><th></th></tr></thead>
+              <tbody>
+                <tr><td><input type="checkbox" /></td><td>1</td><td>Admin System</td><td>admin@ptit.edu.vn</td><td><span class="pill red">ADMIN</span></td><td>—</td><td><span class="pill green">ACTIVE</span></td><td>04/05 14:00</td><td><button class="btn sm outline">Sửa</button></td></tr>
+                <tr><td><input type="checkbox" /></td><td>5</td><td>Trần Văn B</td><td>tranb@ptit.edu.vn</td><td><span class="pill purple">HOD</span></td><td>CNTT</td><td><span class="pill green">ACTIVE</span></td><td>04/05 13:42</td><td><button class="btn sm outline">Sửa</button></td></tr>
+                <tr><td><input type="checkbox" /></td><td>12</td><td>Nguyễn Văn A</td><td>nguyena@ptit.edu.vn</td><td><span class="pill blue">ORGANIZER</span> <span class="pill yellow">JUDGE</span></td><td>CNTT</td><td><span class="pill green">ACTIVE</span></td><td>04/05 14:28</td><td><button class="btn sm outline">Sửa</button></td></tr>
+                <tr><td><input type="checkbox" /></td><td>87</td><td>Lê Quang B</td><td>b22dccn033@ptit.edu.vn</td><td><span class="pill">STUDENT</span></td><td>CNTT</td><td><span class="pill green">ACTIVE</span></td><td>04/05 09:15</td><td><button class="btn sm outline">Sửa</button></td></tr>
+                <tr style="background:#fef2f2"><td><input type="checkbox" /></td><td>892</td><td>Spam User</td><td>spam@gmail.com</td><td><span class="pill">STUDENT</span></td><td>—</td><td><span class="pill red">LOCKED</span></td><td>03/05 22:14</td><td><button class="btn sm outline">Unlock</button></td></tr>
+                <tr><td><input type="checkbox" /></td><td>1234</td><td>Phạm Thị D</td><td>b22dccn087@ptit.edu.vn</td><td><span class="pill">STUDENT</span></td><td>CNTT</td><td><span class="pill green">ACTIVE</span></td><td>04/05 12:30</td><td><button class="btn sm outline">Sửa</button></td></tr>
+                <tr style="color:var(--muted)"><td colspan="9" style="text-align:center;padding:14px">... 1,841 tài khoản khác</td></tr>
+              </tbody>
+            </table>
+            <div style="padding:12px 18px;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);border-top:1px solid var(--border)">
+              <span>Hiển thị 1-50 trong 1,847</span>
+              <div style="display:flex;gap:4px">
+                <button class="btn sm outline">‹</button>
+                <button class="btn sm">1</button>
+                <button class="btn sm outline">2</button>
+                <button class="btn sm outline">3</button>
+                <button class="btn sm outline">›</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">Quản lý tài khoản<span class="code">AD-02 · GET/POST/PATCH /api/admin/users</span></div>
+  </div>
+
+  <!-- 3. Tạo tài khoản -->
+  <div class="screen-wrap">
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">https://contest.ptit.edu.vn/admin/users/new</span>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand"><div class="logo">P</div><div><b>PTIT Contest</b><p>Cổng Admin</p></div></div>
+          <nav>
+            <div class="item"><span class="ico">📊</span>Dashboard</div>
+            <div class="item active"><span class="ico">👥</span>Tài khoản</div>
+          </nav>
+          <div class="footer"><div class="avatar">AD</div><div><b style="color:#fff">Admin</b></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><div class="crumbs">Tài khoản › Tạo mới</div><h2>Tạo tài khoản mới</h2></div>
+            <div><button class="btn outline">Hủy</button> <button class="btn">💾 Tạo</button></div>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px">
+            <div class="card">
+              <div class="title">📌 Thông tin cơ bản</div>
+              <div class="form-row"><label class="label">Họ tên *</label><input class="input" placeholder="Trần Văn B" /></div>
+              <div class="form-row"><label class="label">Email *</label><input class="input" placeholder="tranb@ptit.edu.vn" /></div>
+              <div class="form-row"><label class="label">Số điện thoại</label><input class="input" placeholder="0901234567" /></div>
+              <div class="form-row"><label class="label">Mật khẩu khởi tạo *</label><input class="input" type="password" placeholder="••••••••" /></div>
+              <p style="font-size:11px;color:var(--muted);line-height:1.5">ℹ️ User sẽ được yêu cầu đổi mật khẩu lúc đăng nhập đầu tiên.</p>
+            </div>
+            <div>
+              <div class="card" style="margin-bottom:14px">
+                <div class="title">🛡 Phân quyền</div>
+                <label class="label">Role</label>
+                <select class="input"><option>HOD (Ban Chủ nhiệm khoa)</option><option>ORGANIZER</option><option>JUDGE</option><option>STUDENT</option><option>ADMIN</option></select>
+                <p style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5">Có thể gán nhiều role (vd: 1 GV vừa ORGANIZER vừa JUDGE).</p>
+                <label style="font-size:13px;display:block;margin-top:12px"><input type="checkbox" /> Cho phép multi-role</label>
+              </div>
+              <div class="card" style="margin-bottom:14px">
+                <div class="title">🏛 Profile mở rộng (theo role)</div>
+                <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Hiển thị form tương ứng với role được chọn:</p>
+                <label class="label">Khoa *</label>
+                <select class="input" style="margin-bottom:10px"><option>Khoa CNTT</option></select>
+                <label class="label">Chức vụ</label>
+                <select class="input" style="margin-bottom:10px"><option>Trưởng khoa</option><option>Phó khoa</option></select>
+                <label style="font-size:13px"><input type="checkbox" /> Là người duyệt chính (primary_approver)</label>
+                <p style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5">⚠️ Mỗi khoa chỉ có 1 primary_approver (partial unique index).</p>
+              </div>
+              <div class="card">
+                <div class="title">🔔 Thông báo</div>
+                <label style="font-size:13px"><input type="checkbox" checked /> Gửi email thông báo + mật khẩu</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">Tạo user mới (vd: BCN)<span class="code">AD-02 · POST /api/admin/users + tạo profile theo role</span></div>
+  </div>
+
+  <!-- 4. Khoa / Ngành / Lớp -->
+  <div class="screen-wrap">
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">https://contest.ptit.edu.vn/admin/master/faculties</span>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand"><div class="logo">P</div><div><b>PTIT Contest</b><p>Cổng Admin</p></div></div>
+          <nav>
+            <div class="item"><span class="ico">📊</span>Dashboard</div>
+            <div class="item"><span class="ico">👥</span>Tài khoản</div>
+            <div class="section">Master data</div>
+            <div class="item active"><span class="ico">🏛</span>Khoa / Ngành / Lớp</div>
+          </nav>
+          <div class="footer"><div class="avatar">AD</div><div><b style="color:#fff">Admin</b></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><div class="crumbs">Master data</div><h2>Khoa / Ngành / Lớp</h2></div>
+            <button class="btn">➕ Thêm khoa</button>
+          </div>
+          <div class="tabs">
+            <div class="tab active">🏛 Khoa (8)</div>
+            <div class="tab">📚 Ngành (24)</div>
+            <div class="tab">🏫 Lớp (156)</div>
+          </div>
+          <div class="card" style="padding:0;overflow:hidden">
+            <table>
+              <thead><tr><th>Mã khoa</th><th>Tên khoa</th><th>Số ngành</th><th>Số lớp</th><th>Số SV</th><th>BCN khoa</th><th></th></tr></thead>
+              <tbody>
+                <tr><td><code>CNTT</code></td><td><b>Công nghệ thông tin</b></td><td>5</td><td>32</td><td>892</td><td>BCN. Trần B (Trưởng khoa)<br/><span style="font-size:11px;color:var(--muted)">+ 2 phó khoa</span></td><td><button class="btn sm outline">Sửa</button> <button class="btn sm danger">Xóa</button></td></tr>
+                <tr><td><code>DTVT</code></td><td><b>Điện tử Viễn thông</b></td><td>4</td><td>28</td><td>645</td><td>BCN. Lê C (Trưởng khoa)</td><td><button class="btn sm outline">Sửa</button> <button class="btn sm danger">Xóa</button></td></tr>
+                <tr><td><code>QTKD</code></td><td><b>Quản trị kinh doanh</b></td><td>3</td><td>18</td><td>432</td><td>BCN. Phạm D</td><td><button class="btn sm outline">Sửa</button> <button class="btn sm danger">Xóa</button></td></tr>
+                <tr><td><code>KT</code></td><td><b>Kế toán</b></td><td>2</td><td>14</td><td>298</td><td>—</td><td><button class="btn sm outline">Sửa</button> <button class="btn sm danger">Xóa</button></td></tr>
+                <tr style="color:var(--muted)"><td colspan="7" style="text-align:center;padding:14px">... 4 khoa khác</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="banner" style="margin-top:16px">
+            <span>ℹ️</span>
+            <span>Cấu trúc: <code>faculty (1) → majors (N) → academic_classes (N) → student_directory (N)</code>. Click tab "Ngành" hoặc "Lớp" để CRUD độc lập.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">Quản lý Khoa / Ngành / Lớp<span class="code">AD-03 · CRUD /api/admin/faculties + /majors + /classes</span></div>
+  </div>
+
+  <!-- 5. System Config -->
+  <div class="screen-wrap">
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">https://contest.ptit.edu.vn/admin/configs</span>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand"><div class="logo">P</div><div><b>PTIT Contest</b><p>Cổng Admin</p></div></div>
+          <nav>
+            <div class="item"><span class="ico">📊</span>Dashboard</div>
+            <div class="item"><span class="ico">👥</span>Tài khoản</div>
+            <div class="item"><span class="ico">🏛</span>Khoa / Ngành / Lớp</div>
+            <div class="section">Hệ thống</div>
+            <div class="item active"><span class="ico">⚙️</span>Cấu hình</div>
+            <div class="item"><span class="ico">💾</span>Backup / Restore</div>
+          </nav>
+          <div class="footer"><div class="avatar">AD</div><div><b style="color:#fff">Admin</b></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><div class="crumbs">Hệ thống › Cấu hình</div><h2>Cấu hình hệ thống (system_configs)</h2></div>
+            <button class="btn">➕ Thêm config mới</button>
+          </div>
+          <div class="banner warn">
+            <span>⚠️</span>
+            <span>Thay đổi config có ảnh hưởng <b>ngay lập tức</b> đến toàn hệ thống. Hãy cẩn trọng. Mọi thay đổi đều được ghi vào <code>audit_logs</code>.</span>
+          </div>
+          <div class="card" style="padding:0;overflow:hidden">
+            <table>
+              <thead><tr><th>Key</th><th>Value</th><th>Type</th><th>Mô tả</th><th>Updated</th><th></th></tr></thead>
+              <tbody>
+                <tr><td><code>otp.timeout_seconds</code></td><td><input class="input" value="300" style="font-size:12px;padding:4px 8px" /></td><td><span class="pill">INT</span></td><td>Thời gian hết hạn OTP (giây)</td><td>02/05 by Admin</td><td><button class="btn sm">💾</button></td></tr>
+                <tr><td><code>otp.code_length</code></td><td><input class="input" value="6" style="font-size:12px;padding:4px 8px" /></td><td><span class="pill">INT</span></td><td>Số chữ số OTP</td><td>02/05</td><td><button class="btn sm">💾</button></td></tr>
+                <tr><td><code>upload.max_size_mb</code></td><td><input class="input" value="50" style="font-size:12px;padding:4px 8px" /></td><td><span class="pill">INT</span></td><td>File upload tối đa (MB)</td><td>02/05</td><td><button class="btn sm">💾</button></td></tr>
+                <tr><td><code>upload.allowed_extensions</code></td><td><input class="input" value="pdf,doc,docx,zip,rar,png,jpg,jpeg" style="font-size:12px;padding:4px 8px" /></td><td><span class="pill blue">STRING</span></td><td>Extensions cho phép</td><td>02/05</td><td><button class="btn sm">💾</button></td></tr>
+                <tr><td><code>cancel.min_days_before</code></td><td><input class="input" value="7" style="font-size:12px;padding:4px 8px" /></td><td><span class="pill">INT</span></td><td>Số ngày min hủy đăng ký (QĐ-03)</td><td>02/05</td><td><button class="btn sm">💾</button></td></tr>
+                <tr><td><code>rating.allowed_after_finish</code></td><td><input class="input" value="true" style="font-size:12px;padding:4px 8px" /></td><td><span class="pill green">BOOL</span></td><td>Cho review sau FINISHED</td><td>02/05</td><td><button class="btn sm">💾</button></td></tr>
+                <tr><td colspan="6" style="background:#f9fafb;padding:8px 12px;font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase">SMTP — Email gửi thông báo</td></tr>
+                <tr><td><code>email.smtp_host</code></td><td><input class="input" value="smtp.gmail.com" style="font-size:12px;padding:4px 8px" /></td><td><span class="pill blue">STRING</span></td><td>SMTP host</td><td>—</td><td><button class="btn sm">💾</button></td></tr>
+                <tr><td><code>email.smtp_port</code></td><td><input class="input" value="587" style="font-size:12px;padding:4px 8px" /></td><td><span class="pill">INT</span></td><td>SMTP port</td><td>—</td><td><button class="btn sm">💾</button></td></tr>
+                <tr><td><code>email.smtp_password</code> 🔒</td><td><input class="input" type="password" value="••••••••" style="font-size:12px;padding:4px 8px" /></td><td><span class="pill red">STRING (sensitive)</span></td><td>SMTP password (mask)</td><td>—</td><td><button class="btn sm">💾</button></td></tr>
+                <tr><td><code>certificate.qr_verify_url_base</code></td><td><input class="input" value="https://contest.ptit.edu.vn/verify/" style="font-size:12px;padding:4px 8px" /></td><td><span class="pill blue">STRING</span></td><td>Base URL cho QR cert</td><td>02/05</td><td><button class="btn sm">💾</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">Quản lý cấu hình hệ thống<span class="code">AD-04 · GET/PATCH /api/admin/configs/{key}</span></div>
+  </div>
+
+  <!-- 6. Audit log -->
+  <div class="screen-wrap">
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">https://contest.ptit.edu.vn/admin/audit-logs</span>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand"><div class="logo">P</div><div><b>PTIT Contest</b><p>Cổng Admin</p></div></div>
+          <nav>
+            <div class="item"><span class="ico">📊</span>Dashboard</div>
+            <div class="item"><span class="ico">👥</span>Tài khoản</div>
+            <div class="section">Hệ thống</div>
+            <div class="item"><span class="ico">⚙️</span>Cấu hình</div>
+            <div class="item active"><span class="ico">📋</span>Audit log</div>
+            <div class="item"><span class="ico">🔍</span>Kiểm duyệt review</div>
+          </nav>
+          <div class="footer"><div class="avatar">AD</div><div><b style="color:#fff">Admin</b></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><div class="crumbs">Hệ thống › Audit log</div><h2>Audit log toàn hệ thống</h2></div>
+            <div><button class="btn outline">📥 Export .xlsx</button> <button class="btn outline">⚠️ Anomaly report</button></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+            <input class="input" placeholder="🔎 Search action / entity..." style="flex:1;max-width:280px" />
+            <input class="input" placeholder="user_id" style="width:120px" />
+            <select class="input" style="width:auto"><option>Tất cả action</option><option>auth.login</option><option>contest.create</option><option>approval.decide</option><option>user.lock</option></select>
+            <input class="input" type="date" style="width:auto" />
+            <span style="padding:8px 0;color:var(--muted)">→</span>
+            <input class="input" type="date" style="width:auto" />
+          </div>
+          <div class="card" style="padding:0;overflow:hidden">
+            <table>
+              <thead><tr><th>Thời gian</th><th>User</th><th>Action</th><th>Entity</th><th>IP</th><th>Details</th></tr></thead>
+              <tbody>
+                <tr><td>04/05 14:32:18</td><td>BCN. Trần B<br/><span style="font-size:11px;color:var(--muted)">id=5, HOD</span></td><td><span class="pill green">approval.decide</span></td><td><code>workflow_approvals#7</code></td><td>192.168.1.45</td><td><code style="font-size:10px">{"action":"approve",<br/>"comment":"OK"}</code></td></tr>
+                <tr><td>04/05 14:28:42</td><td>GV. Nguyễn A<br/><span style="font-size:11px;color:var(--muted)">id=12</span></td><td><span class="pill blue">contest.submit</span></td><td><code>contests#42</code></td><td>192.168.1.32</td><td><code style="font-size:10px">{"target":"BCN_QD1",<br/>"revision_round":1}</code></td></tr>
+                <tr><td>04/05 14:15:33</td><td>SV. B22DCCN033<br/><span style="font-size:11px;color:var(--muted)">id=87</span></td><td><span class="pill blue">submission.upload</span></td><td><code>submissions#187</code></td><td>113.176.4.21</td><td><code style="font-size:10px">{"file_size":2457600,<br/>"version":3}</code></td></tr>
+                <tr><td>04/05 13:52:11</td><td>SV. B22DCCN033</td><td><span class="pill blue">contest.register</span></td><td><code>contest_entries#312</code></td><td>113.176.4.21</td><td><code style="font-size:10px">{"contest_id":42,<br/>"team_id":18}</code></td></tr>
+                <tr style="background:#fef2f2"><td>04/05 13:50:00</td><td>Admin</td><td><span class="pill red">user.lock</span></td><td><code>app_users#892</code></td><td>192.168.1.1</td><td><code style="font-size:10px">{"reason":"spam<br/>registration"}</code></td></tr>
+                <tr style="background:#fffbeb"><td>04/05 13:45:22</td><td><span style="color:var(--muted)">unknown</span></td><td><span class="pill yellow">auth.login_failed</span></td><td><code>app_users#892</code></td><td><b>203.113.5.12</b><br/><span style="font-size:10px;color:var(--red)">⚠️ IP lạ</span></td><td><code style="font-size:10px">{"attempts":3}</code></td></tr>
+                <tr style="color:var(--muted)"><td colspan="6" style="text-align:center;padding:14px">... hiển thị 50/12,847 dòng</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">Audit log<span class="code">AD-06 · GET /api/admin/audit-logs</span></div>
+  </div>
+
+  <!-- 7. Statistics -->
+  <div class="screen-wrap">
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">https://contest.ptit.edu.vn/admin/reports/system</span>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand"><div class="logo">P</div><div><b>PTIT Contest</b><p>Cổng Admin</p></div></div>
+          <nav>
+            <div class="item"><span class="ico">📊</span>Dashboard</div>
+            <div class="section">Báo cáo</div>
+            <div class="item active"><span class="ico">📈</span>Thống kê toàn hệ thống</div>
+          </nav>
+          <div class="footer"><div class="avatar">AD</div><div><b style="color:#fff">Admin</b></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><div class="crumbs">Báo cáo</div><h2>Thống kê toàn hệ thống — Năm 2026</h2></div>
+            <div><select class="input" style="width:auto"><option>2026</option><option>2025</option></select> <button class="btn outline">📥 Export .xlsx</button></div>
+          </div>
+          <div class="stats">
+            <div class="stat"><div class="label">Tổng cuộc thi (năm)</div><div class="num">42</div><div class="delta">+12 so với 2025</div></div>
+            <div class="stat"><div class="label">Tổng SV tham gia</div><div class="num">1,847</div></div>
+            <div class="stat"><div class="label">Tỷ lệ hoàn thành TB</div><div class="num">78%</div></div>
+            <div class="stat"><div class="label">Tổng bài nộp</div><div class="num">3,421</div></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+            <div class="card">
+              <div class="title">📊 Phân bố cuộc thi theo khoa</div>
+              <div style="height:240px;background:#f9fafb;border:1px dashed var(--border);border-radius:6px;display:grid;place-items:center;color:var(--muted);font-size:12px">
+                [Pie chart]<br/>CNTT 18, ĐTVT 12, QTKD 8, KT 4
+              </div>
+            </div>
+            <div class="card">
+              <div class="title">📈 Số SV tham gia theo tháng</div>
+              <div style="height:240px;background:#f9fafb;border:1px dashed var(--border);border-radius:6px;display:grid;place-items:center;color:var(--muted);font-size:12px">
+                [Line chart 12 tháng]
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="title">🏆 Top 10 cuộc thi nhiều người tham gia nhất</div>
+            <table>
+              <thead><tr><th>#</th><th>Cuộc thi</th><th>Khoa</th><th>SV đăng ký</th><th>SV hoàn thành</th><th>Đánh giá TB</th></tr></thead>
+              <tbody>
+                <tr><td>1</td><td><b>Olympic Tin học PTIT 2026</b></td><td>CNTT</td><td>200</td><td>187 (94%)</td><td>⭐ 4.8</td></tr>
+                <tr><td>2</td><td><b>Hackathon Mùa hè 2025</b></td><td>CNTT</td><td>120</td><td>112 (93%)</td><td>⭐ 4.7</td></tr>
+                <tr><td>3</td><td><b>Robocon PTIT 2026</b></td><td>ĐTVT</td><td>40 đội</td><td>38 đội</td><td>⭐ 4.6</td></tr>
+                <tr style="color:var(--muted)"><td colspan="6" style="text-align:center;padding:14px">... 7 cuộc thi khác</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">Thống kê toàn hệ thống<span class="code">AD-05 · GET /api/admin/reports/system-summary</span></div>
+  </div>
+
+</div>
+
+</body>
+</html>

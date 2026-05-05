@@ -1,0 +1,145 @@
+%% =========================================================
+%% Sequence Diagram — Workflow Phê duyệt Kết quả Chung cuộc (BCN_QĐ2)
+%% Phiên bản: v01 (2026-05-04)
+%% Schema reference: ptit_contest v03
+%%
+%% Pre-condition:
+%%   - Contest đang ở status ONGOING hoặc đã hết end_at
+%%   - Tất cả round_results đã có (GV-05 chấm xong toàn bộ rounds)
+%%
+%% Cover 2 nhánh:
+%%   Happy path: BTC compute → submit → BCN approve → BTC publish → notify SV
+%%   Revision:   BCN request_revision → BTC sửa rank/award → re-submit
+%% =========================================================
+
+sequenceDiagram
+    autonumber
+    actor BTC as BTC (Giảng viên)
+    actor BCN as BCN (Ban Chủ nhiệm khoa)
+    actor SV as Sinh viên (đã dự thi)
+    participant FE as Flutter Web/App
+    participant API as FastAPI Backend
+    participant DB as PostgreSQL
+    participant NTF as Notification Service
+
+    Note over BTC,NTF: ===== A. BTC tổng hợp kết quả từ round_results =====
+
+    BTC->>FE: Mở "Kết quả chung cuộc" của contest 42
+    FE->>API: POST /api/contests/42/results/compute
+
+    rect rgb(235, 245, 255)
+        Note over API,DB: Aggregate điểm các round → final score
+        API->>DB: SELECT entry_id, SUM(total_score × round_weight) AS final_score<br/>FROM round_results rr<br/>JOIN contest_rounds cr USING(round_id)<br/>WHERE cr.contest_id=42<br/>GROUP BY entry_id<br/>ORDER BY final_score DESC
+        DB-->>API: ranked entries
+        API->>DB: INSERT INTO contest_results<br/>(contest_id=42, entry_id, final_score,<br/> rank_no, bcn_approval_status='PENDING')<br/>ON CONFLICT (contest_id, entry_id) DO UPDATE
+    end
+
+    API-->>FE: 200 OK {results: [...]}
+    FE-->>BTC: Bảng xếp hạng + ô award_title trống
+
+    loop BTC điều chỉnh giải thưởng
+        BTC->>FE: Gán award_title cho top 3 ("Nhất", "Nhì", "Ba")
+        FE->>API: PATCH /api/contest-results/{id}<br/>{award_title: "Giải Nhất"}
+        API->>DB: UPDATE contest_results SET award_title=...
+    end
+
+    Note over BTC,NTF: ===== B. BTC submit kết quả cho BCN duyệt =====
+
+    BTC->>FE: Click "Gửi BCN duyệt kết quả"
+    FE->>API: POST /api/contests/42/results/submit-for-approval
+
+    rect rgb(235, 245, 255)
+        API->>DB: INSERT INTO workflow_approvals<br/>(target_type='CONTEST_RESULT', step='BCN_QD2',<br/> status='PENDING', revision_round=1,<br/> submitted_by=BTC,<br/> snapshot_json={results: [...full ranking + awards]})
+        DB-->>API: approval_id = 12
+    end
+
+    API->>NTF: Notify BCN khoa
+    API-->>FE: 200 OK {approval_id: 12}
+    FE-->>BTC: "Đã gửi, chờ BCN duyệt kết quả"
+
+    Note over BTC,NTF: ===== C. BCN xem queue + xét kết quả =====
+
+    BCN->>FE: Mở "Kết quả chờ duyệt"
+    FE->>API: GET /api/me/pending-approvals?type=CONTEST_RESULT
+    API->>DB: SELECT * FROM workflow_approvals wa<br/>JOIN contests c USING(contest_id)<br/>WHERE wa.target_type='CONTEST_RESULT'<br/>AND wa.status='PENDING'<br/>AND c.host_faculty_id=(BCN's faculty)
+    DB-->>API: List
+    API-->>FE: List
+    FE-->>BCN: Danh sách
+
+    BCN->>FE: Click vào approval #12
+    FE->>API: GET /api/approvals/12<br/>GET /api/contests/42/results (full ranking)
+    API->>DB: SELECT * FROM contest_results<br/>WHERE contest_id=42 ORDER BY rank_no
+    DB-->>API: Ranking
+    API-->>FE: Detail (snapshot + current ranking để so sánh)
+    FE-->>BCN: Hiển thị: ranking + awards + nút<br/>(Approve / Request Revision / Reject)
+
+    Note over BTC,NTF: ===== D. NHÁNH 1 — Happy path: BCN APPROVE =====
+
+    BCN->>FE: Click "Approve"
+    FE->>API: POST /api/approvals/12/decide<br/>{action: "approve", comment: "OK"}
+
+    rect rgb(230, 245, 230)
+        Note over API,DB: Transaction
+        API->>DB: UPDATE workflow_approvals<br/>SET status='APPROVED', reviewed_by=BCN<br/>WHERE approval_id=12
+        API->>DB: UPDATE contest_results<br/>SET bcn_approval_status='APPROVED'<br/>WHERE contest_id=42
+    end
+
+    API->>NTF: Notify BTC
+    API-->>FE: 200 OK
+    FE-->>BCN: "Đã duyệt, chờ BTC publish"
+
+    Note over BTC,NTF: ===== E. BTC publish kết quả ra công khai =====
+
+    BTC->>FE: Click "Công bố kết quả"
+    FE->>API: POST /api/contests/42/results/publish
+
+    rect rgb(220, 245, 220)
+        Note over API,DB: Backend check approval state TRƯỚC khi publish
+        API->>DB: SELECT status FROM workflow_approvals<br/>WHERE contest_id=42<br/>AND target_type='CONTEST_RESULT'<br/>AND revision_round = (max revision)
+        DB-->>API: 'APPROVED'
+        Note over API: Nếu khác APPROVED → 403 "Chưa được BCN duyệt"
+
+        API->>DB: UPDATE contest_results<br/>SET published_at=NOW()<br/>WHERE contest_id=42
+        API->>DB: UPDATE contests SET status='FINISHED'<br/>WHERE contest_id=42 AND end_at < NOW()
+    end
+
+    API->>NTF: Bulk notify tất cả SV đã dự thi<br/>(các student_id từ contest_entries.entry → student/team_members)
+    NTF->>DB: INSERT INTO notifications<br/>(scope='CONTEST', contest_id=42,<br/> title='Kết quả đã được công bố')
+    NTF->>DB: INSERT INTO notification_recipients (bulk)
+    API-->>FE: 200 OK
+    FE-->>BTC: "Đã công bố"
+
+    SV->>FE: Mở app, thấy notification
+    FE->>API: GET /api/me/results
+    API->>DB: SELECT * FROM contest_results<br/>WHERE entry_id IN (own entries)<br/>AND published_at IS NOT NULL
+    DB-->>API: Results
+    API-->>FE: Kết quả + rank + award
+    FE-->>SV: Hiển thị kết quả + nút "Tải chứng nhận"
+
+    Note right of SV: Tải certificate qua issued_certificates.pdf_url<br/>(BCN-06 đã issue trước đó)
+
+    Note over BTC,NTF: ===== F. NHÁNH 2 — Revision Loop =====
+
+    alt BCN yêu cầu sửa lại ranking/award
+        BCN->>FE: Click "Request Revision" + comment
+        FE->>API: POST /api/approvals/12/decide<br/>{action: "request_revision",<br/> comment: "Award Nhất sai entry"}
+
+        rect rgb(255, 248, 220)
+            API->>DB: UPDATE workflow_approvals<br/>SET status='REVISION_REQUESTED', bcn_comment=...
+            API->>DB: UPDATE contest_results<br/>SET bcn_approval_status='REVISION_REQUESTED'
+        end
+
+        API->>NTF: Notify BTC
+        Note over BTC: BTC sửa ranking/award
+
+        BTC->>FE: PATCH ranking/award
+        BTC->>FE: Submit lại
+        FE->>API: POST /api/contests/42/results/submit-for-approval
+
+        rect rgb(235, 245, 255)
+            Note over API,DB: revision_round = 2
+            API->>DB: INSERT workflow_approvals (revision_round=2)
+        end
+
+        Note right of BCN: Quay lại bước C → D<br/>Loop đến khi APPROVED
+    end

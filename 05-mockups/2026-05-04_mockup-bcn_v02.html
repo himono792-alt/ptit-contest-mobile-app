@@ -1,0 +1,191 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PTIT Contest â€” BCN Khoa (Web)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="design-canvas-src/tokens.css">
+<link rel="stylesheet" href="design-canvas-src/web-shell.css">
+<style>
+  /* BCN-specific */
+  .queue-lane {
+    background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 12px; padding: 0; overflow: hidden;
+  }
+  .queue-lane .lane-head {
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--bg-sunken);
+  }
+  .queue-lane .lane-head b { font-size: 13px; }
+  .queue-item {
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    display: flex; gap: 14px; align-items: center;
+  }
+  .queue-item:last-child { border-bottom: 0; }
+  .queue-item:hover { background: var(--bg-sunken); }
+  .queue-item.urgent { border-left: 3px solid var(--err); padding-left: 13px; }
+  .queue-item .num-tag {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: var(--accent-soft); color: var(--brand-700);
+    display: grid; place-items: center;
+    font-family: var(--font-mono); font-weight: 700; font-size: 12px;
+    flex-shrink: 0;
+  }
+  .queue-item .body { flex: 1; min-width: 0; }
+  .queue-item .body b { display: block; font-size: 13px; }
+  .queue-item .body .meta { color: var(--fg-muted); font-size: 11.5px; margin-top: 3px; font-family: var(--font-mono); }
+  .queue-item .right-meta { text-align: right; flex-shrink: 0; font-size: 11px; color: var(--fg-muted); font-family: var(--font-mono); }
+  .queue-item .right-meta b { color: var(--fg); font-size: 13px; display: block; }
+
+  /* Decision panel */
+  .decision-panel {
+    background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px;
+    position: sticky; top: 24px;
+  }
+  .decision-panel h3 {
+    font-family: var(--font-display);
+    font-size: 14px; font-weight: 700; margin-bottom: 14px;
+    letter-spacing: -0.01em;
+  }
+  .decision-btn {
+    width: 100%; justify-content: flex-start;
+    padding: 12px 14px; gap: 10px;
+    margin-bottom: 8px;
+    text-align: left;
+  }
+  .decision-btn .ico { font-size: 16px; }
+  .decision-btn .desc { font-size: 11px; opacity: 0.8; font-weight: 500; margin-left: auto; }
+
+  /* Revision history */
+  .timeline { position: relative; padding-left: 24px; }
+  .timeline::before {
+    content: ""; position: absolute; left: 7px; top: 4px; bottom: 4px;
+    width: 2px; background: var(--border);
+  }
+  .timeline-item {
+    position: relative; padding: 8px 0 16px;
+  }
+  .timeline-item::before {
+    content: ""; position: absolute; left: -22px; top: 11px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 0 3px var(--bg-elev);
+  }
+  .timeline-item.done::before { background: var(--ok); }
+  .timeline-item.warn::before { background: var(--warn); }
+  .timeline-item.info::before { background: var(--info); }
+  .timeline-item .ts { font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted); }
+  .timeline-item .head { font-size: 13px; font-weight: 600; margin-top: 2px; }
+  .timeline-item .desc { font-size: 12px; color: var(--fg-muted); margin-top: 4px; line-height: 1.5; }
+  .timeline-item .desc b { color: var(--fg); }
+
+  /* Diff card */
+  .diff-row {
+    display: grid; grid-template-columns: 130px 1fr 1fr;
+    gap: 12px; padding: 10px 0;
+    border-bottom: 1px dashed var(--border); font-size: 12.5px;
+  }
+  .diff-row:last-child { border-bottom: 0; }
+  .diff-row .field { color: var(--fg-muted); font-size: 11.5px; }
+  .diff-row .old { color: var(--err); text-decoration: line-through; opacity: 0.7; }
+  .diff-row .new { color: var(--ok); font-weight: 600; }
+  .diff-row .same { color: var(--fg-muted); }
+
+  /* Cert preview */
+  .cert {
+    background: linear-gradient(135deg, oklch(0.985 0.005 60), oklch(0.965 0.012 19));
+    border: 6px double var(--brand-700);
+    padding: 30px 36px;
+    text-align: center;
+    position: relative;
+    aspect-ratio: 1.414;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .cert::before {
+    content: "PTIT"; position: absolute; inset: 0;
+    display: grid; place-items: center;
+    font-family: var(--font-display); font-size: 200px;
+    font-weight: 800; color: var(--brand-600);
+    opacity: 0.04; letter-spacing: -0.05em;
+    pointer-events: none;
+  }
+  .cert > * { position: relative; }
+  .cert .sealRow { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .cert .seal { width: 48px; height: 48px; background: var(--brand-600); color: #fff; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-display); font-weight: 800; font-size: 18px; }
+  .cert .deptmark { text-align: right; font-size: 9px; color: var(--brand-700); font-weight: 600; line-height: 1.4; }
+  .cert h1 { font-family: var(--font-display); font-size: 22px; font-weight: 800; color: var(--brand-700); letter-spacing: 0.02em; margin: 6px 0; }
+  .cert .sub { font-size: 10px; color: var(--fg-muted); letter-spacing: 0.06em; text-transform: uppercase; }
+  .cert .name { font-family: var(--font-display); font-size: 26px; font-weight: 700; margin: 14px 0 6px; color: var(--ink-900); letter-spacing: -0.01em; }
+  .cert .desc { font-size: 11px; color: var(--ink-700); line-height: 1.6; margin: 0 auto; max-width: 80%; }
+  .cert .desc b { color: var(--brand-700); }
+  .cert .footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 18px; font-size: 9px; color: var(--fg-muted); }
+  .cert .signature { font-family: 'Brush Script MT', cursive; font-size: 22px; color: var(--brand-800); }
+  .cert .qr {
+    width: 48px; height: 48px;
+    background: repeating-conic-gradient(#000 0 25%, #fff 0 50%) 0/8px 8px;
+    border-radius: 4px;
+  }
+
+  /* Monitor cards */
+  .monitor-card {
+    background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px;
+    display: flex; flex-direction: column; gap: 8px;
+    border-left: 4px solid var(--accent);
+  }
+  .monitor-card.ok { border-left-color: var(--ok); }
+  .monitor-card.warn { border-left-color: var(--warn); }
+  .monitor-card .live {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10px; font-family: var(--font-mono);
+    color: var(--ok); font-weight: 700;
+  }
+  .monitor-card .live::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ok);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+</style>
+</head>
+
+<body>
+
+<div class="doc-mast">
+  <div class="row">
+    <div class="logo">P</div>
+    <div>
+      <h1>PTIT Contest â€” BCN Khoa Console</h1>
+      <div class="sub">Ban Chá»§ nhiá»‡m khoa Â· Web app Â· 7 mÃ n chÃ­nh</div>
+    </div>
+  </div>
+  <div class="meta">
+    <span class="pill">BCN</span>
+    <span class="pill gray">7 screens</span>
+    <span class="pill outline">v01.1</span>
+    <span class="pill outline">1280 Ã— 720</span>
+  </div>
+</div>
+
+<div class="stack" id="stack"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script src="design-canvas-src/web-common.js"></script>
+<script type="text/babel" src="design-canvas-src/gv-screens.jsx"></script>
+<script type="text/babel" src="design-canvas-src/bcn-screens.jsx"></script>
+<script type="text/babel">
+  const root = ReactDOM.createRoot(document.getElementById('stack'));
+  root.render(<window.BCNApp />);
+</script>
+
+</body>
+</html>

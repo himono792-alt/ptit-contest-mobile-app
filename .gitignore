@@ -1,0 +1,81 @@
+# ============== Python / Backend ==============
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+*.log
+
+# ============== FastAPI / DB ==============
+.env
+.env.local
+.env.production
+alembic/versions/__pycache__/
+
+# ============== Flutter / Dart ==============
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+.packages
+build/
+.pub-cache/
+.pub/
+flutter_*.png
+linked_*.ds
+unlinked.ds
+unlinked_spec.ds
+*.iml
+.idea/
+android/.gradle/
+android/captures/
+android/gradlew
+android/gradlew.bat
+android/local.properties
+android/**/GeneratedPluginRegistrant.java
+android/key.properties
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Runner/GeneratedPluginRegistrant.*
+linux/flutter/generated_plugin_registrant.*
+macos/Flutter/GeneratedPluginRegistrant.swift
+windows/flutter/generated_plugin_*
+
+# ============== IDEs ==============
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ============== Build / Output ==============
+dist/
+out/
+*.apk
+*.aab
+*.ipa
+*.app
+
+# ============== Docker ==============
+.docker/
+
+# ============== Misc ==============
+*.bak
+*.tmp
+.cache/
+node_modules/

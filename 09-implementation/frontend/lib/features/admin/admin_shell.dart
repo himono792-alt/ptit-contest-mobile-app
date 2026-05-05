@@ -1,0 +1,166 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/auth/auth_provider.dart';
+import '../../core/theme.dart';
+import 'admin_contests_screen.dart';
+import 'admin_dashboard_screen.dart';
+import 'approval_queue_screen.dart';
+import 'admin_users_screen.dart';
+import 'audit_log_screen.dart';
+import 'configs_screen.dart';
+import 'judge_screen.dart';
+import 'master_data_screen.dart';
+import 'monitor_screen.dart';
+
+class AdminShell extends ConsumerStatefulWidget {
+  const AdminShell({super.key});
+  @override
+  ConsumerState<AdminShell> createState() => _AdminShellState();
+}
+
+class _AdminShellState extends ConsumerState<AdminShell> {
+  int _idx = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final user = ref.watch(authProvider).value;
+    if (user == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+
+    // Build menu based on roles
+    final items = <_NavItem>[
+      _NavItem('Dashboard', Icons.dashboard_outlined, const AdminDashboardScreen()),
+    ];
+
+    if (user.isOrganizer || user.isAdmin) {
+      items.add(_NavItem('Cuộc thi', Icons.emoji_events_outlined, const AdminContestsScreen()));
+    }
+    if (user.isHod || user.isAdmin) {
+      items.add(_NavItem('Phê duyệt', Icons.fact_check_outlined, const ApprovalQueueScreen()));
+      items.add(_NavItem('Giám sát', Icons.visibility_outlined, const MonitorScreen()));
+    }
+    if (user.isJudge || user.isAdmin) {
+      items.add(_NavItem('Chấm bài', Icons.rate_review_outlined, const JudgeScreen()));
+    }
+    if (user.isAdmin) {
+      items.add(_NavItem('Quản lý user', Icons.people_outline, const AdminUsersScreen()));
+      items.add(_NavItem('Khoa/Ngành', Icons.school_outlined, const MasterDataScreen()));
+      items.add(_NavItem('Cấu hình', Icons.settings_outlined, const ConfigsScreen()));
+      items.add(_NavItem('Audit log', Icons.history, const AuditLogScreen()));
+    }
+
+    final activeIdx = _idx.clamp(0, items.length - 1);
+    final activeItem = items[activeIdx];
+
+    return Scaffold(
+      body: Row(children: [
+        // Sidebar
+        Container(
+          width: 240,
+          decoration: const BoxDecoration(
+            color: Color(0xFF1F2937),
+            border: Border(right: BorderSide(color: Colors.black12)),
+          ),
+          child: Column(children: [
+            // Brand
+            Container(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: Color(0xFF374151))),
+              ),
+              child: Row(children: [
+                Container(
+                  width: 32, height: 32,
+                  decoration: BoxDecoration(color: ptitRed, borderRadius: BorderRadius.circular(7)),
+                  child: const Center(child: Text('P', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14))),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('PTIT Contest', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
+                    Text('Cổng quản lý', style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 10)),
+                  ]),
+                ),
+              ]),
+            ),
+            // Nav items
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                children: List.generate(items.length, (i) {
+                  final isActive = i == activeIdx;
+                  return InkWell(
+                    onTap: () => setState(() => _idx = i),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+                      decoration: BoxDecoration(
+                        color: isActive ? const Color(0x26C8102E) : null,
+                        border: Border(
+                          left: BorderSide(
+                            color: isActive ? ptitRed : Colors.transparent,
+                            width: 3,
+                          ),
+                        ),
+                      ),
+                      child: Row(children: [
+                        Icon(items[i].icon, size: 18, color: isActive ? Colors.white : const Color(0xFFD1D5DB)),
+                        const SizedBox(width: 10),
+                        Text(items[i].label,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isActive ? Colors.white : const Color(0xFFD1D5DB),
+                              fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                            )),
+                      ]),
+                    ),
+                  );
+                }),
+              ),
+            ),
+            // Footer with user
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: Color(0xFF374151))),
+              ),
+              child: Row(children: [
+                Container(
+                  width: 32, height: 32,
+                  decoration: const BoxDecoration(color: ptitRedSoft, shape: BoxShape.circle),
+                  child: Center(
+                    child: Text(
+                      user.fullName.split(' ').last.substring(0, 1).toUpperCase(),
+                      style: const TextStyle(color: ptitRed, fontWeight: FontWeight.w700, fontSize: 13),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(user.fullName, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                    Text(user.roles.join(','), style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 10), overflow: TextOverflow.ellipsis),
+                  ]),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.logout, size: 16, color: Color(0xFFD1D5DB)),
+                  tooltip: 'Đăng xuất',
+                  onPressed: () => ref.read(authProvider.notifier).logout(),
+                ),
+              ]),
+            ),
+          ]),
+        ),
+        // Main
+        Expanded(child: activeItem.screen),
+      ]),
+    );
+  }
+}
+
+class _NavItem {
+  final String label;
+  final IconData icon;
+  final Widget screen;
+  _NavItem(this.label, this.icon, this.screen);
+}
+

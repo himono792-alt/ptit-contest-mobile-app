@@ -1,0 +1,2948 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PTIT Contest - Mockup giao diện</title>
+<style>
+  /* =========================================================
+     PTIT CONTEST — MOBILE MOCKUP
+     Tech stack: Ubuntu 24.04 LTS + FastAPI + PostgreSQL + Nginx + systemd
+     ========================================================= */
+
+  :root{
+    --ptit-red:#C8102E;
+    --ptit-red-dark:#A00D24;
+    --ptit-red-light:#FEE5E9;
+    --ptit-red-soft:#FFF5F6;
+    --ink-900:#0F172A;
+    --ink-700:#334155;
+    --ink-500:#64748B;
+    --ink-400:#94A3B8;
+    --ink-300:#CBD5E1;
+    --ink-200:#E2E8F0;
+    --ink-100:#F1F5F9;
+    --ink-50:#F8FAFC;
+    --white:#FFFFFF;
+    --success:#16A34A;
+    --success-soft:#DCFCE7;
+    --warning:#D97706;
+    --warning-soft:#FEF3C7;
+    --info:#2563EB;
+    --info-soft:#DBEAFE;
+    --danger:#DC2626;
+    --danger-soft:#FEE2E2;
+    --shadow-sm:0 1px 2px rgba(15,23,42,.06);
+    --shadow-md:0 6px 16px rgba(15,23,42,.08);
+    --shadow-lg:0 16px 40px rgba(15,23,42,.12);
+    --radius:12px;
+    --radius-lg:18px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
+    background:#EEF2F7;
+    color:var(--ink-900);
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ===== TOP BAR ===== */
+  .topbar{
+    position:sticky;top:0;z-index:50;
+    background:linear-gradient(135deg,var(--ptit-red) 0%,var(--ptit-red-dark) 100%);
+    color:#fff;
+    padding:14px 24px;
+    box-shadow:var(--shadow-md);
+  }
+  .topbar-inner{display:flex;align-items:center;justify-content:space-between;gap:24px;max-width:1500px;margin:0 auto}
+  .brand{display:flex;align-items:center;gap:14px}
+  .brand-logo{
+    width:42px;height:42px;border-radius:10px;
+    background:#fff;color:var(--ptit-red);
+    display:grid;place-items:center;font-weight:800;font-size:14px;letter-spacing:.5px;
+    box-shadow:var(--shadow-sm);
+  }
+  .brand-text h1{font-size:16px;font-weight:700;letter-spacing:.2px}
+  .brand-text p{font-size:11px;opacity:.85;margin-top:2px}
+  .stack-pill{
+    display:inline-flex;align-items:center;gap:6px;
+    background:rgba(255,255,255,.16);
+    border:1px solid rgba(255,255,255,.28);
+    padding:6px 12px;border-radius:999px;font-size:11px;font-weight:500;
+    backdrop-filter:blur(4px);
+  }
+  .stack-pill b{font-weight:700}
+
+  /* ===== ACTOR TABS ===== */
+  .actor-tabs{
+    background:#fff;border-bottom:1px solid var(--ink-200);
+    padding:0 24px;
+    display:flex;gap:4px;justify-content:center;
+    position:sticky;top:70px;z-index:40;
+  }
+  .actor-tab{
+    border:none;background:transparent;
+    padding:14px 22px;font-size:14px;font-weight:600;color:var(--ink-500);
+    border-bottom:3px solid transparent;cursor:pointer;
+    transition:all .15s;
+    display:flex;align-items:center;gap:8px;
+  }
+  .actor-tab:hover{color:var(--ptit-red)}
+  .actor-tab.active{color:var(--ptit-red);border-bottom-color:var(--ptit-red)}
+  .actor-tab .ico{
+    width:24px;height:24px;border-radius:6px;
+    display:grid;place-items:center;font-size:12px;
+    background:var(--ink-100);color:var(--ink-500);
+  }
+  .actor-tab.active .ico{background:var(--ptit-red-light);color:var(--ptit-red)}
+
+  /* ===== LAYOUT ===== */
+  .layout{
+    display:grid;
+    grid-template-columns:280px 1fr 280px;
+    gap:24px;
+    max-width:1500px;
+    margin:0 auto;
+    padding:24px;
+  }
+  @media(max-width:1200px){.layout{grid-template-columns:240px 1fr}.right-panel{display:none}}
+  @media(max-width:900px){.layout{grid-template-columns:1fr}.left-panel{display:none}}
+
+  /* ===== SIDE PANEL ===== */
+  .side-panel{
+    background:#fff;border-radius:var(--radius-lg);
+    padding:18px;box-shadow:var(--shadow-sm);
+    align-self:start;position:sticky;top:140px;
+    max-height:calc(100vh - 160px);overflow-y:auto;
+  }
+  .side-panel h3{
+    font-size:11px;text-transform:uppercase;letter-spacing:1px;
+    color:var(--ink-500);margin-bottom:12px;font-weight:700;
+  }
+  .screen-list{display:flex;flex-direction:column;gap:2px}
+  .screen-item{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 12px;border-radius:10px;cursor:pointer;
+    font-size:13px;color:var(--ink-700);
+    transition:all .12s;
+  }
+  .screen-item:hover{background:var(--ink-100)}
+  .screen-item.active{background:var(--ptit-red);color:#fff;font-weight:600}
+  .screen-num{
+    flex:0 0 22px;height:22px;border-radius:6px;
+    background:var(--ink-100);color:var(--ink-500);
+    display:grid;place-items:center;font-size:11px;font-weight:700;
+  }
+  .screen-item.active .screen-num{background:rgba(255,255,255,.22);color:#fff}
+
+  /* ===== CENTER — PHONE FRAME ===== */
+  .stage{display:flex;flex-direction:column;align-items:center;gap:18px;padding:8px}
+  .screen-meta{
+    display:flex;align-items:center;gap:14px;
+    background:#fff;padding:12px 18px;border-radius:14px;
+    box-shadow:var(--shadow-sm);width:100%;max-width:520px;
+  }
+  .screen-meta-num{
+    width:34px;height:34px;border-radius:8px;
+    background:var(--ptit-red-light);color:var(--ptit-red);
+    display:grid;place-items:center;font-weight:800;font-size:13px;
+  }
+  .screen-meta h2{font-size:15px;font-weight:700;margin-bottom:2px}
+  .screen-meta p{font-size:12px;color:var(--ink-500)}
+  .nav-arrows{display:flex;gap:8px;margin-left:auto}
+  .nav-arrow{
+    width:34px;height:34px;border-radius:8px;
+    background:var(--ink-100);color:var(--ink-700);
+    border:none;cursor:pointer;font-size:16px;
+    display:grid;place-items:center;
+    transition:all .12s;
+  }
+  .nav-arrow:hover{background:var(--ptit-red);color:#fff}
+
+  .phone{
+    width:380px;height:780px;
+    background:#1a1a1a;border-radius:46px;
+    padding:14px;position:relative;
+    box-shadow:0 30px 60px rgba(15,23,42,.18),0 0 0 2px #0a0a0a;
+  }
+  .phone::before{
+    content:'';position:absolute;top:24px;left:50%;transform:translateX(-50%);
+    width:120px;height:28px;background:#0a0a0a;border-radius:0 0 16px 16px;z-index:5;
+  }
+  .phone-screen{
+    width:100%;height:100%;background:#fff;border-radius:34px;
+    overflow:hidden;position:relative;
+    display:flex;flex-direction:column;
+  }
+
+  /* ===== STATUS BAR ===== */
+  .status-bar{
+    height:34px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 28px;font-size:12px;font-weight:600;color:var(--ink-900);
+  }
+  .status-bar.on-red{color:#fff}
+  .status-icons{display:flex;align-items:center;gap:5px}
+
+  /* ===== APP HEADER ===== */
+  .app-header{
+    background:var(--ptit-red);color:#fff;
+    padding:14px 18px 18px;
+    flex-shrink:0;
+  }
+  .app-header.tall{padding-bottom:28px}
+  .app-header-row{display:flex;align-items:center;gap:12px}
+  .app-header-title{font-size:18px;font-weight:700;flex:1}
+  .app-header-sub{font-size:12px;opacity:.85;margin-top:3px}
+  .icon-btn{
+    width:36px;height:36px;border-radius:10px;
+    background:rgba(255,255,255,.18);color:#fff;
+    border:none;display:grid;place-items:center;font-size:16px;
+    cursor:pointer;
+  }
+  .icon-btn-light{background:var(--ink-100);color:var(--ink-700)}
+
+  /* ===== APP BODY (scrollable) ===== */
+  .app-body{
+    flex:1;overflow-y:auto;background:var(--ink-50);
+    padding:16px;
+  }
+  .app-body.no-pad{padding:0}
+  .app-body::-webkit-scrollbar{width:0}
+
+  /* ===== APP BOTTOM NAV ===== */
+  .bottom-nav{
+    flex-shrink:0;
+    background:#fff;border-top:1px solid var(--ink-200);
+    display:flex;justify-content:space-around;
+    padding:8px 0 22px;
+  }
+  .nav-item{
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    background:none;border:none;cursor:pointer;
+    color:var(--ink-500);font-size:10px;font-weight:600;
+    padding:6px 10px;
+  }
+  .nav-item-ico{font-size:18px}
+  .nav-item.active{color:var(--ptit-red)}
+
+  /* ===== UI COMPONENTS ===== */
+  .input{
+    width:100%;padding:12px 14px;border:1.5px solid var(--ink-200);
+    border-radius:10px;font-size:14px;background:#fff;
+    transition:border-color .12s;
+    font-family:inherit;
+  }
+  .input:focus{outline:none;border-color:var(--ptit-red)}
+  .input-group{margin-bottom:14px}
+  .input-label{font-size:12px;font-weight:600;color:var(--ink-700);margin-bottom:6px;display:block}
+
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    padding:12px 18px;border-radius:10px;border:none;
+    font-size:14px;font-weight:600;cursor:pointer;
+    font-family:inherit;transition:all .12s;
+  }
+  .btn-primary{background:var(--ptit-red);color:#fff}
+  .btn-primary:hover{background:var(--ptit-red-dark)}
+  .btn-secondary{background:var(--ink-100);color:var(--ink-700)}
+  .btn-outline{background:#fff;color:var(--ptit-red);border:1.5px solid var(--ptit-red)}
+  .btn-block{width:100%}
+  .btn-sm{padding:8px 12px;font-size:12px;border-radius:8px}
+
+  .card{
+    background:#fff;border-radius:14px;padding:14px;
+    box-shadow:var(--shadow-sm);
+    margin-bottom:12px;
+  }
+  .card-flat{background:#fff;border-radius:14px;padding:14px;border:1px solid var(--ink-200);margin-bottom:12px}
+
+  .badge{
+    display:inline-flex;align-items:center;gap:4px;
+    padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600;
+  }
+  .badge-success{background:var(--success-soft);color:var(--success)}
+  .badge-warning{background:var(--warning-soft);color:var(--warning)}
+  .badge-info{background:var(--info-soft);color:var(--info)}
+  .badge-danger{background:var(--danger-soft);color:var(--danger)}
+  .badge-red{background:var(--ptit-red-light);color:var(--ptit-red)}
+  .badge-gray{background:var(--ink-100);color:var(--ink-700)}
+
+  .section-title{
+    font-size:14px;font-weight:700;color:var(--ink-900);
+    margin:6px 4px 10px;display:flex;align-items:center;justify-content:space-between;
+  }
+  .section-title .more{font-size:12px;color:var(--ptit-red);font-weight:600;cursor:pointer}
+
+  .avatar{
+    width:42px;height:42px;border-radius:50%;
+    background:var(--ptit-red);color:#fff;
+    display:grid;place-items:center;font-weight:700;font-size:14px;flex-shrink:0;
+  }
+  .avatar-lg{width:80px;height:80px;font-size:26px}
+  .avatar-sm{width:30px;height:30px;font-size:11px}
+
+  /* ===== RIGHT PANEL ===== */
+  .right-panel h4{
+    font-size:11px;text-transform:uppercase;letter-spacing:1px;
+    color:var(--ink-500);margin-bottom:10px;font-weight:700;
+  }
+  .meta-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:12px;color:var(--ink-700)}
+  .meta-row b{color:var(--ink-900);min-width:80px;display:inline-block}
+  .tech-chip{
+    display:inline-flex;align-items:center;gap:6px;
+    background:var(--ink-100);color:var(--ink-700);
+    padding:5px 10px;border-radius:8px;font-size:11px;font-weight:600;
+    margin:2px;
+  }
+  .tech-chip.api{background:#DBEAFE;color:#1D4ED8}
+  .tech-chip.db{background:#FEE2E2;color:#B91C1C}
+  .tech-chip.os{background:#FEF3C7;color:#92400E}
+  .tech-chip.web{background:#DCFCE7;color:#166534}
+
+  /* ===== HELPER ===== */
+  .row{display:flex;align-items:center;gap:10px}
+  .row-between{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .col{display:flex;flex-direction:column;gap:8px}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .text-xs{font-size:11px}.text-sm{font-size:12px}.text-md{font-size:13px}.text-lg{font-size:15px}.text-xl{font-size:18px}.text-2xl{font-size:22px}
+  .font-bold{font-weight:700}.font-semi{font-weight:600}
+  .text-muted{color:var(--ink-500)}.text-red{color:var(--ptit-red)}.text-success{color:var(--success)}.text-warning{color:var(--warning)}
+  .mt-2{margin-top:8px}.mt-3{margin-top:12px}.mt-4{margin-top:16px}.mb-2{margin-bottom:8px}.mb-3{margin-bottom:12px}.mb-4{margin-bottom:16px}
+  .gap-2{gap:8px}.gap-3{gap:12px}.flex-1{flex:1}.text-center{text-align:center}
+
+  /* ===== SCREEN-SPECIFIC STYLES ===== */
+  .splash{
+    background:linear-gradient(160deg,var(--ptit-red) 0%,var(--ptit-red-dark) 100%);
+    color:#fff;height:100%;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:40px;text-align:center;
+  }
+  .splash-logo{
+    width:120px;height:120px;border-radius:30px;background:#fff;
+    color:var(--ptit-red);display:grid;place-items:center;
+    font-weight:900;font-size:36px;letter-spacing:1px;
+    box-shadow:0 12px 30px rgba(0,0,0,.25);margin-bottom:24px;
+  }
+  .splash h1{font-size:24px;font-weight:800;margin-bottom:8px}
+  .splash p{font-size:14px;opacity:.9;margin-bottom:50px}
+  .loading-bar{
+    width:100px;height:4px;border-radius:2px;background:rgba(255,255,255,.25);overflow:hidden;
+  }
+  .loading-bar::after{
+    content:'';display:block;width:40%;height:100%;background:#fff;
+    animation:slide 1.4s infinite;
+  }
+  @keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}
+
+  .auth-hero{
+    background:linear-gradient(160deg,var(--ptit-red) 0%,var(--ptit-red-dark) 100%);
+    color:#fff;padding:50px 24px 40px;text-align:center;
+  }
+  .auth-hero h1{font-size:22px;font-weight:800;margin-bottom:6px}
+  .auth-hero p{font-size:13px;opacity:.85}
+  .auth-card{
+    background:#fff;border-radius:24px 24px 0 0;
+    padding:24px 20px;margin-top:-20px;flex:1;
+  }
+
+  .contest-card{
+    background:#fff;border-radius:14px;overflow:hidden;
+    box-shadow:var(--shadow-sm);margin-bottom:12px;cursor:pointer;
+    transition:transform .12s;
+  }
+  .contest-card:hover{transform:translateY(-2px)}
+  .contest-banner{
+    height:90px;background:linear-gradient(135deg,#C8102E,#7E0A1D);
+    display:flex;align-items:flex-end;padding:10px 12px;color:#fff;
+    position:relative;
+  }
+  .contest-banner.b2{background:linear-gradient(135deg,#1E40AF,#3B82F6)}
+  .contest-banner.b3{background:linear-gradient(135deg,#16A34A,#22C55E)}
+  .contest-banner.b4{background:linear-gradient(135deg,#7C3AED,#A855F7)}
+  .contest-banner.b5{background:linear-gradient(135deg,#EA580C,#F97316)}
+  .contest-banner-cat{font-size:10px;text-transform:uppercase;letter-spacing:1px;font-weight:700;opacity:.9}
+  .contest-content{padding:12px}
+  .contest-title{font-size:14px;font-weight:700;margin-bottom:4px;line-height:1.3}
+  .contest-meta{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink-500);flex-wrap:wrap}
+
+  .stat-card{
+    background:#fff;border-radius:14px;padding:14px;text-align:center;
+    box-shadow:var(--shadow-sm);
+  }
+  .stat-card .num{font-size:22px;font-weight:800;color:var(--ptit-red);margin-bottom:2px}
+  .stat-card .lbl{font-size:11px;color:var(--ink-500);font-weight:600}
+
+  .list-item{
+    background:#fff;border-radius:12px;padding:12px;margin-bottom:8px;
+    display:flex;align-items:center;gap:12px;
+    box-shadow:var(--shadow-sm);
+  }
+  .list-item-ico{
+    width:42px;height:42px;border-radius:10px;
+    background:var(--ptit-red-light);color:var(--ptit-red);
+    display:grid;place-items:center;font-size:18px;flex-shrink:0;
+  }
+  .list-item-body{flex:1;min-width:0}
+  .list-item-title{font-size:13px;font-weight:600;margin-bottom:2px}
+  .list-item-sub{font-size:11px;color:var(--ink-500)}
+
+  .timeline{padding-left:18px;border-left:2px solid var(--ink-200);position:relative;margin-left:8px}
+  .timeline-dot{
+    width:12px;height:12px;border-radius:50%;background:var(--ptit-red);
+    position:absolute;left:-7px;border:2px solid #fff;
+  }
+  .timeline-item{position:relative;padding-bottom:14px}
+  .timeline-item .timeline-dot{top:4px}
+
+  .progress{height:6px;background:var(--ink-100);border-radius:3px;overflow:hidden}
+  .progress-bar{height:100%;background:var(--ptit-red);border-radius:3px}
+
+  .filter-chip{
+    display:inline-flex;align-items:center;gap:4px;
+    padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;
+    background:#fff;color:var(--ink-700);border:1px solid var(--ink-200);
+    cursor:pointer;white-space:nowrap;
+  }
+  .filter-chip.active{background:var(--ptit-red);color:#fff;border-color:var(--ptit-red)}
+
+  .star{color:#F59E0B}
+  .star-empty{color:var(--ink-300)}
+
+  .otp-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:18px 0}
+  .otp-cell{
+    aspect-ratio:1;border:2px solid var(--ink-200);border-radius:10px;
+    display:grid;place-items:center;font-size:20px;font-weight:700;
+  }
+  .otp-cell.filled{border-color:var(--ptit-red);background:var(--ptit-red-soft)}
+
+  .qr-box{
+    width:200px;height:200px;background:
+      linear-gradient(45deg,#000 25%,transparent 25%) 0 0/16px 16px,
+      linear-gradient(-45deg,#000 25%,transparent 25%) 0 0/16px 16px,
+      linear-gradient(45deg,transparent 75%,#000 75%) 0 0/16px 16px,
+      linear-gradient(-45deg,transparent 75%,#000 75%) 0 0/16px 16px,
+      #fff;
+    border-radius:14px;padding:16px;margin:0 auto;position:relative;
+  }
+  .qr-box::after{
+    content:'';position:absolute;inset:38%;background:var(--ptit-red);border-radius:8px;
+  }
+
+  .upload-zone{
+    border:2px dashed var(--ink-300);border-radius:14px;
+    padding:30px 20px;text-align:center;background:var(--ink-50);
+  }
+  .upload-zone .ico{font-size:36px;color:var(--ptit-red);margin-bottom:10px}
+
+  .rubric-row{
+    background:#fff;border-radius:10px;padding:12px;margin-bottom:8px;
+    border:1px solid var(--ink-200);
+  }
+  .rubric-slider{
+    -webkit-appearance:none;appearance:none;
+    width:100%;height:6px;border-radius:3px;
+    background:var(--ink-200);outline:none;margin-top:8px;
+  }
+  .rubric-slider::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;
+    width:18px;height:18px;border-radius:50%;
+    background:var(--ptit-red);cursor:pointer;
+  }
+
+  .table-row{
+    display:grid;grid-template-columns:30px 1fr auto;
+    gap:10px;align-items:center;padding:10px 12px;
+    background:#fff;border-radius:10px;margin-bottom:6px;font-size:12px;
+  }
+
+  /* footer info */
+  .footer-info{
+    background:#fff;border-radius:var(--radius-lg);
+    padding:16px;margin-top:16px;
+  }
+  .footer-info h4{font-size:12px;color:var(--ink-500);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+
+</style>
+</head>
+<body>
+
+<!-- ============ TOP BAR ============ -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="brand-logo">PTIT</div>
+      <div class="brand-text">
+        <h1>Contest Management — Mobile App Mockup</h1>
+        <p>Đồ án CNPM · Học viện Công nghệ Bưu chính Viễn thông</p>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+      <span class="stack-pill">🐧 <b>Ubuntu 24.04 LTS</b></span>
+      <span class="stack-pill">⚡ <b>FastAPI</b></span>
+      <span class="stack-pill">🐘 <b>PostgreSQL</b></span>
+      <span class="stack-pill">🌐 <b>Nginx</b></span>
+      <span class="stack-pill">⚙️ <b>systemd</b></span>
+    </div>
+  </div>
+</header>
+
+<!-- ============ ACTOR TABS ============ -->
+<nav class="actor-tabs">
+  <button class="actor-tab active" data-actor="student">
+    <span class="ico">👨‍🎓</span> Sinh viên
+  </button>
+  <button class="actor-tab" data-actor="lecturer">
+    <span class="ico">👨‍🏫</span> Giảng viên / BTC
+  </button>
+  <button class="actor-tab" data-actor="bcn">
+    <span class="ico">🏛️</span> Ban chủ nhiệm khoa
+  </button>
+  <button class="actor-tab" data-actor="admin">
+    <span class="ico">🛡️</span> Admin
+  </button>
+</nav>
+
+<!-- ============ MAIN LAYOUT ============ -->
+<div class="layout">
+
+  <!-- LEFT: screen list -->
+  <aside class="left-panel">
+    <div class="side-panel">
+      <h3 id="actor-name-label">Sinh viên · 14 màn</h3>
+      <div class="screen-list" id="screen-list"></div>
+    </div>
+  </aside>
+
+  <!-- CENTER: phone -->
+  <section class="stage">
+    <div class="screen-meta">
+      <div class="screen-meta-num" id="meta-num">01</div>
+      <div>
+        <h2 id="meta-title">Splash screen</h2>
+        <p id="meta-desc">Màn hình chờ khi mở app</p>
+      </div>
+      <div class="nav-arrows">
+        <button class="nav-arrow" id="prev-btn" title="Màn trước">‹</button>
+        <button class="nav-arrow" id="next-btn" title="Màn sau">›</button>
+      </div>
+    </div>
+
+    <div class="phone">
+      <div class="phone-screen" id="phone-screen">
+        <!-- screens injected here -->
+      </div>
+    </div>
+  </section>
+
+  <!-- RIGHT: meta -->
+  <aside class="right-panel">
+    <div class="side-panel">
+      <h4>Thông tin màn hình</h4>
+      <div id="meta-info">
+        <div class="meta-row"><b>Mã chức năng:</b><span id="meta-code">SV1</span></div>
+        <div class="meta-row"><b>Loại:</b><span id="meta-type">Lưu trữ</span></div>
+        <div class="meta-row"><b>API liên quan:</b><span id="meta-api">—</span></div>
+        <div class="meta-row"><b>Bảng CSDL:</b><span id="meta-db">—</span></div>
+      </div>
+    </div>
+
+    <div class="footer-info">
+      <h4>Tech stack</h4>
+      <div>
+        <span class="tech-chip os">🐧 Ubuntu 24.04</span>
+        <span class="tech-chip api">⚡ FastAPI</span>
+        <span class="tech-chip api">🔐 JWT + OAuth2</span>
+        <span class="tech-chip db">🐘 PostgreSQL 16</span>
+        <span class="tech-chip web">🌐 Nginx</span>
+        <span class="tech-chip">⚙️ systemd</span>
+        <span class="tech-chip">📱 Flutter (suggest)</span>
+        <span class="tech-chip">📦 Pydantic v2</span>
+        <span class="tech-chip">🔄 SQLAlchemy 2</span>
+        <span class="tech-chip">🚀 Uvicorn</span>
+      </div>
+    </div>
+
+    <div class="footer-info">
+      <h4>Hệ màu PTIT</h4>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <div style="text-align:center"><div style="width:40px;height:40px;border-radius:8px;background:#C8102E"></div><div class="text-xs mt-2">#C8102E</div></div>
+        <div style="text-align:center"><div style="width:40px;height:40px;border-radius:8px;background:#A00D24"></div><div class="text-xs mt-2">#A00D24</div></div>
+        <div style="text-align:center"><div style="width:40px;height:40px;border-radius:8px;background:#FEE5E9;border:1px solid #eee"></div><div class="text-xs mt-2">#FEE5E9</div></div>
+        <div style="text-align:center"><div style="width:40px;height:40px;border-radius:8px;background:#0F172A"></div><div class="text-xs mt-2">#0F172A</div></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+/* ====================================================
+   SCREEN DEFINITIONS
+   Each actor has a list of screens.
+   render() returns an HTML string for the phone-screen.
+   ==================================================== */
+
+const STATUS_BAR = (white=false) => `
+  <div class="status-bar ${white?'on-red':''}">
+    <span>9:41</span>
+    <div class="status-icons"><span>📶</span><span>📡</span><span>🔋</span></div>
+  </div>`;
+
+const BOTTOM_NAV = (active='home') => `
+  <div class="bottom-nav">
+    <button class="nav-item ${active==='home'?'active':''}"><span class="nav-item-ico">🏠</span>Trang chủ</button>
+    <button class="nav-item ${active==='contests'?'active':''}"><span class="nav-item-ico">🏆</span>Cuộc thi</button>
+    <button class="nav-item ${active==='my'?'active':''}"><span class="nav-item-ico">📋</span>Của tôi</button>
+    <button class="nav-item ${active==='noti'?'active':''}"><span class="nav-item-ico">🔔</span>Thông báo</button>
+    <button class="nav-item ${active==='me'?'active':''}"><span class="nav-item-ico">👤</span>Tôi</button>
+  </div>`;
+
+const BOTTOM_NAV_LECT = (active='home') => `
+  <div class="bottom-nav">
+    <button class="nav-item ${active==='home'?'active':''}"><span class="nav-item-ico">📊</span>Tổng quan</button>
+    <button class="nav-item ${active==='contests'?'active':''}"><span class="nav-item-ico">🏆</span>Cuộc thi</button>
+    <button class="nav-item ${active==='grade'?'active':''}"><span class="nav-item-ico">✍️</span>Chấm thi</button>
+    <button class="nav-item ${active==='stats'?'active':''}"><span class="nav-item-ico">📈</span>Báo cáo</button>
+    <button class="nav-item ${active==='me'?'active':''}"><span class="nav-item-ico">👤</span>Tôi</button>
+  </div>`;
+
+const BOTTOM_NAV_BCN = (active='home') => `
+  <div class="bottom-nav">
+    <button class="nav-item ${active==='home'?'active':''}"><span class="nav-item-ico">📊</span>Tổng quan</button>
+    <button class="nav-item ${active==='approve'?'active':''}"><span class="nav-item-ico">✅</span>Phê duyệt</button>
+    <button class="nav-item ${active==='monitor'?'active':''}"><span class="nav-item-ico">👁️</span>Giám sát</button>
+    <button class="nav-item ${active==='cert'?'active':''}"><span class="nav-item-ico">🎓</span>Chứng nhận</button>
+    <button class="nav-item ${active==='me'?'active':''}"><span class="nav-item-ico">👤</span>Tôi</button>
+  </div>`;
+
+const BOTTOM_NAV_ADMIN = (active='home') => `
+  <div class="bottom-nav">
+    <button class="nav-item ${active==='home'?'active':''}"><span class="nav-item-ico">📊</span>Tổng quan</button>
+    <button class="nav-item ${active==='users'?'active':''}"><span class="nav-item-ico">👥</span>Người dùng</button>
+    <button class="nav-item ${active==='config'?'active':''}"><span class="nav-item-ico">⚙️</span>Cấu hình</button>
+    <button class="nav-item ${active==='audit'?'active':''}"><span class="nav-item-ico">📜</span>Audit</button>
+    <button class="nav-item ${active==='me'?'active':''}"><span class="nav-item-ico">👤</span>Tôi</button>
+  </div>`;
+
+/* =======================================================
+   STUDENT SCREENS
+   ======================================================= */
+const STUDENT_SCREENS = [
+  {
+    title:'Splash screen', desc:'Màn hình chờ khi mở app',
+    code:'SV0', type:'UI', api:'—', db:'—',
+    render:()=>`
+      ${STATUS_BAR(true)}
+      <div class="splash">
+        <div class="splash-logo">PTIT</div>
+        <h1>Contest Hub</h1>
+        <p>Cuộc thi sinh viên Học viện<br>Công nghệ Bưu chính Viễn thông</p>
+        <div class="loading-bar"></div>
+      </div>`
+  },
+  {
+    title:'Đăng nhập', desc:'Sinh viên đăng nhập bằng email PTIT',
+    code:'SV1', type:'Lưu trữ',
+    api:'POST /auth/login',
+    db:'app_users, user_roles',
+    render:()=>`
+      ${STATUS_BAR(true)}
+      <div class="auth-hero">
+        <div style="width:70px;height:70px;border-radius:18px;background:#fff;color:var(--ptit-red);display:grid;place-items:center;font-weight:900;font-size:18px;margin:0 auto 16px">PTIT</div>
+        <h1>Chào mừng trở lại</h1>
+        <p>Đăng nhập để bắt đầu hành trình</p>
+      </div>
+      <div class="auth-card">
+        <div class="input-group">
+          <label class="input-label">Email PTIT</label>
+          <input class="input" placeholder="b21dccn123@ptit.edu.vn" value="b21dccn123@ptit.edu.vn">
+        </div>
+        <div class="input-group">
+          <label class="input-label">Mật khẩu</label>
+          <input class="input" type="password" placeholder="••••••••" value="••••••••">
+        </div>
+        <div class="row-between mb-3">
+          <label class="row text-sm"><input type="checkbox" checked> Ghi nhớ</label>
+          <a class="text-red text-sm font-semi">Quên mật khẩu?</a>
+        </div>
+        <button class="btn btn-primary btn-block mb-3">Đăng nhập</button>
+        <div class="text-center text-sm text-muted mb-3">hoặc</div>
+        <button class="btn btn-outline btn-block">Đăng ký tài khoản mới</button>
+        <p class="text-center text-xs text-muted mt-4">SV_QĐ1: email phải là @ptit.edu.vn, mật khẩu ≥ 6 ký tự</p>
+      </div>`
+  },
+  {
+    title:'Đăng ký tài khoản', desc:'Sinh viên đăng ký mới',
+    code:'SV1', type:'Lưu trữ',
+    api:'POST /auth/register',
+    db:'app_users, students, student_directory',
+    render:()=>`
+      ${STATUS_BAR()}
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="icon-btn">‹</button>
+          <div class="app-header-title">Đăng ký</div>
+        </div>
+        <div class="app-header-sub">Tạo tài khoản mới với email PTIT</div>
+      </div>
+      <div class="app-body">
+        <div class="input-group">
+          <label class="input-label">Họ và tên</label>
+          <input class="input" placeholder="Nguyễn Văn A" value="Nguyễn Văn An">
+        </div>
+        <div class="input-group">
+          <label class="input-label">Mã sinh viên</label>
+          <input class="input" placeholder="B21DCCN123" value="B21DCCN123">
+        </div>
+        <div class="input-group">
+          <label class="input-label">Email PTIT</label>
+          <input class="input" placeholder="b21dccn123@ptit.edu.vn" value="b21dccn123@ptit.edu.vn">
+        </div>
+        <div class="grid-2">
+          <div class="input-group">
+            <label class="input-label">Khoa</label>
+            <input class="input" value="CNTT" readonly>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Lớp</label>
+            <input class="input" value="D21CN02" readonly>
+          </div>
+        </div>
+        <div class="input-group">
+          <label class="input-label">Mật khẩu (≥ 6 ký tự)</label>
+          <input class="input" type="password" value="••••••••">
+        </div>
+        <div class="input-group">
+          <label class="input-label">Nhập lại mật khẩu</label>
+          <input class="input" type="password" value="••••••••">
+        </div>
+        <div class="card" style="background:var(--info-soft);border:0">
+          <div class="text-xs"><b>ℹ️ Lưu ý:</b> Hệ thống sẽ kiểm tra mã SV trong danh sách chuẩn của trường. Sau khi gửi, bạn sẽ nhận mã OTP qua email.</div>
+        </div>
+        <button class="btn btn-primary btn-block">Tiếp tục → Xác thực OTP</button>
+      </div>`
+  },
+  {
+    title:'Xác thực OTP', desc:'Nhập mã OTP gửi qua email PTIT',
+    code:'SV1', type:'UI',
+    api:'POST /auth/verify-otp',
+    db:'app_users.email_verified_at',
+    render:()=>`
+      ${STATUS_BAR()}
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="icon-btn">‹</button>
+          <div class="app-header-title">Xác thực OTP</div>
+        </div>
+      </div>
+      <div class="app-body" style="padding:30px 20px">
+        <div class="text-center mb-4">
+          <div style="font-size:50px">✉️</div>
+          <h2 class="text-lg font-bold mt-3">Nhập mã 6 chữ số</h2>
+          <p class="text-sm text-muted mt-2">Đã gửi đến <b>b21dccn123@ptit.edu.vn</b></p>
+        </div>
+        <div class="otp-grid">
+          <div class="otp-cell filled">8</div>
+          <div class="otp-cell filled">2</div>
+          <div class="otp-cell filled">5</div>
+          <div class="otp-cell filled">7</div>
+          <div class="otp-cell"></div>
+          <div class="otp-cell"></div>
+        </div>
+        <p class="text-center text-sm text-muted mb-3">Mã sẽ hết hạn sau <b class="text-red">02:34</b></p>
+        <button class="btn btn-primary btn-block mb-3">Xác thực</button>
+        <p class="text-center text-sm">Không nhận được mã? <a class="text-red font-semi">Gửi lại</a></p>
+      </div>`
+  },
+  {
+    title:'Trang chủ (Home)', desc:'Dashboard sinh viên — featured contests',
+    code:'SV4-5', type:'Tra cứu',
+    api:'GET /contests/featured · GET /me/upcoming',
+    db:'contests, contest_entries',
+    render:()=>`
+      ${STATUS_BAR(true)}
+      <div class="app-header tall">
+        <div class="app-header-row">
+          <div class="avatar" style="background:#fff;color:var(--ptit-red)">AN</div>
+          <div class="flex-1">
+            <div style="font-size:11px;opacity:.85">Xin chào,</div>
+            <div class="app-header-title">Nguyễn Văn An</div>
+          </div>
+          <button class="icon-btn">🔔</button>
+        </div>
+        <div style="background:rgba(255,255,255,.18);border-radius:12px;padding:10px 14px;margin-top:14px;display:flex;align-items:center;gap:10px">
+          <span>🔍</span>
+          <input style="flex:1;background:transparent;border:0;color:#fff;font-size:13px;outline:none" placeholder="Tìm cuộc thi..." value="Tìm cuộc thi...">
+        </div>
+      </div>
+      <div class="app-body" style="margin-top:-12px">
+        <div class="grid-3 mb-3">
+          <div class="stat-card"><div class="num">3</div><div class="lbl">Đang tham gia</div></div>
+          <div class="stat-card"><div class="num">7</div><div class="lbl">Đã hoàn thành</div></div>
+          <div class="stat-card"><div class="num">2</div><div class="lbl">Giải thưởng</div></div>
+        </div>
+
+        <div class="section-title">🔥 Nổi bật <span class="more">Xem tất cả ›</span></div>
+        <div class="contest-card">
+          <div class="contest-banner">
+            <div>
+              <div class="contest-banner-cat">CNTT · TUẦN NÀY</div>
+              <div style="font-weight:700;font-size:14px;margin-top:4px">PTIT Code Hunt 2026</div>
+            </div>
+          </div>
+          <div class="contest-content">
+            <div class="contest-meta">
+              <span class="badge badge-success">🟢 Đang mở</span>
+              <span>📅 5 ngày còn lại</span>
+              <span>👥 142 thí sinh</span>
+            </div>
+          </div>
+        </div>
+        <div class="contest-card">
+          <div class="contest-banner b2">
+            <div>
+              <div class="contest-banner-cat">KỸ NĂNG MỀM</div>
+              <div style="font-weight:700;font-size:14px;margin-top:4px">Hùng biện sinh viên 2026</div>
+            </div>
+          </div>
+          <div class="contest-content">
+            <div class="contest-meta">
+              <span class="badge badge-warning">🟡 Sắp đóng</span>
+              <span>📅 1 ngày còn lại</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-title">📅 Sắp diễn ra của bạn</div>
+        <div class="list-item">
+          <div class="list-item-ico">🏆</div>
+          <div class="list-item-body">
+            <div class="list-item-title">Vòng chung kết — Code Hunt</div>
+            <div class="list-item-sub">10/05/2026 · 08:00 · Hội trường A2</div>
+          </div>
+          <span class="badge badge-red">2 ngày</span>
+        </div>
+      </div>
+      ${BOTTOM_NAV('home')}`
+  },
+  {
+    title:'Danh sách cuộc thi (lọc)', desc:'Tìm kiếm và lọc cuộc thi',
+    code:'SV4', type:'Tra cứu',
+    api:'GET /contests?q=&category=&status=',
+    db:'contests',
+    render:()=>`
+      ${STATUS_BAR(true)}
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="icon-btn">‹</button>
+          <div class="app-header-title">Cuộc thi</div>
+          <button class="icon-btn">⚙️</button>
+        </div>
+        <div style="background:rgba(255,255,255,.18);border-radius:12px;padding:10px 14px;margin-top:12px;display:flex;align-items:center;gap:10px">
+          <span>🔍</span>
+          <input style="flex:1;background:transparent;border:0;color:#fff;font-size:13px;outline:none" placeholder="Tìm cuộc thi...">
+        </div>
+      </div>
+      <div class="app-body">
+        <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin:-4px 0 12px">
+          <button class="filter-chip active">Tất cả</button>
+          <button class="filter-chip">CNTT</button>
+          <button class="filter-chip">Học thuật</button>
+          <button class="filter-chip">Văn nghệ</button>
+          <button class="filter-chip">Thể thao</button>
+        </div>
+        <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:12px">
+          <button class="filter-chip active">🟢 Đang mở</button>
+          <button class="filter-chip">📅 Sắp diễn ra</button>
+          <button class="filter-chip">👤 Cá nhân</button>
+          <button class="filter-chip">👥 Nhóm</button>
+        </div>
+
+        <div class="contest-card">
+          <div class="contest-banner">
+            <div>
+              <div class="contest-banner-cat">CNTT · CÁ NHÂN</div>
+              <div style="font-weight:700;font-size:14px;margin-top:4px">PTIT Code Hunt 2026</div>
+            </div>
+          </div>
+          <div class="contest-content">
+            <div class="text-xs text-muted mb-2">Cuộc thi lập trình thuật toán dành cho SV năm 1-4</div>
+            <div class="contest-meta">
+              <span class="badge badge-success">🟢 Đang mở</span><span>👥 142/200</span>
+            </div>
+          </div>
+        </div>
+        <div class="contest-card">
+          <div class="contest-banner b3">
+            <div>
+              <div class="contest-banner-cat">HỌC THUẬT · NHÓM</div>
+              <div style="font-weight:700;font-size:14px;margin-top:4px">Hackathon Khởi nghiệp 2026</div>
+            </div>
+          </div>
+          <div class="contest-content">
+            <div class="text-xs text-muted mb-2">Đội 3-5 thành viên · Giải nhất 20 triệu VNĐ</div>
+            <div class="contest-meta">
+              <span class="badge badge-warning">⏰ 1 ngày</span><span>👥 38 đội</span>
+            </div>
+          </div>
+        </div>
+        <div class="contest-card">
+          <div class="contest-banner b4">
+            <div>
+              <div class="contest-banner-cat">VĂN NGHỆ</div>
+              <div style="font-weight:700;font-size:14px;margin-top:4px">Tiếng hát PTIT 2026</div>
+            </div>
+          </div>
+          <div class="contest-content">
+            <div class="contest-meta">
+              <span class="badge badge-info">📅 15/05</span><span>🎤 Vòng sơ loại</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      ${BOTTOM_NAV('contests')}`
+  },
+  {
+    title:'Chi tiết cuộc thi', desc:'Xem mô tả, thể lệ, giải thưởng',
+    code:'SV5', type:'Tra cứu',
+    api:'GET /contests/{slug}',
+    db:'contests, contest_rounds, contest_organizers',
+    render:()=>`
+      ${STATUS_BAR(true)}
+      <div style="height:160px;background:linear-gradient(135deg,#C8102E,#7E0A1D);position:relative;flex-shrink:0;padding:14px">
+        <div class="row-between">
+          <button class="icon-btn">‹</button>
+          <div class="row gap-2">
+            <button class="icon-btn">↗</button>
+            <button class="icon-btn">♡</button>
+          </div>
+        </div>
+        <div style="position:absolute;bottom:14px;left:16px;color:#fff">
+          <div class="text-xs" style="opacity:.85">CNTT · CÁ NHÂN</div>
+          <div class="text-xl font-bold">PTIT Code Hunt 2026</div>
+        </div>
+      </div>
+      <div class="app-body" style="margin-top:-14px;background:#fff;border-radius:18px 18px 0 0">
+        <div class="row gap-2 mb-3">
+          <span class="badge badge-success">🟢 Đang mở đăng ký</span>
+          <span class="badge badge-gray">⏰ Còn 5 ngày</span>
+        </div>
+        <div class="grid-3 mb-3" style="text-align:center">
+          <div><div class="text-2xl font-bold text-red">142</div><div class="text-xs text-muted">Thí sinh</div></div>
+          <div><div class="text-2xl font-bold text-red">3</div><div class="text-xs text-muted">Vòng thi</div></div>
+          <div><div class="text-2xl font-bold text-red">5tr</div><div class="text-xs text-muted">Giải nhất</div></div>
+        </div>
+        <div class="card-flat">
+          <div class="font-bold mb-2">📋 Mô tả</div>
+          <div class="text-sm text-muted">Cuộc thi lập trình thuật toán hàng năm dành cho sinh viên PTIT. 3 vòng thi: Sơ loại online, Bán kết, Chung kết. Áp dụng quy chế chấm ẩn danh.</div>
+        </div>
+        <div class="card-flat">
+          <div class="font-bold mb-2">📅 Lịch trình</div>
+          <div class="timeline">
+            <div class="timeline-item"><div class="timeline-dot"></div>
+              <div class="text-sm font-semi">Mở đăng ký</div>
+              <div class="text-xs text-muted">01/05/2026 — 08/05/2026</div>
+            </div>
+            <div class="timeline-item"><div class="timeline-dot" style="background:var(--warning)"></div>
+              <div class="text-sm font-semi">Vòng sơ loại (online)</div>
+              <div class="text-xs text-muted">10/05/2026 · 19:00-22:00</div>
+            </div>
+            <div class="timeline-item"><div class="timeline-dot" style="background:var(--ink-300)"></div>
+              <div class="text-sm font-semi">Vòng bán kết</div>
+              <div class="text-xs text-muted">15/05/2026 · Hội trường A2</div>
+            </div>
+            <div class="timeline-item"><div class="timeline-dot" style="background:var(--ink-300)"></div>
+              <div class="text-sm font-semi">Chung kết · Trao giải</div>
+              <div class="text-xs text-muted">22/05/2026</div>
+            </div>
+          </div>
+        </div>
+        <div class="card-flat">
+          <div class="font-bold mb-2">🏆 Giải thưởng</div>
+          <div class="text-sm">🥇 Nhất: 5.000.000 VNĐ + Cup<br>🥈 Nhì: 3.000.000 VNĐ<br>🥉 Ba: 1.500.000 VNĐ + 5 giải KK</div>
+        </div>
+        <div class="row gap-2">
+          <button class="btn btn-secondary flex-1">Hỏi BTC</button>
+          <button class="btn btn-primary flex-1">Đăng ký ngay</button>
+        </div>
+      </div>`
+  },
+  {
+    title:'Đăng ký dự thi (cá nhân/nhóm)', desc:'Form đăng ký, tạo nhóm tối đa 5 TV',
+    code:'SV6', type:'Lưu trữ',
+    api:'POST /contests/{id}/register · POST /teams',
+    db:'contest_entries, teams, team_members',
+    render:()=>`
+      ${STATUS_BAR()}
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="icon-btn">‹</button>
+          <div class="app-header-title">Đăng ký dự thi</div>
+        </div>
+        <div class="app-header-sub">PTIT Code Hunt 2026</div>
+      </div>
+      <div class="app-body">
+        <div class="row gap-2 mb-3">
+          <button class="btn btn-outline flex-1" style="background:var(--ptit-red);color:#fff;border-color:var(--ptit-red)">👤 Cá nhân</button>
+          <button class="btn btn-outline flex-1">👥 Theo nhóm</button>
+        </div>
+        <div class="card-flat">
+          <div class="font-bold mb-2">Thông tin thí sinh</div>
+          <div class="row gap-3 mb-3">
+            <div class="avatar">AN</div>
+            <div class="flex-1">
+              <div class="font-semi text-sm">Nguyễn Văn An</div>
+              <div class="text-xs text-muted">B21DCCN123 · CNTT · D21CN02</div>
+            </div>
+            <span class="badge badge-success">✓</span>
+          </div>
+        </div>
+        <div class="input-group">
+          <label class="input-label">Lời giới thiệu (tùy chọn)</label>
+          <textarea class="input" rows="3" placeholder="Vài dòng giới thiệu...">Sinh viên năm 3, đam mê thuật toán và competitive programming.</textarea>
+        </div>
+        <div class="card" style="background:var(--warning-soft);border:0">
+          <div class="text-xs"><b>⚠️ Điều kiện dự thi (SV_QĐ2):</b><br>· Là SV PTIT đang theo học · GPA ≥ 2.0 · Chưa từng đạt giải nhất 2 năm liên tiếp</div>
+        </div>
+        <label class="row gap-2 text-sm mb-3"><input type="checkbox" checked> Tôi đã đọc và đồng ý <a class="text-red">thể lệ cuộc thi</a></label>
+        <button class="btn btn-primary btn-block">Xác nhận đăng ký</button>
+      </div>`
+  },
+  {
+    title:'Tạo nhóm dự thi', desc:'Mời thành viên (tối đa 5)',
+    code:'SV6', type:'Lưu trữ',
+    api:'POST /teams · POST /teams/{id}/invite',
+    db:'teams, team_members',
+    render:()=>`
+      ${STATUS_BAR()}
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="icon-btn">‹</button>
+          <div class="app-header-title">Tạo nhóm</div>
+        </div>
+        <div class="app-header-sub">Hackathon Khởi nghiệp 2026</div>
+      </div>
+      <div class="app-body">
+        <div class="input-group">
+          <label class="input-label">Tên nhóm *</label>
+          <input class="input" value="The Codebreakers">
+        </div>
+        <div class="section-title">Thành viên (3/5)</div>
+        <div class="list-item">
+          <div class="avatar avatar-sm">AN</div>
+          <div class="list-item-body">
+            <div class="list-item-title">Nguyễn Văn An (Bạn)</div>
+            <div class="list-item-sub">B21DCCN123</div>
+          </div>
+          <span class="badge badge-red">👑 Leader</span>
+        </div>
+        <div class="list-item">
+          <div class="avatar avatar-sm" style="background:#1E40AF">BL</div>
+          <div class="list-item-body">
+            <div class="list-item-title">Trần Bảo Linh</div>
+            <div class="list-item-sub">B21DCCN045 · ✓ Đã chấp nhận</div>
+          </div>
+          <button class="btn btn-sm btn-secondary">×</button>
+        </div>
+        <div class="list-item">
+          <div class="avatar avatar-sm" style="background:#16A34A">MH</div>
+          <div class="list-item-body">
+            <div class="list-item-title">Lê Minh Hoàng</div>
+            <div class="list-item-sub">B21DCCN090 · ⏳ Chờ chấp nhận</div>
+          </div>
+          <button class="btn btn-sm btn-secondary">×</button>
+        </div>
+        <div class="card-flat" style="border-style:dashed;text-align:center;cursor:pointer">
+          <div class="text-2xl">➕</div>
+          <div class="text-sm font-semi">Mời thành viên</div>
+          <div class="text-xs text-muted mt-2">Nhập MSSV hoặc email</div>
+        </div>
+        <div class="card" style="background:var(--info-soft);border:0">
+          <div class="text-xs"><b>ℹ️ Lưu ý:</b> Nhóm có 3-5 thành viên · Tất cả phải thuộc PTIT · Đăng ký chỉ hoàn tất khi mọi thành viên đã chấp nhận lời mời.</div>
+        </div>
+        <button class="btn btn-primary btn-block">Lưu & gửi lời mời</button>
+      </div>`
+  },
+  {
+    title:'Nộp bài thi', desc:'Upload file PDF/DOCX/ZIP',
+    code:'SV8', type:'Lưu trữ',
+    api:'POST /submissions · PUT /submissions/{id}/files',
+    db:'submissions, submission_versions, submission_files',
+    render:()=>`
+      ${STATUS_BAR()}
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="icon-btn">‹</button>
+          <div class="app-header-title">Nộp bài</div>
+        </div>
+        <div class="app-header-sub">Vòng sơ loại · Hạn: 10/05 23:59</div>
+      </div>
+      <div class="app-body">
+        <div class="card" style="background:var(--ptit-red-soft);border:0">
+          <div class="row-between">
+            <div>
+              <div class="text-xs text-muted">Còn lại</div>
+              <div class="text-xl font-bold text-red">2 giờ 14 phút</div>
+            </div>
+            <div style="font-size:34px">⏰</div>
+          </div>
+        </div>
+        <div class="input-group">
+          <label class="input-label">Tiêu đề bài nộp</label>
+          <input class="input" value="Giải bài tập thuật toán - Round 1">
+        </div>
+        <div class="input-group">
+          <label class="input-label">Mô tả ngắn (tùy chọn)</label>
+          <textarea class="input" rows="2">Lời giải sử dụng dynamic programming và segment tree.</textarea>
+        </div>
+        <div class="input-group">
+          <label class="input-label">Tệp đính kèm</label>
+          <div class="upload-zone">
+            <div class="ico">📤</div>
+            <div class="font-semi text-sm">Kéo file vào đây hoặc bấm để chọn</div>
+            <div class="text-xs text-muted mt-2">PDF, DOCX, ZIP · Tối đa 50MB (QĐ-04)</div>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="list-item-ico" style="background:#FEE2E2;color:#DC2626">📄</div>
+          <div class="list-item-body">
+            <div class="list-item-title">solution.pdf</div>
+            <div class="list-item-sub">2.4 MB · ✓ Đã upload</div>
+          </div>
+          <button class="btn-sm" style="background:none;border:0;color:var(--danger)">🗑</button>
+        </div>
+        <div class="list-item">
+          <div class="list-item-ico" style="background:#DBEAFE;color:#1D4ED8">📦</div>
+          <div class="list-item-body">
+            <div class="list-item-title">source-code.zip</div>
+            <div class="list-item-sub">5.1 MB · ⏳ Đang upload (78%)</div>
+            <div class="progress mt-2"><div class="progress-bar" style="width:78%"></div></div>
+          </div>
+        </div>
+        <div class="card" style="background:var(--info-soft);border:0">
+          <div class="text-xs"><b>ℹ️ QĐ-02:</b> Sau khi nộp, bài sẽ chuyển trạng thái <b>SUBMITTED</b>. Bạn có thể nộp lại nhiều phiên bản trước hạn (lưu lịch sử version).</div>
+        </div>
+        <div class="row gap-2">
+          <button class="btn btn-secondary flex-1">Lưu nháp</button>
+          <button class="btn btn-primary flex-1">Nộp bài</button>
+        </div>
+      </div>`
+  },
+  {
+    title:'Cuộc thi của tôi (lịch sử)', desc:'Tra cứu các cuộc thi đã/đang tham gia',
+    code:'SV9', type:'Tra cứu',
+    api:'GET /me/entries',
+    db:'contest_entries, contests, round_results',
+    render:()=>`
+      ${STATUS_BAR(true)}
+      <div class="app-header">
+        <div class="app-header-row">
+          <div class="app-header-title">Cuộc thi của tôi</div>
+          <button class="icon-btn">⚙️</button>
+        </div>
+      </div>
+      <div class="app-body">
+        <div style="display:flex;gap:6px;overflow-x:auto;margin:-4px 0 12px">
+          <button class="filter-chip active">Tất cả (10)</button>
+          <button class="filter-chip">Đang thi (3)</button>
+          <button class="filter-chip">Đã xong (7)</button>
+        </div>
+        <div class="card">
+          <div class="row-between mb-2">
+            <div class="badge badge-success">🟢 Đang diễn ra</div>
+            <span class="text-xs text-muted">5 ngày còn lại</span>
+          </div>
+          <div class="font-bold mb-2">PTIT Code Hunt 2026</div>
+          <div class="text-xs text-muted mb-2">Vòng sơ loại · Hạn nộp: 10/05 23:59</div>
+          <div class="progress mb-2"><div class="progress-bar" style="width:35%"></div></div>
+          <div class="row-between text-xs"><span>Trạng thái: <b class="text-red">SUBMITTED</b></span><a class="text-red font-semi">Chi tiết ›</a></div>
+        </div>
+        <div class="card">
+          <div class="row-between mb-2">
+            <div class="badge badge-info">📅 Sắp diễn ra</div>
+            <span class="text-xs text-muted">15/05/2026</span>
+          </div>
+          <div class="font-bold mb-2">Hackathon Khởi nghiệp 2026</div>
+          <div class="text-xs text-muted">The Codebreakers · 3 thành viên</div>
+        </div>
+        <div class="card">
+          <div class="row-between mb-2">
+            <div class="badge badge-gray">✓ Đã hoàn thành</div>
+            <div class="row gap-2"><span class="star">★★★★★</span></div>
+          </div>
+          <div class="font-bold mb-2">Tiếng Anh PTIT 2025</div>
+          <div class="row-between">
+            <div class="text-xs">Kết quả: <b class="text-success">Giải Khuyến khích</b></div>
+            <a class="text-red text-xs font-semi">Tải chứng nhận ›</a>
+          </div>
+        </div>
+        <div class="card">
+          <div class="row-between mb-2">
+            <div class="badge badge-gray">✓ Đã hoàn thành</div>
+          </div>
+          <div class="font-bold mb-2">Olympic Tin học 2025</div>
+          <div class="text-xs">Kết quả: <b>Hạng 12 / 87</b> · 78 điểm</div>
+        </div>
+      </div>
+      ${BOTTOM_NAV('my')}`
+  },
+  {
+    title:'Kết quả & Chứng nhận', desc:'Xem kết quả, tải chứng nhận QR',
+    code:'SV9', type:'Kết xuất',
+    api:'GET /results/{id} · GET /certificates/{id}/qr',
+    db:'contest_results, certificates',
+    render:()=>`
+      ${STATUS_BAR()}
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="icon-btn">‹</button>
+          <div class="app-header-title">Kết quả</div>
+          <button class="icon-btn">↗</button>
+        </div>
+      </div>
+      <div class="app-body" style="background:linear-gradient(180deg,var(--ptit-red-soft) 0%,var(--ink-50) 100%)">
+        <div class="text-center mb-4">
+          <div style="font-size:60px">🏆</div>
+          <div class="text-xs text-muted mt-2">CHÚC MỪNG BẠN ĐÃ ĐẠT</div>
+          <div class="text-2xl font-bold text-red mt-2">Giải Khuyến khích</div>
+          <div class="text-sm text-muted mt-2">Tiếng Anh PTIT 2025</div>
+        </div>
+
+        <div class="card">
+          <div class="font-bold mb-2">📊 Điểm số</div>
+          <div class="grid-3" style="text-align:center">
+            <div><div class="text-xl font-bold text-red">82.5</div><div class="text-xs text-muted">Tổng</div></div>
+            <div><div class="text-xl font-bold">15/87</div><div class="text-xs text-muted">Xếp hạng</div></div>
+            <div><div class="text-xl font-bold text-success">Đạt</div><div class="text-xs text-muted">Trạng thái</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="font-bold mb-3">📋 Điểm chi tiết theo tiêu chí</div>
+          <div class="row-between text-sm mb-2"><span>Listening</span><b>22/25</b></div>
+          <div class="progress mb-3"><div class="progress-bar" style="width:88%"></div></div>
+          <div class="row-between text-sm mb-2"><span>Speaking</span><b>18/25</b></div>
+          <div class="progress mb-3"><div class="progress-bar" style="width:72%"></div></div>
+          <div class="row-between text-sm mb-2"><span>Reading</span><b>21/25</b></div>
+          <div class="progress mb-3"><div class="progress-bar" style="width:84%"></div></div>
+          <div class="row-between text-sm mb-2"><span>Writing</span><b>21.5/25</b></div>
+          <div class="progress"><div class="progress-bar" style="width:86%"></div></div>
+        </div>
+
+        <div class="card text-center">
+          <div class="font-bold mb-3">🎓 Chứng nhận điện tử</div>
+          <div class="qr-box"></div>
+          <div class="text-xs text-muted mt-3">Mã: PTIT-2025-EN-0142</div>
+          <div class="row gap-2 mt-3">
+            <button class="btn btn-outline flex-1">📥 Tải PDF</button>
+            <button class="btn btn-primary flex-1">↗ Chia sẻ</button>
+          </div>
+        </div>
+
+        <button class="btn btn-secondary btn-block mt-3">Phúc khảo kết quả</button>
+      </div>`
+  },
+  {
+    title:'Thông báo', desc:'Push notifications, email logs',
+    code:'SV-NOTI', type:'Tra cứu',
+    api:'GET /notifications · PUT /notifications/{id}/read',
+    db:'notifications, notification_recipients',
+    render:()=>`
+      ${STATUS_BAR(true)}
+      <div class="app-header">
+        <div class="app-header-row">
+          <div class="app-header-title">Thông báo</div>
+          <button class="icon-btn">✓ Đọc tất cả</button>
+        </div>
+      </div>
+      <div class="app-body">
+        <div style="display:flex;gap:6px;margin-bottom:12px">
+          <button class="filter-chip active">Tất cả (8)</button>
+          <button class="filter-chip">Chưa đọc (3)</button>
+        </div>
+
+        <div class="card" style="border-left:3px solid var(--ptit-red)">
+          <div class="row gap-3">
+            <div style="font-size:24px">🏆</div>
+            <div class="flex-1">
+              <div class="font-semi text-sm mb-2">Bạn được phê duyệt tham gia Code Hunt 2026</div>
+              <div class="text-xs text-muted">10 phút trước · BTC Code Hunt</div>
+            </div>
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--ptit-red)"></div>
+          </div>
+        </div>
+
+        <div class="card" style="border-left:3px solid var(--info)">
+          <div class="row gap-3">
+            <div style="font-size:24px">📅</div>
+            <div class="flex-1">
+              <div class="font-semi text-sm mb-2">Nhắc nhở: Hôm nay là deadline nộp bài</div>
+              <div class="text-xs text-muted">2 giờ trước · System</div>
+            </div>
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--info)"></div>
+          </div>
+        </div>
+
+        <div class="card" style="border-left:3px solid var(--success)">
+          <div class="row gap-3">
+            <div style="font-size:24px">✅</div>
+            <div class="flex-1">
+              <div class="font-semi text-sm mb-2">Bài nộp Round 1 đã được ghi nhận</div>
+              <div class="text-xs text-muted">Hôm qua · System</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row gap-3">
+            <div style="font-size:24px">💬</div>
+            <div class="flex-1">
+              <div class="font-semi text-sm mb-2">BTC trả lời câu hỏi của bạn</div>
+              <div class="text-xs text-muted">3 ngày trước · Code Hunt</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row gap-3">
+            <div style="font-size:24px">🎓</div>
+            <div class="flex-1">
+              <div class="font-semi text-sm mb-2">Chứng nhận Tiếng Anh PTIT 2025 đã sẵn sàng</div>
+              <div class="text-xs text-muted">1 tuần trước · BCN khoa</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      ${BOTTOM_NAV('noti')}`
+  },
+  {
+    title:'Hồ sơ cá nhân', desc:'Profile, đổi mật khẩu, cài đặt',
+    code:'SV2', type:'Lưu trữ',
+    api:'GET /me · PUT /me · PUT /me/password',
+    db:'app_users, students',
+    render:()=>`
+      ${STATUS_BAR(true)}
+      <div class="app-header tall" style="padding-bottom:60px;text-align:center">
+        <div class="app-header-row">
+          <button class="icon-btn">‹</button>
+          <div class="app-header-title">Tôi</div>
+          <button class="icon-btn">⚙️</button>
+        </div>
+      </div>
+      <div class="app-body" style="margin-top:-50px">
+        <div class="text-center mb-3">
+          <div class="avatar avatar-lg" style="margin:0 auto;border:4px solid #fff;box-shadow:var(--shadow-md)">AN</div>
+          <div class="font-bold text-lg mt-3">Nguyễn Văn An</div>
+          <div class="text-xs text-muted">B21DCCN123 · b21dccn123@ptit.edu.vn</div>
+          <div class="row gap-2 mt-3" style="justify-content:center">
+            <span class="badge badge-red">CNTT · D21CN02</span>
+            <span class="badge badge-success">✓ Đã xác thực</span>
+          </div>
+        </div>
+
+        <div class="grid-3 mb-3">
+          <div class="stat-card"><div class="num">10</div><div class="lbl">Cuộc thi</div></div>
+          <div class="stat-card"><div class="num">2</div><div class="lbl">Giải thưởng</div></div>
+          <div class="stat-card"><div class="num">85</div><div class="lbl">Điểm TB</div></div>
+        </div>
+
+        <div class="card no-pad" style="padding:0;overflow:hidden">
+          <button class="list-item" style="margin:0;border-radius:0;border-bottom:1px solid var(--ink-100);width:100%;text-align:left;border-left:0;border-right:0;border-top:0">
+            <div class="list-item-ico">✏️</div>
+            <div class="list-item-body"><div class="list-item-title">Chỉnh sửa thông tin</div></div>
+            <span class="text-muted">›</span>
+          </button>
+          <button class="list-item" style="margin:0;border-radius:0;border-bottom:1px solid var(--ink-100);width:100%;text-align:left;border-left:0;border-right:0;border-top:0">
+            <div class="list-item-ico" style="background:#DBEAFE;color:#1D4ED8">🔒</div>
+            <div class="list-item-body"><div class="list-item-title">Đổi mật khẩu</div></div>
+            <span class="text-muted">›</span>
+          </button>
+          <button class="list-item" style="margin:0;border-radius:0;border-bottom:1px solid var(--ink-100);width:100%;text-align:left;border-left:0;border-right:0;border-top:0">
+            <div class="list-item-ico" style="background:#FEF3C7;color:#92400E">🎓</div>
+            <div class="list-item-body"><div class="list-item-title">Chứng nhận của tôi</div></div>
+            <span class="badge badge-red">2</span>
+          </button>
+          <button class="list-item" style="margin:0;border-radius:0;border-bottom:1px solid var(--ink-100);width:100%;text-align:left;border-left:0;border-right:0;border-top:0">
+            <div class="list-item-ico" style="background:#DCFCE7;color:#166534">📊</div>
+            <div class="list-item-body"><div class="list-item-title">Đánh giá cuộc thi</div></div>
+            <span class="text-muted">›</span>
+          </button>
+          <button class="list-item" style="margin:0;border-radius:0;width:100%;text-align:left;border:0">
+            <div class="list-item-ico" style="background:#FEE2E2;color:#DC2626">🚪</div>
+            <div class="list-item-body"><div class="list-item-title" style="color:var(--danger)">Đăng xuất</div></div>
+          </button>
+        </div>
+      </div>
+      ${BOTTOM_NAV('me')}`
+  }
+];
+
+/* =======================================================
+   LECTURER / ORGANIZER SCREENS
+   ======================================================= */
+const LECTURER_SCREENS = [
+  {
+    title:'Đăng nhập (Giảng viên)', desc:'Đăng nhập tài khoản BTC',
+    code:'GV1', type:'Lưu trữ',
+    api:'POST /auth/login (role=ORGANIZER)',
+    db:'app_users, organizers',
+    render:()=>`
+      ${STATUS_BAR(true)}
+      <div class="auth-hero">
+        <div style="width:70px;height:70px;border-radius:18px;background:#fff;color:var(--ptit-red);display:grid;place-items:center;font-weight:900;font-size:18px;margin:0 auto 16px">PTIT</div>
+        <h1>Cổng Ban tổ chức</h1>
+        <p>Quản lý cuộc thi sinh viên</p>
+      </div>
+      <div class="auth-card">
+        <div class="card" style="background:var(--info-soft);border:0">
+          <div class="text-xs"><b>👨‍🏫 Tài khoản giảng viên/BTC</b><br>Sử dụng email công vụ @ptit.edu.vn được cấp bởi Admin</div>
+        </div>
+        <div class="input-group">
+          <label class="input-label">Email công vụ</label>
+          <input class="input" value="nv.minh@ptit.edu.vn">
+        </div>
+        <div class="input-group">
+          <label class="input-label">Mật khẩu</label>
+          <input class="input" type="password" value="••••••••">
+        </div>
+        <div class="row-between mb-3">
+          <label class="row text-sm"><input type="checkbox" checked> Ghi nhớ</label>
+          <a class="text-red text-sm font-semi">Quên mật khẩu?</a>
+        </div>
+        <button class="btn btn-primary btn-block">Đăng nhập</button>
+        <p class="text-center text-xs text-muted mt-3">Cần hỗ trợ? Liên hệ Admin (0243.8546.555)</p>
+      </div>`
+  },
+  {
+    title:'Dashboard BTC', desc:'Tổng quan cuộc thi đang quản lý',
+    code:'GV2', type:'Tra cứu, Tổng hợp',
+    api:'GET /organizer/dashboard',
+    db:'contests, contest_entries, submissions',
+    render:()=>`
+      ${STATUS_BAR(true)}
+      <div class="app-header tall">
+        <div class="app-header-row">
+          <div class="avatar" style="background:#fff;color:var(--ptit-red)">NM</div>
+          <div class="flex-1">
+            <div style="font-size:11px;opacity:.85">Ban tổ chức</div>
+            <div class="app-header-title">TS. Nguyễn Văn Minh</div>
+          </div>
+          <button class="icon-btn">🔔</button>
+        </div>
+      </div>
+      <div class="app-body" style="margin-top:-12px">
+        <div class="grid-2 mb-3">
+          <div class="stat-card"><div class="num">5</div><div class="lbl">Cuộc thi đang quản lý</div></div>
+          <div class="stat-card"><div class="num">142</div><div class="lbl">Thí sinh hoạt động</div></div>
+          <div class="stat-card"><div class="num">23</div><div class="lbl">Chờ phê duyệt</div></div>
+          <div class="stat-card"><div class="num">87</div><div class="lbl">Bài chờ chấm</div></div>
+        </div>
+
+        <div class="section-title">⚡ Việc cần làm <span class="more">Xem tất cả ›</span></div>
+        <div class="list-item" style="border-left:3px solid var(--warning)">
+          <div class="list-item-ico" style="background:#FEF3C7;color:#92400E">⏳</div>
+          <div class="list-item-body">
+            <div class="list-item-title">23 đăng ký chờ phê duyệt</div>
+            <div class="list-item-sub">Code Hunt 2026 · Hạn xử lý: hôm nay</div>
+          </div>
+          <span class="text-muted">›</span>
+        </div>
+        <div class="list-item" style="border-left:3px solid var(--ptit-red)">
+          <div class="list-item-ico">📝</div>
+          <div class="list-item-body">
+            <div class="list-item-title">87 bài thi chờ chấm</div>
+            <div class="list-item-sub">Vòng sơ loại · Còn 3 ngày</div>
+          </div>
+          <span class="text-muted">›</span>
+        </div>
+        <div class="list-item" style="border-left:3px solid var(--info)">
+          <div class="list-item-ico" style="background:#DBEAFE;color:#1D4ED8">💬</div>
+          <div class="list-item-body">
+            <div class="list-item-title">5 câu hỏi mới từ thí sinh</div>
+            <div class="list-item-sub">Hackathon · Cần phản hồi</div>
+          </div>
+          <span class="text-muted">›</span>
+        </div>
+
+        <div class="section-title">📅 Lịch sắp tới</div>
+        <div class="card">
+          <div class="row gap-3">
+            <div style="text-align:center;flex-shrink:0;background:var(--ptit-red-light);border-radius:10px;padding:8px;width:48px">
+              <div class="text-xs text-red font-bold">THÁNG 5</div>
+              <div class="text-xl font-bold text-red">10</div>
+            </div>
+            <div class="flex-1">
+              <div class="font-semi text-sm">Vòng sơ loại Code Hunt 2026</div>
+              <div class="text-xs text-muted mt-2">19:00-22:00 · Online</div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-block">+ Tạo cuộc thi mới</button>
+      </div>
+      ${BOTTOM_NAV_LECT('home')}`
+  },
+  {
+    title:'Tạo cuộc thi (B1: Thông tin)', desc:'Wizard 4 bước tạo cuộc thi',
+    code:'GV2', type:'Lưu trữ',
+    api:'POST /contests',
+    db:'contests',
+    render:()=>`
+      ${STATUS_BAR()}
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="icon-btn">‹</button>
+          <div class="app-header-title">Tạo cuộc thi</div>
+        </div>
+        <div class="row mt-3" style="gap:6px">
+          <div class="progress flex-1" style="background:rgba(255,255,255,.3)"><div class="progress-bar" style="background:#fff;width:25%"></div></div>
+          <span class="text-xs">1/4</span>
+        </div>
+      </div>
+      <div class="app-body">
+        <div class="text-xs font-bold mb-3" style="color:var(--ptit-red)">BƯỚC 1 — THÔNG TIN CƠ BẢN</div>
+        <div class="input-group">
+          <label class="input-label">Tên cuộc thi *</label>
+          <input class="input" value="PTIT Code Hunt 2026">
+        </div>
+        <div class="input-group">
+          <label class="input-label">Slug (URL friendly)</label>
+          <input class="input" value="code-hunt-2026">
+        </div>
+        <div class="input-group">
+          <label class="input-label">Thể loại *</label>
+          <select class="input"><option>CNTT - Lập trình</option><option>Học thuật</option><option>Văn nghệ</option></select>
+        </div>
+        <div class="grid-2">
+          <div class="input-group">
+            <label class="input-label">Hình thức *</label>
+            <select class="input"><option>ONLINE</option><option>OFFLINE</option><option>HYBRID</option></select>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Loại đơn vị *</label>
+            <select class="input"><option>Cá nhân</option><option>Đội nhóm</option></select>
+          </div>
+        </div>
+        <div class="input-group">
+          <label class="input-label">Mô tả ngắn</label>
+          <textarea class="input" rows="3">Cuộc thi lập trình thuật toán hàng năm dành cho sinh viên PTIT.</textarea>
+        </div>
+        <div class="input-group">
+          <label class="input-label">Banner cuộc thi</label>
+          <div class="upload-zone" style="padding:18px"><div class="ico" style="font-size:24px">🖼️</div><div class="text-sm">Chọn ảnh banner (1200×400)</div></div>
+        </div>
+        <div class="row gap-2">
+          <button class="btn btn-secondary flex-1">Lưu nháp</button>
+          <button class="btn btn-primary flex-1">Tiếp →</button>
+        </div>
+      </div>`
+  },
+  {
+    title:'Tạo cuộc thi (B2: Thời gian & vòng)', desc:'Cấu hình các vòng thi',
+    code:'GV2', type:'Lưu trữ',
+    api:'POST /contests/{id}/rounds',
+    db:'contest_rounds',
+    render:()=>`
+      ${STATUS_BAR()}
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="icon-btn">‹</button>
+          <div class="app-header-title">Tạo cuộc thi</div>
+        </div>
+        <div class="row mt-3" style="gap:6px">
+          <div class="progress flex-1" style="background:rgba(255,255,255,.3)"><div class="progress-bar" style="background:#fff;width:50%"></div></div>
+          <span class="text-xs">2/4</span>
+        </div>
+      </div>
+      <div class="app-body">
+        <div class="text-xs font-bold mb-3" style="color:var(--ptit-red)">BƯỚC 2 — THỜI GIAN & VÒNG THI</div>
+        <div class="card-flat">
+          <div class="font-bold mb-3">⏰ Thời gian tổng</div>
+          <div class="grid-2">
+            <div class="input-group">
+              <label class="input-label">Mở đăng ký</label>
+              <input class="input" type="date" value="2026-05-01">
+            </div>
+            <div class="input-group">
+              <label class="input-label">Đóng đăng ký</label>
+              <input class="input" type="date" value="2026-05-08">
+            </div>
+            <div class="input-group">
+              <label class="input-label">Bắt đầu</label>
+              <input class="input" type="date" value="2026-05-10">
+            </div>
+            <div class="input-group">
+              <label class="input-label">Kết thúc</label>
+              <input class="input" type="date" value="2026-05-22">
+            </div>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Số lượng tối đa</label>
+            <input class="input" value="200">
+          </div>
+        </div>
+        <div class="font-bold mb-2">🏁 Các vòng thi</div>
+        <div class="card-flat">
+          <div class="row-between mb-2">
+            <span class="badge badge-red">Vòng 1</span>
+            <span class="text-xs text-muted">QUALIFIER</span>
+          </div>
+          <div class="font-semi text-sm">Sơ loại online</div>
+          <div class="text-xs text-muted">10/05 19:00 → 10/05 22:00</div>
+        </div>
+        <div class="card-flat">
+          <div class="row-between mb-2">
+            <span class="badge badge-red">Vòng 2</span>
+            <span class="text-xs text-muted">SEMI_FINAL</span>
+          </div>
+          <div class="font-semi text-sm">Bán kết</div>
+          <div class="text-xs text-muted">15/05 · Hội trường A2</div>
+        </div>
+        <div class="card-flat">
+          <div class="row-between mb-2">
+            <span class="badge badge-red">Vòng 3</span>
+            <span class="text-xs text-muted">FINAL</span>
+          </div>
+          <div class="font-semi text-sm">Chung kết</div>
+          <div class="text-xs text-muted">22/05 · Hội trường A2</div>
+        </div>
+        <button class="btn btn-outline btn-block mb-3">+ Thêm vòng</button>
+        <div class="row gap-2">
+          <button class="btn btn-secondary flex-1">‹ Lại</button>
+          <button class="btn btn-primary flex-1">Tiếp →</button>
+        </div>
+      </div>`
+  },
+  {
+    title:'Quản lý danh sách thi', desc:'Danh sách cuộc thi đang quản lý',
+    code:'GV2', type:'Tra cứu',
+    api:'GET /organizer/contests',
+    db:'contests, contest_organizers',
+    render:()=>`
+      ${STATUS_BAR(true)}
+      <div class="app-header">
+        <div class="app-header-row">
+          <div class="app-header-title">Cuộc thi của tôi</div>
+          <button class="icon-btn">+</button>
+        </div>
+      </div>
+      <div class="app-body">
+        <div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:12px">
+          <button class="filter-chip active">Tất cả (5)</button>
+          <button class="filter-chip">Đang chạy (2)</button>
+          <button class="filter-chip">Nháp (1)</button>
+          <button class="filter-chip">Đã xong (2)</button>
+        </div>
+
+        <div class="card">
+          <div class="row-between mb-2">
+            <span class="badge badge-success">🟢 ONGOING</span>
+            <span class="text-xs text-muted">5 ngày còn lại</span>
+          </div>
+          <div class="font-bold mb-2">PTIT Code Hunt 2026</div>
+          <div class="row gap-3 text-xs text-muted mb-3">
+            <span>👥 142/200</span>
+            <span>📝 87 bài</span>
+            <span>⭐ 4.6</span>
+          </div>
+          <div class="progress mb-3"><div class="progress-bar" style="width:71%"></div></div>
+          <div class="row gap-2">
+            <button class="btn btn-secondary btn-sm">📊 Báo cáo</button>
+            <button class="btn btn-secondary btn-sm">✍️ Chấm</button>
+            <button class="btn btn-primary btn-sm flex-1">Quản lý</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row-between mb-2">
+            <span class="badge badge-warning">⏳ REG_CLOSED</span>
+            <span class="text-xs text-muted">Bắt đầu 15/05</span>
+          </div>
+          <div class="font-bold mb-2">Hackathon Khởi nghiệp 2026</div>
+          <div class="row gap-3 text-xs text-muted mb-3">
+            <span>👥 38 đội</span>
+            <span>⏳ Chưa thi</span>
+          </div>
+          <div class="row gap-2">
+            <button class="btn btn-secondary btn-sm">📊 Báo cáo</button>
+            <button class="btn btn-primary btn-sm flex-1">Quản lý</button>
+          </div>
+        </div>
+
+        <div class="card" style="border:1.5px dashed var(--ink-300);background:var(--ink-50)">
+          <div class="row-between mb-2">
+            <span class="badge badge-gray">📝 DRAFT</span>
+          </div>
+          <div class="font-bold mb-2">Tiếng Anh PTIT 2026</div>
+          <div class="text-xs text-muted mb-3">Chưa gửi đề xuất phê duyệt</div>
+          <button class="btn btn-outline btn-block btn-sm">Tiếp tục soạn</button>
+        </div>
+      </div>
+      ${BOTTOM_NAV_LECT('contests')}`
+  },
+  {
+    title:'Phê duyệt đăng ký', desc:'Duyệt/từ chối thí sinh đăng ký',
+    code:'GV3', type:'Lưu trữ',
+    api:'PUT /entries/{id}/approve · PUT /entries/{id}/reject',
+    db:'contest_entries, entry_status_logs',
+    render:()=>`
+      ${STATUS_BAR()}
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="icon-btn">‹</button>
+          <div class="app-header-title">Phê duyệt đăng ký</div>
+          <button class="icon-btn">⚙️</button>
+        </div>
+        <div class="app-header-sub">Code Hunt 2026 · 23 yêu cầu</div>
+      </div>
+      <div class="app-body">
+        <div class="row gap-2 mb-3">
+          <button class="btn btn-secondary btn-sm flex-1">✓ Duyệt tất cả</button>
+          <button class="btn btn-outline btn-sm flex-1">Lọc</button>
+        </div>
+
+        <div class="card">
+          <div class="row gap-3 mb-3">
+            <div class="avatar">VL</div>
+            <div class="flex-1">
+              <div class="font-semi text-sm">Vũ Hoàng Long</div>
+              <div class="text-xs text-muted">B22DCCN200 · CNTT · D22CN03</div>
+              <div class="text-xs mt-2">⏱ Đăng ký 2 giờ trước</div>
+            </div>
+          </div>
+          <div class="card" style="background:var(--info-soft);border:0;padding:8px;margin-bottom:8px">
+            <div class="text-xs"><b>Lời giới thiệu:</b> Sinh viên năm 2, học OOP và DSA, mong muốn thử sức.</div>
+          </div>
+          <div class="row gap-2">
+            <button class="btn btn-outline btn-sm flex-1" style="color:var(--danger);border-color:var(--danger)">✗ Từ chối</button>
+            <button class="btn btn-primary btn-sm flex-1">✓ Duyệt</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row gap-3 mb-3">
+            <div class="avatar" style="background:#7C3AED">PT</div>
+            <div class="flex-1">
+              <div class="font-semi text-sm">Phạm Thị Thảo</div>
+              <div class="text-xs text-muted">B23DCAT100 · ATTT · D23AT01</div>
+              <div class="text-xs mt-2">⏱ Đăng ký 5 giờ trước</div>
+            </div>
+          </div>
+          <div class="row gap-2">
+            <button class="btn btn-outline btn-sm flex-1" style="color:var(--danger);border-color:var(--danger)">✗ Từ chối</button>
+            <button class="btn btn-primary btn-sm flex-1">✓ Duyệt</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row gap-3 mb-2">
+            <div class="avatar" style="background:#16A34A">TC</div>
+            <div class="flex-1">
+              <div class="font-semi text-sm">The Codebreakers <span class="badge badge-info text-xs">👥 Team</span></div>
+              <div class="text-xs text-muted">3 thành viên · Leader: Nguyễn Văn An</div>
+            </div>
+          </div>
+          <div class="row gap-2">
+            <button class="btn btn-outline btn-sm flex-1" style="color:var(--danger);border-color:var(--danger)">✗ Từ chối</button>
+            <button class="btn btn-primary btn-sm flex-1">✓ Duyệt</button>
+          </div>
+        </div>
+      </div>`
+  },
+  {
+    title:'Chấm bài (Rubric)', desc:'Chấm điểm theo các tiêu chí',
+    code:'GV5', type:'Tính toán, Lưu trữ',
+    api:'POST /assignments/{id}/scores',
+    db:'judge_assignments, scores, round_score_criteria',
+    render:()=>`
+      ${STATUS_BAR()}
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="icon-btn">‹</button>
+          <div class="app-header-title">Chấm bài #042</div>
+          <button class="icon-btn">⋯</button>
+        </div>
+        <div class="app-header-sub">Vòng sơ loại · Bài 5/87</div>
+      </div>
+      <div class="app-body">
+        <div class="card">
+          <div class="row gap-3">
+            <div class="avatar" style="background:var(--ink-300);color:var(--ink-700)">?</div>
+            <div class="flex-1">
+              <div class="font-semi text-sm">Thí sinh ẩn danh #042</div>
+              <div class="text-xs text-muted">🔒 Chấm ẩn danh (can_view_identity=false)</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="font-bold mb-2">📄 Bài nộp</div>
+          <div class="list-item" style="margin-bottom:0;background:var(--ink-50)">
+            <div class="list-item-ico" style="background:#FEE2E2;color:#DC2626">📄</div>
+            <div class="list-item-body">
+              <div class="list-item-title">solution.pdf</div>
+              <div class="list-item-sub">2.4MB · v2 (mới nhất)</div>
+            </div>
+            <button class="btn-sm" style="background:none;border:0;color:var(--ptit-red)">↗</button>
+          </div>
+        </div>
+
+        <div class="font-bold mb-2 mt-3">📊 Tiêu chí chấm</div>
+
+        <div class="rubric-row">
+          <div class="row-between mb-2">
+            <span class="font-semi text-sm">Tính đúng đắn (40%)</span>
+            <span class="font-bold text-red">35/40</span>
+          </div>
+          <input type="range" min="0" max="40" value="35" class="rubric-slider">
+        </div>
+
+        <div class="rubric-row">
+          <div class="row-between mb-2">
+            <span class="font-semi text-sm">Hiệu năng (25%)</span>
+            <span class="font-bold text-red">20/25</span>
+          </div>
+          <input type="range" min="0" max="25" value="20" class="rubric-slider">
+        </div>
+
+        <div class="rubric-row">
+          <div class="row-between mb-2">
+            <span class="font-semi text-sm">Code style (20%)</span>
+            <span class="font-bold text-red">18/20</span>
+          </div>
+          <input type="range" min="0" max="20" value="18" class="rubric-slider">
+        </div>
+
+        <div class="rubric-row">
+          <div class="row-between mb-2">
+            <span class="font-semi text-sm">Trình bày (15%)</span>
+            <span class="font-bold text-red">12/15</span>
+          </div>
+          <input type="range" min="0" max="15" value="12" class="rubric-slider">
+        </div>
+
+        <div class="card" style="background:var(--ptit-red-soft);border:0">
+          <div class="row-between">
+            <span class="font-semi">Tổng điểm</span>
+            <span class="text-2xl font-bold text-red">85/100</span>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Nhận xét</label>
+          <textarea class="input" rows="3" placeholder="Nhận xét cho thí sinh...">Bài làm tốt, thuật toán rõ ràng. Cần tối ưu phần I/O để chạy nhanh hơn.</textarea>
+        </div>
+
+        <div class="row gap-2">
+          <button class="btn btn-secondary flex-1">Lưu nháp</button>
+          <button class="btn btn-primary flex-1">Lưu & bài tiếp →</button>
+        </div>
+      </div>`
+  },
+  {
+    title:'Công bố kết quả', desc:'Tổng hợp điểm và publish',
+    code:'GV6', type:'Tính toán, Lưu trữ',
+    api:'POST /rounds/{id}/results/publish',
+    db:'round_results, contest_results',
+    render:()=>`
+      ${STATUS_BAR()}
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="icon-btn">‹</button>
+          <div class="app-header-title">Công bố kết quả</div>
+        </div>
+        <div class="app-header-sub">Vòng sơ loại · 87 bài đã chấm</div>
+      </div>
+      <div class="app-body">
+        <div class="card" style="background:var(--success-soft);border:0">
+          <div class="row gap-2">
+            <span style="font-size:24px">✅</span>
+            <div>
+              <div class="font-semi text-sm">Tất cả bài đã được chấm</div>
+              <div class="text-xs text-muted mt-2">87/87 bài · 3/3 giám khảo hoàn thành</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="font-bold mb-2 mt-3">🏆 Top 10 (preview)</div>
+        <div class="table-row" style="background:var(--ptit-red-soft)">
+          <span class="font-bold text-red">🥇</span>
+          <div><div class="font-semi text-sm">Phan Minh Tú</div><div class="text-xs text-muted">B21DCCN045</div></div>
+          <span class="font-bold text-red">94.5</span>
+        </div>
+        <div class="table-row" style="background:var(--ptit-red-soft)">
+          <span class="font-bold text-red">🥈</span>
+          <div><div class="font-semi text-sm">Trần Bảo Ngọc</div><div class="text-xs text-muted">B22DCCN112</div></div>
+          <span class="font-bold text-red">91.0</span>
+        </div>
+        <div class="table-row" style="background:var(--ptit-red-soft)">
+          <span class="font-bold text-red">🥉</span>
+          <div><div class="font-semi text-sm">Hoàng Đức Anh</div><div class="text-xs text-muted">B21DCAT028</div></div>
+          <span class="font-bold text-red">88.5</span>
+        </div>
+        <div class="table-row">
+          <span class="font-bold">4</span>
+          <div><div class="font-semi text-sm">Nguyễn Văn An</div><div class="text-xs text-muted">B21DCCN123</div></div>
+          <span class="font-bold">85.0</span>
+        </div>
+        <div class="table-row">
+          <span class="font-bold">5</span>
+          <div><div class="font-semi text-sm">Lê Thị Mai</div><div class="text-xs text-muted">B22DCCN087</div></div>
+          <span class="font-bold">83.5</span>
+        </div>
+        <div class="text-xs text-center text-muted my-2">... 82 thí sinh khác</div>
+
+        <div class="card" style="background:var(--warning-soft);border:0">
+          <div class="text-xs"><b>⚠️ Cần phê duyệt:</b> Theo BCN_QĐ2, kết quả phải được Ban chủ nhiệm khoa rà soát trước khi công bố chính thức.</div>
+        </div>
+
+        <label class="row gap-2 text-sm mb-3"><input type="checkbox" checked> Gửi thông báo email cho tất cả thí sinh sau khi BCN duyệt</label>
+        <label class="row gap-2 text-sm mb-3"><input type="checkbox" checked> Cho phép thí sinh phúc khảo (5 ngày)</label>
+
+        <div class="row gap-2">
+          <button class="btn btn-secondary flex-1">📥 Xuất Excel</button>
+          <button class="btn btn-primary flex-1">→ Gửi BCN duyệt</button>
+        </div>
+      </div>`
+  },
+  {
+    title:'Thống kê & báo cáo', desc:'Báo cáo cuộc thi',
+    code:'GV7', type:'Kết xuất, Tổng hợp',
+    api:'GET /contests/{id}/stats',
+    db:'aggregate queries',
+    render:()=>`
+      ${STATUS_BAR(true)}
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="icon-btn">‹</button>
+          <div class="app-header-title">Báo cáo</div>
+          <button class="icon-btn">📥</button>
+        </div>
+        <div class="app-header-sub">Code Hunt 2026 · Sơ loại</div>
+      </div>
+      <div class="app-body">
+        <div class="grid-2 mb-3">
+          <div class="stat-card"><div class="num">142</div><div class="lbl">Đăng ký</div></div>
+          <div class="stat-card"><div class="num">87</div><div class="lbl">Bài nộp</div></div>
+          <div class="stat-card" style="background:var(--success-soft)"><div class="num" style="color:var(--success)">61%</div><div class="lbl">Tỷ lệ nộp bài</div></div>
+          <div class="stat-card" style="background:var(--info-soft)"><div class="num" style="color:var(--info)">76.4</div><div class="lbl">Điểm TB</div></div>
+        </div>
+
+        <div class="card">
+          <div class="font-bold mb-3">📊 Phân bố điểm</div>
+          <div style="height:140px;display:flex;align-items:flex-end;gap:6px">
+            <div style="flex:1;background:var(--ptit-red-light);height:20%;border-radius:4px 4px 0 0;position:relative">
+              <span style="position:absolute;top:-18px;font-size:10px;left:0;right:0;text-align:center">3</span>
+            </div>
+            <div style="flex:1;background:var(--ptit-red-light);height:35%;border-radius:4px 4px 0 0;position:relative">
+              <span style="position:absolute;top:-18px;font-size:10px;left:0;right:0;text-align:center">8</span>
+            </div>
+            <div style="flex:1;background:var(--ptit-red);height:60%;border-radius:4px 4px 0 0;position:relative">
+              <span style="position:absolute;top:-18px;font-size:10px;left:0;right:0;text-align:center;color:var(--ptit-red);font-weight:700">22</span>
+            </div>
+            <div style="flex:1;background:var(--ptit-red-dark);height:90%;border-radius:4px 4px 0 0;position:relative">
+              <span style="position:absolute;top:-18px;font-size:10px;left:0;right:0;text-align:center;color:var(--ptit-red);font-weight:700">38</span>
+            </div>
+            <div style="flex:1;background:var(--ptit-red);height:50%;border-radius:4px 4px 0 0;position:relative">
+              <span style="position:absolute;top:-18px;font-size:10px;left:0;right:0;text-align:center;color:var(--ptit-red);font-weight:700">12</span>
+            </div>
+            <div style="flex:1;background:var(--ptit-red-light);height:18%;border-radius:4px 4px 0 0;position:relative">
+              <span style="position:absolute;top:-18px;font-size:10px;left:0;right:0;text-align:center">4</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <span style="flex:1;text-align:center;font-size:10px;color:var(--ink-500)">0-50</span>
+            <span style="flex:1;text-align:center;font-size:10px;color:var(--ink-500)">50-60</span>
+            <span style="flex:1;text-align:center;font-size:10px;color:var(--ink-500)">60-70</span>
+            <span style="flex:1;text-align:center;font-size:10px;color:var(--ink-500)">70-80</span>
+            <span style="flex:1;text-align:center;font-size:10px;color:var(--ink-500)">80-90</span>
+            <span style="flex:1;text-align:center;font-size:10px;color:var(--ink-500)">90-100</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="font-bold mb-3">🏛️ Theo khoa</div>
+          <div class="row-between text-sm mb-2"><span>CNTT (D21,D22)</span><b>62 SV</b></div>
+          <div class="progress mb-3"><div class="progress-bar" style="width:71%"></div></div>
+          <div class="row-between text-sm mb-2"><span>An toàn TT</span><b>15 SV</b></div>
+          <div class="progress mb-3"><div class="progress-bar" style="width:18%"></div></div>
+          <div class="row-between text-sm mb-2"><span>Điện tử Viễn thông</span><b>10 SV</b></div>
+          <div class="progress"><div class="progress-bar" style="width:11%"></div></div>
+        </div>
+
+        <button class="btn btn-primary btn-block">📥 Xuất báo cáo PDF</button>
+      </div>
+      ${BOTTOM_NAV_LECT('stats')}`
+  }
+];
+
+/* =======================================================
+   BCN (HEAD OF DEPARTMENT) SCREENS
+   ======================================================= */
+const BCN_SCREENS = [
+  {
+    title:'Dashboard BCN', desc:'Tổng quan hoạt động khoa',
+    code:'BCN-HOME', type:'Tra cứu, Tổng hợp',
+    api:'GET /dean/dashboard',
+    db:'aggregate queries',
+    render:()=>`
+      ${STATUS_BAR(true)}
+      <div class="app-header tall">
+        <div class="app-header-row">
+          <div class="avatar" style="background:#fff;color:var(--ptit-red)">PD</div>
+          <div class="flex-1">
+            <div style="font-size:11px;opacity:.85">Ban chủ nhiệm khoa CNTT</div>
+            <div class="app-header-title">PGS. Phan Đăng Hưng</div>
+          </div>
+          <button class="icon-btn">🔔</button>
+        </div>
+      </div>
+      <div class="app-body" style="margin-top:-12px">
+        <div class="grid-2 mb-3">
+          <div class="stat-card"><div class="num">12</div><div class="lbl">Cuộc thi năm 2026</div></div>
+          <div class="stat-card"><div class="num">485</div><div class="lbl">SV tham gia</div></div>
+          <div class="stat-card" style="background:var(--warning-soft)"><div class="num" style="color:var(--warning)">3</div><div class="lbl">Đề xuất chờ duyệt</div></div>
+          <div class="stat-card" style="background:var(--ptit-red-soft)"><div class="num">2</div><div class="lbl">KQ chờ duyệt</div></div>
+        </div>
+
+        <div class="section-title">⚠️ Việc cần xử lý</div>
+        <div class="list-item" style="border-left:3px solid var(--warning)">
+          <div class="list-item-ico" style="background:#FEF3C7;color:#92400E">📋</div>
+          <div class="list-item-body">
+            <div class="list-item-title">3 đề xuất cuộc thi mới</div>
+            <div class="list-item-sub">Cần phê duyệt trước 15/05</div>
+          </div>
+          <span class="text-muted">›</span>
+        </div>
+        <div class="list-item" style="border-left:3px solid var(--ptit-red)">
+          <div class="list-item-ico">🏆</div>
+          <div class="list-item-body">
+            <div class="list-item-title">Code Hunt 2026 — Kết quả sơ loại</div>
+            <div class="list-item-sub">BTC đã gửi · Cần rà soát</div>
+          </div>
+          <span class="text-muted">›</span>
+        </div>
+        <div class="list-item" style="border-left:3px solid var(--info)">
+          <div class="list-item-ico" style="background:#DBEAFE;color:#1D4ED8">🎓</div>
+          <div class="list-item-body">
+            <div class="list-item-title">52 chứng nhận cần ký duyệt</div>
+            <div class="list-item-sub">Tiếng Anh PTIT 2025</div>
+          </div>
+          <span class="text-muted">›</span>
+        </div>
+
+        <div class="section-title">📊 Hoạt động đang diễn ra</div>
+        <div class="card">
+          <div class="row-between mb-2">
+            <div class="font-semi text-sm">Code Hunt 2026</div>
+            <span class="badge badge-success">Đang chạy</span>
+          </div>
+          <div class="text-xs text-muted mb-2">Vòng sơ loại · 142 thí sinh</div>
+          <div class="progress mb-3"><div class="progress-bar" style="width:65%"></div></div>
+        </div>
+        <div class="card">
+          <div class="row-between mb-2">
+            <div class="font-semi text-sm">Hackathon Khởi nghiệp</div>
+            <span class="badge badge-warning">Sắp diễn ra</span>
+          </div>
+          <div class="text-xs text-muted mb-2">38 đội · Bắt đầu 15/05</div>
+        </div>
+      </div>
+      ${BOTTOM_NAV_BCN('home')}`
+  },
+  {
+    title:'Phê duyệt đề xuất cuộc thi', desc:'Danh sách đề xuất từ BTC',
+    code:'BCN2', type:'Lưu trữ',
+    api:'GET /dean/proposals · PUT /proposals/{id}/approve',
+    db:'contests (status=PROPOSED)',
+    render:()=>`
+      ${STATUS_BAR(true)}
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="icon-btn">‹</button>
+          <div class="app-header-title">Phê duyệt đề xuất</div>
+        </div>
+      </div>
+      <div class="app-body">
+        <div style="display:flex;gap:6px;margin-bottom:12px">
+          <button class="filter-chip active">Chờ duyệt (3)</button>
+          <button class="filter-chip">Đã duyệt (8)</button>
+          <button class="filter-chip">Từ chối (1)</button>
+        </div>
+
+        <div class="card">
+          <div class="row-between mb-2">
+            <span class="badge badge-warning">⏳ Chờ duyệt</span>
+            <span class="text-xs text-muted">Gửi 2 giờ trước</span>
+          </div>
+          <div class="font-bold mb-2">Cuộc thi Khoa học sinh viên 2026</div>
+          <div class="text-xs text-muted mb-2">Người đề xuất: TS. Nguyễn Văn Minh</div>
+          <div class="grid-2 mb-3">
+            <div class="card-flat" style="margin:0;padding:8px;background:var(--ink-50)">
+              <div class="text-xs text-muted">Kinh phí</div>
+              <div class="font-bold text-sm">35.000.000đ</div>
+            </div>
+            <div class="card-flat" style="margin:0;padding:8px;background:var(--ink-50)">
+              <div class="text-xs text-muted">Quy mô</div>
+              <div class="font-bold text-sm">~150 SV</div>
+            </div>
+          </div>
+          <div class="row gap-2">
+            <button class="btn btn-outline btn-sm flex-1" style="color:var(--danger);border-color:var(--danger)">✗ Từ chối</button>
+            <button class="btn btn-secondary btn-sm">Xem</button>
+            <button class="btn btn-primary btn-sm flex-1">✓ Duyệt</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row-between mb-2">
+            <span class="badge badge-warning">⏳ Chờ duyệt</span>
+            <span class="text-xs text-muted">Gửi hôm qua</span>
+          </div>
+          <div class="font-bold mb-2">PTIT Tech Show 2026</div>
+          <div class="text-xs text-muted mb-2">Người đề xuất: TS. Trần Thu Hà</div>
+          <div class="grid-2 mb-3">
+            <div class="card-flat" style="margin:0;padding:8px;background:var(--ink-50)">
+              <div class="text-xs text-muted">Kinh phí</div>
+              <div class="font-bold text-sm">120.000.000đ</div>
+            </div>
+            <div class="card-flat" style="margin:0;padding:8px;background:var(--ink-50)">
+              <div class="text-xs text-muted">Quy mô</div>
+              <div class="font-bold text-sm">~300 SV</div>
+            </div>
+          </div>
+          <div class="row gap-2">
+            <button class="btn btn-outline btn-sm flex-1" style="color:var(--danger);border-color:var(--danger)">✗ Từ chối</button>
+            <button class="btn btn-secondary btn-sm">Xem</button>
+            <button class="btn btn-primary btn-sm flex-1">✓ Duyệt</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row-between mb-2">
+            <span class="badge badge-warning">⏳ Chờ duyệt</span>
+            <span class="text-xs text-muted">Gửi 3 ngày trước</span>
+          </div>
+          <div class="font-bold mb-2">Olympic Toán Tin sinh viên</div>
+          <div class="text-xs text-muted">Người đề xuất: PGS. Lê Văn Bình</div>
+        </div>
+      </div>
+      ${BOTTOM_NAV_BCN('approve')}`
+  },
+  {
+    title:'Chi tiết đề xuất', desc:'Xem & duyệt đề xuất cuộc thi',
+    code:'BCN2', type:'Tra cứu',
+    api:'GET /proposals/{id}',
+    db:'contests, contest_organizers',
+    render:()=>`
+      ${STATUS_BAR()}
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="icon-btn">‹</button>
+          <div class="app-header-title">Chi tiết đề xuất</div>
+          <button class="icon-btn">⋯</button>
+        </div>
+      </div>
+      <div class="app-body">
+        <div class="card">
+          <span class="badge badge-warning mb-2">⏳ Chờ phê duyệt</span>
+          <div class="text-lg font-bold mt-2">Cuộc thi Khoa học sinh viên 2026</div>
+          <div class="text-xs text-muted mt-2">Mã đề xuất: PROP-2026-007 · Gửi: 03/05/2026</div>
+        </div>
+
+        <div class="card-flat">
+          <div class="font-bold mb-3">👤 Người đề xuất</div>
+          <div class="row gap-3">
+            <div class="avatar">NM</div>
+            <div>
+              <div class="font-semi text-sm">TS. Nguyễn Văn Minh</div>
+              <div class="text-xs text-muted">Khoa CNTT · nv.minh@ptit.edu.vn</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-flat">
+          <div class="font-bold mb-2">🎯 Mục tiêu</div>
+          <div class="text-sm text-muted">Khuyến khích sinh viên nghiên cứu khoa học, ứng dụng công nghệ giải quyết bài toán thực tế. Chọn ra sản phẩm tiêu biểu tham gia cấp Bộ.</div>
+        </div>
+
+        <div class="card-flat">
+          <div class="font-bold mb-2">💰 Kinh phí dự kiến</div>
+          <div class="text-sm">
+            <div class="row-between mb-2"><span>Giải thưởng</span><b>20.000.000đ</b></div>
+            <div class="row-between mb-2"><span>Vật tư & phòng thi</span><b>8.000.000đ</b></div>
+            <div class="row-between mb-2"><span>Truyền thông</span><b>5.000.000đ</b></div>
+            <div class="row-between mb-2"><span>Khác</span><b>2.000.000đ</b></div>
+            <hr style="border:0;border-top:1px solid var(--ink-200);margin:6px 0">
+            <div class="row-between font-bold text-red"><span>Tổng</span><span>35.000.000đ</span></div>
+          </div>
+        </div>
+
+        <div class="card-flat">
+          <div class="font-bold mb-2">📅 Thời gian dự kiến</div>
+          <div class="text-sm">10/06/2026 — 30/07/2026</div>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Ý kiến phê duyệt</label>
+          <textarea class="input" rows="3" placeholder="Nhập ý kiến..."></textarea>
+        </div>
+
+        <div class="row gap-2">
+          <button class="btn btn-outline flex-1" style="color:var(--danger);border-color:var(--danger)">✗ Từ chối</button>
+          <button class="btn btn-primary flex-1">✓ Phê duyệt</button>
+        </div>
+      </div>`
+  },
+  {
+    title:'Giám sát tiến độ', desc:'Theo dõi cuộc thi đang diễn ra',
+    code:'BCN3', type:'Tra cứu',
+    api:'GET /dean/contests/active',
+    db:'contests, contest_entries',
+    render:()=>`
+      ${STATUS_BAR(true)}
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="icon-btn">‹</button>
+          <div class="app-header-title">Giám sát</div>
+        </div>
+      </div>
+      <div class="app-body">
+        <div class="card">
+          <div class="row-between mb-2">
+            <div>
+              <div class="font-bold">PTIT Code Hunt 2026</div>
+              <div class="text-xs text-muted">BTC: TS. Nguyễn Văn Minh</div>
+            </div>
+            <span class="badge badge-success">Vòng 1</span>
+          </div>
+          <div class="grid-3 mb-3" style="text-align:center">
+            <div><div class="font-bold text-red">142</div><div class="text-xs text-muted">Đăng ký</div></div>
+            <div><div class="font-bold text-red">87</div><div class="text-xs text-muted">Bài nộp</div></div>
+            <div><div class="font-bold text-red">61%</div><div class="text-xs text-muted">Tỷ lệ</div></div>
+          </div>
+          <div class="text-xs text-muted mb-2">Tiến độ chấm</div>
+          <div class="progress mb-2"><div class="progress-bar" style="width:100%;background:var(--success)"></div></div>
+          <div class="text-xs text-success font-semi">✓ 87/87 bài đã chấm</div>
+        </div>
+
+        <div class="card">
+          <div class="row-between mb-2">
+            <div>
+              <div class="font-bold">Hackathon Khởi nghiệp</div>
+              <div class="text-xs text-muted">BTC: TS. Trần Thu Hà</div>
+            </div>
+            <span class="badge badge-warning">Đăng ký</span>
+          </div>
+          <div class="grid-3 mb-3" style="text-align:center">
+            <div><div class="font-bold text-red">38</div><div class="text-xs text-muted">Đội đăng ký</div></div>
+            <div><div class="font-bold text-red">115</div><div class="text-xs text-muted">SV</div></div>
+            <div><div class="font-bold text-red">76%</div><div class="text-xs text-muted">Đầy</div></div>
+          </div>
+          <div class="text-xs text-muted mb-2">Tiến độ tổng</div>
+          <div class="progress mb-2"><div class="progress-bar" style="width:25%"></div></div>
+        </div>
+
+        <div class="card">
+          <div class="row-between mb-2">
+            <div>
+              <div class="font-bold">Hùng biện sinh viên 2026</div>
+              <div class="text-xs text-muted">BTC: ThS. Đỗ Thanh Thủy</div>
+            </div>
+            <span class="badge badge-info">Bán kết</span>
+          </div>
+          <div class="grid-3 mb-3" style="text-align:center">
+            <div><div class="font-bold text-red">52</div><div class="text-xs text-muted">Vào BK</div></div>
+            <div><div class="font-bold text-red">12</div><div class="text-xs text-muted">Vào CK</div></div>
+            <div><div class="font-bold text-red">24/05</div><div class="text-xs text-muted">CK</div></div>
+          </div>
+        </div>
+
+        <button class="btn btn-outline btn-block">📊 Báo cáo tổng hợp</button>
+      </div>
+      ${BOTTOM_NAV_BCN('monitor')}`
+  },
+  {
+    title:'Phê duyệt kết quả chung cuộc', desc:'Rà soát kết quả trước khi công bố',
+    code:'BCN4', type:'Lưu trữ',
+    api:'PUT /contests/{id}/results/approve',
+    db:'contest_results',
+    render:()=>`
+      ${STATUS_BAR()}
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="icon-btn">‹</button>
+          <div class="app-header-title">Duyệt kết quả</div>
+        </div>
+        <div class="app-header-sub">Code Hunt 2026 · Vòng sơ loại</div>
+      </div>
+      <div class="app-body">
+        <div class="card" style="background:var(--info-soft);border:0">
+          <div class="text-xs"><b>BCN_QĐ2:</b> Vui lòng rà soát kỹ kết quả trước khi phê duyệt. Sau khi duyệt, kết quả sẽ được công bố tới thí sinh.</div>
+        </div>
+
+        <div class="card">
+          <div class="font-bold mb-3">📊 Tổng quan</div>
+          <div class="grid-2">
+            <div class="card-flat" style="margin:0;padding:10px;background:var(--ink-50)">
+              <div class="text-xs text-muted">Tổng thí sinh</div>
+              <div class="font-bold text-lg text-red">87</div>
+            </div>
+            <div class="card-flat" style="margin:0;padding:10px;background:var(--ink-50)">
+              <div class="text-xs text-muted">Đạt vào vòng sau</div>
+              <div class="font-bold text-lg text-success">32</div>
+            </div>
+            <div class="card-flat" style="margin:0;padding:10px;background:var(--ink-50)">
+              <div class="text-xs text-muted">Điểm TB</div>
+              <div class="font-bold text-lg">76.4</div>
+            </div>
+            <div class="card-flat" style="margin:0;padding:10px;background:var(--ink-50)">
+              <div class="text-xs text-muted">Khoảng điểm</div>
+              <div class="font-bold text-lg">42 - 95</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="font-bold mb-3">🏆 Top 5</div>
+          <div class="table-row" style="background:var(--ptit-red-soft)">
+            <span class="font-bold text-red">🥇</span>
+            <div><div class="font-semi text-sm">Phan Minh Tú</div><div class="text-xs text-muted">B21DCCN045</div></div>
+            <span class="font-bold text-red">94.5</span>
+          </div>
+          <div class="table-row">
+            <span class="font-bold">🥈</span>
+            <div><div class="font-semi text-sm">Trần Bảo Ngọc</div><div class="text-xs text-muted">B22DCCN112</div></div>
+            <span class="font-bold">91.0</span>
+          </div>
+          <div class="table-row">
+            <span class="font-bold">🥉</span>
+            <div><div class="font-semi text-sm">Hoàng Đức Anh</div><div class="text-xs text-muted">B21DCAT028</div></div>
+            <span class="font-bold">88.5</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="font-bold mb-2">⚠️ Lưu ý từ hệ thống</div>
+          <div class="text-sm">
+            <div class="row gap-2 mb-2"><span class="text-warning">⚠</span><span>2 bài có chênh lệch điểm > 15 giữa các giám khảo</span></div>
+            <div class="row gap-2"><span class="text-success">✓</span><span>Không có dấu hiệu bất thường về thời gian nộp</span></div>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Nhận xét rà soát</label>
+          <textarea class="input" rows="3" placeholder="Nhập nhận xét..."></textarea>
+        </div>
+
+        <div class="row gap-2">
+          <button class="btn btn-outline flex-1">↻ Yêu cầu sửa</button>
+          <button class="btn btn-primary flex-1">✓ Duyệt & công bố</button>
+        </div>
+      </div>`
+  },
+  {
+    title:'Cấp chứng nhận QR', desc:'Phê duyệt mẫu & cấp chứng nhận',
+    code:'BCN6', type:'Kết xuất',
+    api:'POST /certificates/issue · GET /certificates/{id}/qr',
+    db:'certificates, contest_results',
+    render:()=>`
+      ${STATUS_BAR(true)}
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="icon-btn">‹</button>
+          <div class="app-header-title">Cấp chứng nhận</div>
+        </div>
+      </div>
+      <div class="app-body">
+        <div class="card">
+          <div class="font-bold mb-2">🎓 Tiếng Anh PTIT 2025</div>
+          <div class="text-xs text-muted mb-3">52 chứng nhận chờ ký duyệt · BCN_QĐ3</div>
+          <div class="grid-2">
+            <div class="card-flat" style="margin:0;padding:10px;background:var(--ink-50);text-align:center">
+              <div class="text-2xl font-bold text-red">52</div>
+              <div class="text-xs text-muted">Tổng số</div>
+            </div>
+            <div class="card-flat" style="margin:0;padding:10px;background:var(--ink-50);text-align:center">
+              <div class="text-2xl font-bold text-warning">3</div>
+              <div class="text-xs text-muted">Cần xem lại</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="font-bold mb-3">🎨 Mẫu chứng nhận</div>
+          <div style="background:linear-gradient(135deg,#FEF5F6,#fff);border:2px solid var(--ptit-red);border-radius:12px;padding:18px;text-align:center">
+            <div class="text-xs text-red font-bold">HỌC VIỆN CÔNG NGHỆ BƯU CHÍNH VIỄN THÔNG</div>
+            <div style="font-size:14px;font-weight:800;margin:6px 0">CHỨNG NHẬN</div>
+            <div class="text-xs">Chứng nhận sinh viên</div>
+            <div style="font-size:12px;font-weight:700;color:var(--ptit-red);margin:6px 0">[Họ tên sinh viên]</div>
+            <div class="text-xs">đã đạt giải [Hạng] tại</div>
+            <div style="font-size:11px;font-weight:700;margin:4px 0">Tiếng Anh PTIT 2025</div>
+            <div class="row mt-3" style="justify-content:center;gap:18px">
+              <div style="width:50px;height:50px;background:#fff;border:1px solid #ccc;display:grid;place-items:center;font-size:8px">QR</div>
+              <div style="text-align:center;font-size:9px">Chữ ký BCN<br><b>PGS. Phan Đăng Hưng</b></div>
+            </div>
+          </div>
+          <div class="row gap-2 mt-3">
+            <button class="btn btn-secondary btn-sm flex-1">✏️ Sửa mẫu</button>
+            <button class="btn btn-outline btn-sm flex-1">👁 Xem trước</button>
+          </div>
+        </div>
+
+        <div class="font-bold mb-2 mt-3">📜 Danh sách (top 5 hiển thị)</div>
+        <div class="list-item">
+          <div class="avatar avatar-sm">NA</div>
+          <div class="list-item-body">
+            <div class="list-item-title">Nguyễn Văn An — KK</div>
+            <div class="list-item-sub">B21DCCN123 · 82.5đ</div>
+          </div>
+          <span class="badge badge-success">✓</span>
+        </div>
+        <div class="list-item">
+          <div class="avatar avatar-sm" style="background:#7C3AED">PT</div>
+          <div class="list-item-body">
+            <div class="list-item-title">Phạm Thảo — Nhì</div>
+            <div class="list-item-sub">B21DCAT089 · 91.0đ</div>
+          </div>
+          <span class="badge badge-success">✓</span>
+        </div>
+        <div class="list-item">
+          <div class="avatar avatar-sm" style="background:#16A34A">LH</div>
+          <div class="list-item-body">
+            <div class="list-item-title">Lê Hùng — Nhất</div>
+            <div class="list-item-sub">B22DCCN001 · 95.5đ</div>
+          </div>
+          <span class="badge badge-warning">!</span>
+        </div>
+
+        <button class="btn btn-primary btn-block mt-3">✓ Ký số & cấp tất cả (52)</button>
+      </div>
+      ${BOTTOM_NAV_BCN('cert')}`
+  }
+];
+
+/* =======================================================
+   ADMIN SCREENS
+   ======================================================= */
+const ADMIN_SCREENS = [
+  {
+    title:'Dashboard Admin', desc:'Tổng quan toàn hệ thống',
+    code:'AD-HOME', type:'Tra cứu, Tổng hợp',
+    api:'GET /admin/dashboard',
+    db:'aggregate queries',
+    render:()=>`
+      ${STATUS_BAR(true)}
+      <div class="app-header tall">
+        <div class="app-header-row">
+          <div class="avatar" style="background:#fff;color:var(--ptit-red)">AD</div>
+          <div class="flex-1">
+            <div style="font-size:11px;opacity:.85">System Administrator</div>
+            <div class="app-header-title">Admin Console</div>
+          </div>
+          <button class="icon-btn">🔔</button>
+        </div>
+      </div>
+      <div class="app-body" style="margin-top:-12px">
+        <div class="grid-2 mb-3">
+          <div class="stat-card"><div class="num">2,847</div><div class="lbl">Tài khoản</div></div>
+          <div class="stat-card"><div class="num">38</div><div class="lbl">Cuộc thi 2026</div></div>
+          <div class="stat-card" style="background:var(--success-soft)"><div class="num" style="color:var(--success)">99.8%</div><div class="lbl">Uptime 30 ngày</div></div>
+          <div class="stat-card" style="background:var(--info-soft)"><div class="num" style="color:var(--info)">12.4 GB</div><div class="lbl">Dung lượng</div></div>
+        </div>
+
+        <div class="card">
+          <div class="font-bold mb-3">🖥 Trạng thái server</div>
+          <div class="row-between text-sm mb-2"><span>🐧 Ubuntu 24.04 LTS</span><span class="badge badge-success">Healthy</span></div>
+          <div class="row-between text-sm mb-2"><span>⚡ FastAPI (Uvicorn)</span><span class="badge badge-success">Active</span></div>
+          <div class="row-between text-sm mb-2"><span>🐘 PostgreSQL 16</span><span class="badge badge-success">Active</span></div>
+          <div class="row-between text-sm mb-2"><span>🌐 Nginx</span><span class="badge badge-success">Active</span></div>
+          <div class="row-between text-sm"><span>⚙️ systemd ptit-api.service</span><span class="badge badge-success">Running</span></div>
+        </div>
+
+        <div class="section-title">⚠️ Cảnh báo gần đây</div>
+        <div class="list-item" style="border-left:3px solid var(--warning)">
+          <div class="list-item-ico" style="background:#FEF3C7;color:#92400E">⚠</div>
+          <div class="list-item-body">
+            <div class="list-item-title">5 lần đăng nhập thất bại liên tiếp</div>
+            <div class="list-item-sub">IP 14.232.xxx.xxx · 10 phút trước</div>
+          </div>
+        </div>
+        <div class="list-item" style="border-left:3px solid var(--info)">
+          <div class="list-item-ico" style="background:#DBEAFE;color:#1D4ED8">💾</div>
+          <div class="list-item-body">
+            <div class="list-item-title">Backup tự động thành công</div>
+            <div class="list-item-sub">02:00 sáng nay · 2.4 GB</div>
+          </div>
+        </div>
+
+        <div class="section-title">📈 Hoạt động hôm nay</div>
+        <div class="card">
+          <div class="row-between mb-2"><span class="text-sm">Đăng ký mới</span><b>+34</b></div>
+          <div class="row-between mb-2"><span class="text-sm">Đăng nhập</span><b>1,248</b></div>
+          <div class="row-between mb-2"><span class="text-sm">Bài thi nộp</span><b>87</b></div>
+          <div class="row-between"><span class="text-sm">API calls</span><b>45,210</b></div>
+        </div>
+      </div>
+      ${BOTTOM_NAV_ADMIN('home')}`
+  },
+  {
+    title:'Quản lý người dùng', desc:'CRUD + phân quyền tài khoản',
+    code:'AD2', type:'Lưu trữ',
+    api:'GET/POST/PUT/DELETE /admin/users',
+    db:'app_users, user_roles, students, organizers',
+    render:()=>`
+      ${STATUS_BAR(true)}
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="icon-btn">‹</button>
+          <div class="app-header-title">Người dùng</div>
+          <button class="icon-btn">+</button>
+        </div>
+        <div style="background:rgba(255,255,255,.18);border-radius:10px;padding:8px 12px;margin-top:10px">
+          <input style="background:transparent;border:0;color:#fff;font-size:13px;outline:none;width:100%" placeholder="🔍 Tìm theo tên, email, MSSV...">
+        </div>
+      </div>
+      <div class="app-body">
+        <div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:12px">
+          <button class="filter-chip active">Tất cả (2,847)</button>
+          <button class="filter-chip">Sinh viên (2,650)</button>
+          <button class="filter-chip">Giảng viên (180)</button>
+          <button class="filter-chip">BCN (12)</button>
+          <button class="filter-chip">Admin (5)</button>
+        </div>
+
+        <div class="card">
+          <div class="row gap-3">
+            <div class="avatar">AN</div>
+            <div class="flex-1">
+              <div class="row-between">
+                <div class="font-semi text-sm">Nguyễn Văn An</div>
+                <span class="badge badge-success">Active</span>
+              </div>
+              <div class="text-xs text-muted">b21dccn123@ptit.edu.vn</div>
+              <div class="row gap-2 mt-2">
+                <span class="badge badge-red">STUDENT</span>
+                <span class="text-xs text-muted">Đăng nhập: 5 phút trước</span>
+              </div>
+            </div>
+          </div>
+          <div class="row gap-2 mt-3">
+            <button class="btn btn-secondary btn-sm flex-1">✏️ Sửa</button>
+            <button class="btn btn-outline btn-sm" style="color:var(--warning);border-color:var(--warning)">🔒 Khóa</button>
+            <button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)">🗑</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row gap-3">
+            <div class="avatar" style="background:#1E40AF">NM</div>
+            <div class="flex-1">
+              <div class="row-between">
+                <div class="font-semi text-sm">TS. Nguyễn Văn Minh</div>
+                <span class="badge badge-success">Active</span>
+              </div>
+              <div class="text-xs text-muted">nv.minh@ptit.edu.vn</div>
+              <div class="row gap-2 mt-2">
+                <span class="badge badge-info">ORGANIZER</span>
+                <span class="badge badge-info">JUDGE</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row gap-3">
+            <div class="avatar" style="background:#94A3B8">PT</div>
+            <div class="flex-1">
+              <div class="row-between">
+                <div class="font-semi text-sm">Phạm Thị Thảo</div>
+                <span class="badge badge-warning">Locked</span>
+              </div>
+              <div class="text-xs text-muted">pt.thao@ptit.edu.vn</div>
+              <div class="row gap-2 mt-2">
+                <span class="badge badge-red">STUDENT</span>
+                <span class="text-xs text-muted">Khóa từ: 3 ngày trước</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-block mt-3">📥 Import từ CSV</button>
+      </div>
+      ${BOTTOM_NAV_ADMIN('users')}`
+  },
+  {
+    title:'Quản lý khoa/ngành', desc:'CRUD master data',
+    code:'AD3', type:'Lưu trữ',
+    api:'GET/POST/PUT /admin/faculties · /classes',
+    db:'faculties, academic_classes, student_directory',
+    render:()=>`
+      ${STATUS_BAR()}
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="icon-btn">‹</button>
+          <div class="app-header-title">Khoa & Lớp</div>
+          <button class="icon-btn">+</button>
+        </div>
+      </div>
+      <div class="app-body">
+        <div class="row gap-2 mb-3">
+          <button class="btn btn-outline btn-sm flex-1" style="background:var(--ptit-red);color:#fff;border-color:var(--ptit-red)">Khoa (8)</button>
+          <button class="btn btn-outline btn-sm flex-1">Lớp (124)</button>
+        </div>
+
+        <div class="card">
+          <div class="row gap-3">
+            <div class="list-item-ico" style="background:#FEE2E2;color:#DC2626">🏛️</div>
+            <div class="flex-1">
+              <div class="font-semi text-sm">Công nghệ Thông tin</div>
+              <div class="text-xs text-muted">Mã: CNTT · 32 lớp · 845 SV</div>
+            </div>
+            <button class="btn-sm" style="background:none;border:0">⋯</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row gap-3">
+            <div class="list-item-ico" style="background:#DBEAFE;color:#1D4ED8">🛡️</div>
+            <div class="flex-1">
+              <div class="font-semi text-sm">An toàn Thông tin</div>
+              <div class="text-xs text-muted">Mã: ATTT · 18 lớp · 420 SV</div>
+            </div>
+            <button class="btn-sm" style="background:none;border:0">⋯</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row gap-3">
+            <div class="list-item-ico" style="background:#FEF3C7;color:#92400E">📡</div>
+            <div class="flex-1">
+              <div class="font-semi text-sm">Điện tử Viễn thông</div>
+              <div class="text-xs text-muted">Mã: ĐTVT · 24 lớp · 580 SV</div>
+            </div>
+            <button class="btn-sm" style="background:none;border:0">⋯</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row gap-3">
+            <div class="list-item-ico" style="background:#DCFCE7;color:#166534">📊</div>
+            <div class="flex-1">
+              <div class="font-semi text-sm">Quản trị kinh doanh</div>
+              <div class="text-xs text-muted">Mã: QTKD · 22 lớp · 510 SV</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row gap-3">
+            <div class="list-item-ico" style="background:#FCE7F3;color:#9F1239">🎨</div>
+            <div class="flex-1">
+              <div class="font-semi text-sm">Đa phương tiện</div>
+              <div class="text-xs text-muted">Mã: ĐPT · 16 lớp · 310 SV</div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-outline btn-block">📥 Đồng bộ từ HTQL trường</button>
+      </div>`
+  },
+  {
+    title:'Cấu hình hệ thống', desc:'OTP, file size, branding',
+    code:'AD4', type:'Lưu trữ',
+    api:'GET/PUT /admin/settings',
+    db:'system_settings',
+    render:()=>`
+      ${STATUS_BAR()}
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="icon-btn">‹</button>
+          <div class="app-header-title">Cấu hình hệ thống</div>
+        </div>
+      </div>
+      <div class="app-body">
+        <div class="font-bold mb-2">🔐 Bảo mật</div>
+        <div class="card-flat">
+          <div class="input-group" style="margin-bottom:10px">
+            <label class="input-label">Thời gian OTP hiệu lực (phút)</label>
+            <input class="input" value="5" type="number">
+          </div>
+          <div class="input-group" style="margin-bottom:10px">
+            <label class="input-label">Số lần đăng nhập sai trước khi khóa</label>
+            <input class="input" value="5" type="number">
+          </div>
+          <div class="input-group" style="margin-bottom:0">
+            <label class="input-label">Thời gian khóa tài khoản (phút)</label>
+            <input class="input" value="30" type="number">
+          </div>
+        </div>
+
+        <div class="font-bold mb-2 mt-3">📁 Lưu trữ tệp</div>
+        <div class="card-flat">
+          <div class="input-group" style="margin-bottom:10px">
+            <label class="input-label">Dung lượng tối đa mỗi file (MB)</label>
+            <input class="input" value="50" type="number">
+          </div>
+          <div class="input-group" style="margin-bottom:10px">
+            <label class="input-label">Định dạng cho phép</label>
+            <input class="input" value="pdf, docx, doc, zip, rar, png, jpg">
+          </div>
+          <div class="input-group" style="margin-bottom:0">
+            <label class="input-label">Đường dẫn lưu (Linux)</label>
+            <input class="input" value="/var/lib/ptit-contest/uploads" style="font-family:monospace;font-size:12px">
+          </div>
+        </div>
+
+        <div class="font-bold mb-2 mt-3">💾 Sao lưu</div>
+        <div class="card-flat">
+          <div class="row-between mb-3">
+            <div>
+              <div class="font-semi text-sm">Tự động sao lưu</div>
+              <div class="text-xs text-muted">Hàng ngày lúc 02:00</div>
+            </div>
+            <label class="row" style="position:relative;width:44px;height:24px;background:var(--ptit-red);border-radius:12px;cursor:pointer">
+              <span style="position:absolute;right:2px;top:2px;width:20px;height:20px;background:#fff;border-radius:50%"></span>
+            </label>
+          </div>
+          <div class="input-group" style="margin-bottom:10px">
+            <label class="input-label">Số bản giữ lại</label>
+            <input class="input" value="30" type="number">
+          </div>
+          <button class="btn btn-secondary btn-block btn-sm">💾 Sao lưu thủ công ngay</button>
+        </div>
+
+        <div class="font-bold mb-2 mt-3">📧 Email SMTP</div>
+        <div class="card-flat">
+          <div class="input-group" style="margin-bottom:10px">
+            <label class="input-label">SMTP Server</label>
+            <input class="input" value="smtp.gmail.com:587">
+          </div>
+          <div class="input-group" style="margin-bottom:0">
+            <label class="input-label">From email</label>
+            <input class="input" value="noreply@ptit.edu.vn">
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-block mt-3">💾 Lưu thay đổi</button>
+      </div>
+      ${BOTTOM_NAV_ADMIN('config')}`
+  },
+  {
+    title:'Audit log', desc:'Lịch sử hoạt động người dùng',
+    code:'AD6', type:'Tra cứu',
+    api:'GET /admin/audit-logs',
+    db:'audit_logs',
+    render:()=>`
+      ${STATUS_BAR(true)}
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="icon-btn">‹</button>
+          <div class="app-header-title">Audit Log</div>
+          <button class="icon-btn">📥</button>
+        </div>
+      </div>
+      <div class="app-body">
+        <div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:12px">
+          <button class="filter-chip active">Tất cả</button>
+          <button class="filter-chip">Đăng nhập</button>
+          <button class="filter-chip">CRUD</button>
+          <button class="filter-chip">Bất thường</button>
+        </div>
+
+        <div class="card-flat" style="font-family:monospace;font-size:11px">
+          <div class="row-between mb-2">
+            <span class="badge badge-warning">⚠ ANOMALY</span>
+            <span class="text-muted">10:34:22</span>
+          </div>
+          <div class="text-sm" style="font-family:inherit">5 lần đăng nhập sai liên tiếp</div>
+          <div class="text-muted mt-2">user: <b>unknown</b> · IP: 14.232.143.21<br>email_attempt: hacker@evil.com</div>
+        </div>
+
+        <div class="card-flat" style="font-family:monospace;font-size:11px">
+          <div class="row-between mb-2">
+            <span class="badge badge-success">✓ LOGIN</span>
+            <span class="text-muted">10:28:14</span>
+          </div>
+          <div class="text-sm" style="font-family:inherit">User logged in successfully</div>
+          <div class="text-muted mt-2">user: <b>nguyen.van.an@ptit.edu.vn</b><br>IP: 113.176.xxx.xxx · iOS Safari</div>
+        </div>
+
+        <div class="card-flat" style="font-family:monospace;font-size:11px">
+          <div class="row-between mb-2">
+            <span class="badge badge-info">CREATE</span>
+            <span class="text-muted">10:15:00</span>
+          </div>
+          <div class="text-sm" style="font-family:inherit">Tạo cuộc thi mới</div>
+          <div class="text-muted mt-2">user: <b>nv.minh@ptit.edu.vn</b><br>entity: contest#42 — "Code Hunt 2026"</div>
+        </div>
+
+        <div class="card-flat" style="font-family:monospace;font-size:11px">
+          <div class="row-between mb-2">
+            <span class="badge badge-warning">UPDATE</span>
+            <span class="text-muted">09:42:18</span>
+          </div>
+          <div class="text-sm" style="font-family:inherit">Cập nhật điểm bài thi</div>
+          <div class="text-muted mt-2">user: <b>dt.thuy@ptit.edu.vn</b><br>entity: scores#1042 — old:75 → new:82</div>
+        </div>
+
+        <div class="card-flat" style="font-family:monospace;font-size:11px">
+          <div class="row-between mb-2">
+            <span class="badge badge-danger">DELETE</span>
+            <span class="text-muted">08:15:00</span>
+          </div>
+          <div class="text-sm" style="font-family:inherit">Xóa thí sinh khỏi cuộc thi</div>
+          <div class="text-muted mt-2">user: <b>admin@ptit.edu.vn</b><br>entity: contest_entries#234<br>reason: "Vi phạm thể lệ"</div>
+        </div>
+
+        <div class="text-center text-xs text-muted mt-3">Hiển thị 5/45,210 bản ghi</div>
+        <button class="btn btn-outline btn-block mt-2">Xem thêm</button>
+      </div>
+      ${BOTTOM_NAV_ADMIN('audit')}`
+  },
+  {
+    title:'Báo cáo toàn hệ thống', desc:'Thống kê & xuất báo cáo',
+    code:'AD5', type:'Kết xuất, Tổng hợp',
+    api:'GET /admin/reports/system',
+    db:'aggregate queries',
+    render:()=>`
+      ${STATUS_BAR()}
+      <div class="app-header">
+        <div class="app-header-row">
+          <button class="icon-btn">‹</button>
+          <div class="app-header-title">Báo cáo</div>
+          <button class="icon-btn">📥</button>
+        </div>
+      </div>
+      <div class="app-body">
+        <div class="row gap-2 mb-3">
+          <button class="filter-chip active">Tháng</button>
+          <button class="filter-chip">Quý</button>
+          <button class="filter-chip">Năm</button>
+        </div>
+
+        <div class="grid-2 mb-3">
+          <div class="stat-card"><div class="num">38</div><div class="lbl">Cuộc thi tháng 5</div></div>
+          <div class="stat-card"><div class="num">1,420</div><div class="lbl">SV tham gia</div></div>
+          <div class="stat-card" style="background:var(--success-soft)"><div class="num" style="color:var(--success)">87%</div><div class="lbl">Tỷ lệ hoàn thành</div></div>
+          <div class="stat-card" style="background:var(--info-soft)"><div class="num" style="color:var(--info)">1,205</div><div class="lbl">Chứng nhận đã cấp</div></div>
+        </div>
+
+        <div class="card">
+          <div class="font-bold mb-3">📊 Cuộc thi theo tháng (2026)</div>
+          <div style="height:140px;display:flex;align-items:flex-end;gap:6px">
+            <div style="flex:1;background:var(--ptit-red-light);height:30%;border-radius:4px 4px 0 0"></div>
+            <div style="flex:1;background:var(--ptit-red-light);height:42%;border-radius:4px 4px 0 0"></div>
+            <div style="flex:1;background:var(--ptit-red);height:55%;border-radius:4px 4px 0 0"></div>
+            <div style="flex:1;background:var(--ptit-red);height:78%;border-radius:4px 4px 0 0"></div>
+            <div style="flex:1;background:var(--ptit-red-dark);height:95%;border-radius:4px 4px 0 0"></div>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <span style="flex:1;text-align:center;font-size:10px">T1</span>
+            <span style="flex:1;text-align:center;font-size:10px">T2</span>
+            <span style="flex:1;text-align:center;font-size:10px">T3</span>
+            <span style="flex:1;text-align:center;font-size:10px">T4</span>
+            <span style="flex:1;text-align:center;font-size:10px;font-weight:700;color:var(--ptit-red)">T5</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="font-bold mb-3">🏛 Sinh viên theo khoa</div>
+          <div class="row-between text-sm mb-2"><span>CNTT</span><b>645</b></div>
+          <div class="progress mb-3"><div class="progress-bar" style="width:85%"></div></div>
+          <div class="row-between text-sm mb-2"><span>ATTT</span><b>320</b></div>
+          <div class="progress mb-3"><div class="progress-bar" style="width:42%"></div></div>
+          <div class="row-between text-sm mb-2"><span>ĐTVT</span><b>275</b></div>
+          <div class="progress mb-3"><div class="progress-bar" style="width:36%"></div></div>
+          <div class="row-between text-sm mb-2"><span>Khoa khác</span><b>180</b></div>
+          <div class="progress"><div class="progress-bar" style="width:24%"></div></div>
+        </div>
+
+        <div class="card">
+          <div class="font-bold mb-2">📥 Xuất báo cáo</div>
+          <div class="row gap-2">
+            <button class="btn btn-outline btn-sm flex-1">📄 PDF</button>
+            <button class="btn btn-outline btn-sm flex-1">📊 Excel</button>
+            <button class="btn btn-outline btn-sm flex-1">🔗 CSV</button>
+          </div>
+        </div>
+      </div>`
+  }
+];
+
+/* =======================================================
+   APP STATE & RENDER LOGIC
+   ======================================================= */
+const ACTORS = {
+  student:  { name:'Sinh viên', screens:STUDENT_SCREENS },
+  lecturer: { name:'Giảng viên / BTC', screens:LECTURER_SCREENS },
+  bcn:      { name:'Ban chủ nhiệm khoa', screens:BCN_SCREENS },
+  admin:    { name:'Admin', screens:ADMIN_SCREENS }
+};
+
+let currentActor = 'student';
+let currentScreen = 0;
+
+const $ = sel => document.querySelector(sel);
+
+function renderScreenList() {
+  const screens = ACTORS[currentActor].screens;
+  const list = $('#screen-list');
+  list.innerHTML = screens.map((s, i) => `
+    <div class="screen-item ${i===currentScreen?'active':''}" data-i="${i}">
+      <div class="screen-num">${String(i+1).padStart(2,'0')}</div>
+      <div>${s.title}</div>
+    </div>
+  `).join('');
+  list.querySelectorAll('.screen-item').forEach(el => {
+    el.addEventListener('click', () => {
+      currentScreen = +el.dataset.i;
+      renderScreenList();
+      renderScreen();
+    });
+  });
+  $('#actor-name-label').textContent = `${ACTORS[currentActor].name} · ${screens.length} màn`;
+}
+
+function renderScreen() {
+  const s = ACTORS[currentActor].screens[currentScreen];
+  $('#phone-screen').innerHTML = s.render();
+  $('#meta-num').textContent = String(currentScreen+1).padStart(2,'0');
+  $('#meta-title').textContent = s.title;
+  $('#meta-desc').textContent = s.desc;
+  $('#meta-code').textContent = s.code || '—';
+  $('#meta-type').textContent = s.type || '—';
+  $('#meta-api').innerHTML = (s.api || '—').replace(/·/g,'<br>·');
+  $('#meta-db').textContent = s.db || '—';
+}
+
+document.querySelectorAll('.actor-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.actor-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentActor = tab.dataset.actor;
+    currentScreen = 0;
+    renderScreenList();
+    renderScreen();
+  });
+});
+
+$('#prev-btn').addEventListener('click', () => {
+  const total = ACTORS[currentActor].screens.length;
+  currentScreen = (currentScreen - 1 + total) % total;
+  renderScreenList(); renderScreen();
+});
+$('#next-btn').addEventListener('click', () => {
+  const total = ACTORS[currentActor].screens.length;
+  currentScreen = (currentScreen + 1) % total;
+  renderScreenList(); renderScreen();
+});
+
+// initial render
+renderScreenList();
+renderScreen();
+</script>
+</body>
+</html>

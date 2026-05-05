@@ -1,0 +1,248 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PTIT Contest â€” GV / BTC (Web)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="design-canvas-src/tokens.css">
+<link rel="stylesheet" href="design-canvas-src/web-shell.css">
+<style>
+  /* GV-specific tweaks */
+  .login-split { display: grid; grid-template-columns: 1.1fr 1fr; min-height: 720px; }
+  .login-hero {
+    background:
+      radial-gradient(circle at 80% 10%, oklch(0.700 0.180 19 / 0.55), transparent 50%),
+      radial-gradient(circle at 10% 90%, oklch(0.400 0.150 19 / 0.7), transparent 55%),
+      linear-gradient(135deg, var(--brand-700), var(--brand-900));
+    color: #fff;
+    padding: 56px 56px 40px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    position: relative; overflow: hidden;
+  }
+  .login-hero::after {
+    content: ""; position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: radial-gradient(ellipse at top right, black 30%, transparent 75%);
+  }
+  .login-hero > * { position: relative; z-index: 1; }
+  .login-hero .brand-row { display: flex; align-items: center; gap: 12px; font-family: var(--font-display); font-weight: 800; font-size: 18px; }
+  .login-hero .brand-row .mark {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: rgba(255,255,255,0.12); backdrop-filter: blur(10px);
+    display: grid; place-items: center; font-size: 16px;
+  }
+  .login-hero h1 {
+    font-family: var(--font-display);
+    font-size: 38px; font-weight: 800; letter-spacing: -0.03em;
+    line-height: 1.1; margin-top: 64px; max-width: 460px;
+  }
+  .login-hero p { margin-top: 18px; font-size: 14px; opacity: 0.85; max-width: 440px; line-height: 1.55; }
+  .login-hero .meta-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    margin-top: 32px;
+  }
+  .login-hero .meta-item {
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 10px; padding: 12px 14px;
+  }
+  .login-hero .meta-item .num { font-family: var(--font-display); font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+  .login-hero .meta-item .lbl { font-size: 11px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+  .login-hero .footer-mark { font-family: var(--font-mono); font-size: 11px; opacity: 0.6; }
+
+  .login-form-wrap { padding: 56px 64px; display: flex; flex-direction: column; justify-content: center; }
+  .login-form-wrap h2 { font-family: var(--font-display); font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+  .login-form-wrap .sub { color: var(--fg-muted); font-size: 13px; margin-top: 6px; margin-bottom: 32px; }
+  .login-form .role-tabs {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    background: var(--bg-sunken); border-radius: 10px; padding: 4px;
+    margin-bottom: 22px;
+  }
+  .login-form .role-tabs .role {
+    padding: 8px; text-align: center; font-size: 12px; font-weight: 600;
+    border-radius: 7px; cursor: pointer; color: var(--fg-muted);
+  }
+  .login-form .role-tabs .role.active { background: var(--bg-elev); color: var(--fg); box-shadow: var(--shadow-sm); }
+
+  /* Stat row variants */
+  .grid-stats-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+
+  /* Schedule */
+  .schedule-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+  .schedule-row:last-child { border-bottom: 0; padding-bottom: 0; }
+  .schedule-row .when {
+    width: 64px; flex-shrink: 0;
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--fg-muted); text-align: right;
+    line-height: 1.4;
+  }
+  .schedule-row .when b { display: block; color: var(--fg); font-size: 13px; }
+  .schedule-row .body { flex: 1; }
+  .schedule-row .body b { font-size: 13px; }
+  .schedule-row .body .meta { color: var(--fg-muted); font-size: 11.5px; margin-top: 2px; font-family: var(--font-mono); }
+
+  /* Contest cards */
+  .contest-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .contest-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px;
+    display: flex; flex-direction: column; gap: 10px;
+    position: relative; overflow: hidden;
+  }
+  .contest-card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    background: var(--accent);
+  }
+  .contest-card.ongoing::before { background: var(--ok); }
+  .contest-card.draft::before { background: var(--ink-400); }
+  .contest-card.judging::before { background: var(--info); }
+  .contest-card.done::before { background: var(--ink-500); }
+  .contest-card .title { font-weight: 700; font-size: 14px; letter-spacing: -0.01em; }
+  .contest-card .sub { color: var(--fg-muted); font-size: 11.5px; font-family: var(--font-mono); }
+  .contest-card .progress {
+    height: 6px; background: var(--bg-sunken); border-radius: 4px; overflow: hidden;
+  }
+  .contest-card .progress > div { height: 100%; background: var(--accent); border-radius: 4px; }
+  .contest-card .meta-row { display: flex; gap: 12px; font-size: 11px; color: var(--fg-muted); font-family: var(--font-mono); }
+  .contest-card .meta-row span b { color: var(--fg); font-weight: 700; }
+
+  /* Wizard */
+  .wizard-steps {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 18px; background: var(--bg-elev);
+    border: 1px solid var(--border); border-radius: 10px;
+    margin-bottom: 18px;
+  }
+  .wizard-steps .step {
+    display: flex; align-items: center; gap: 8px;
+    color: var(--fg-faint); font-size: 12px; font-weight: 600;
+  }
+  .wizard-steps .step .num {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--bg-sunken); color: var(--fg-muted);
+    display: grid; place-items: center;
+    font-size: 11px; font-family: var(--font-mono); font-weight: 700;
+  }
+  .wizard-steps .step.done { color: var(--ok); }
+  .wizard-steps .step.done .num { background: var(--ok-bg); color: var(--ok); }
+  .wizard-steps .step.active { color: var(--fg); }
+  .wizard-steps .step.active .num { background: var(--accent); color: #fff; }
+  .wizard-steps .conn { flex: 1; height: 1px; background: var(--border); }
+  .wizard-steps .conn.done { background: var(--ok); }
+
+  /* Round card */
+  .round-card {
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px; background: var(--bg-elev);
+    margin-bottom: 10px;
+  }
+  .round-card .head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 10px;
+  }
+
+  /* Judging layout */
+  .judge-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; min-height: 600px; }
+  .judge-paper {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 12px; padding: 22px 26px;
+    line-height: 1.7; font-size: 13.5px;
+  }
+  .judge-paper h3 { font-family: var(--font-display); font-size: 18px; font-weight: 700; margin-bottom: 14px; }
+  .judge-paper h4 { font-size: 14px; margin: 18px 0 8px; font-weight: 700; }
+  .judge-paper p { color: oklch(0.300 0.010 60); margin-bottom: 8px; }
+  .judge-paper code {
+    font-family: var(--font-mono); font-size: 12px;
+    background: var(--bg-sunken); padding: 1px 6px; border-radius: 4px;
+  }
+  .judge-paper ul { padding-left: 22px; }
+  .judge-paper li { margin-bottom: 4px; }
+  .anon-banner {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 14px; background: var(--info-bg); color: var(--info);
+    border-radius: 8px; font-size: 12px; margin-bottom: 14px;
+    font-family: var(--font-mono);
+  }
+  .score-input {
+    display: grid; grid-template-columns: 1fr 90px;
+    gap: 10px; align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+  .score-input:last-of-type { border-bottom: 0; }
+  .score-input .meta { font-size: 11px; color: var(--fg-muted); }
+  .score-input .field {
+    display: flex; align-items: center; gap: 4px;
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 4px 8px; background: var(--bg-elev);
+  }
+  .score-input .field input {
+    width: 50px; border: 0; outline: 0; font: inherit;
+    font-family: var(--font-mono); font-weight: 700; text-align: right;
+    color: var(--fg); background: transparent;
+  }
+  .score-input .field .max { color: var(--fg-faint); font-size: 11px; font-family: var(--font-mono); }
+
+  /* Results */
+  .medal { font-family: var(--font-display); font-weight: 800; font-size: 14px; }
+  .medal.gold { color: oklch(0.700 0.150 80); }
+  .medal.silver { color: oklch(0.620 0.020 280); }
+  .medal.bronze { color: oklch(0.580 0.110 50); }
+
+  /* Statistics */
+  .legend-row { display: flex; gap: 16px; font-size: 11.5px; color: var(--fg-muted); }
+  .legend-row span { display: flex; align-items: center; gap: 6px; }
+  .legend-row span::before { content: ""; width: 10px; height: 10px; border-radius: 3px; background: var(--accent); }
+  .legend-row .l-soft::before { background: var(--accent-soft); }
+  .legend-row .l-info::before { background: var(--info); }
+</style>
+</head>
+
+<body>
+
+<div class="doc-mast">
+  <div class="row">
+    <div class="logo">P</div>
+    <div>
+      <h1>PTIT Contest â€” GV / BTC Console</h1>
+      <div class="sub">Giáº£ng viÃªn & Ban tá»• chá»©c Â· Web app Â· 8 mÃ n chÃ­nh</div>
+    </div>
+  </div>
+  <div class="meta">
+    <span class="pill">GV</span>
+    <span class="pill gray">8 screens</span>
+    <span class="pill outline">v01.1</span>
+    <span class="pill outline">1280 Ã— 720</span>
+  </div>
+</div>
+
+<div class="stack" id="stack"></div>
+
+<!-- React + Babel -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script src="design-canvas-src/web-common.js"></script>
+<script type="text/babel" src="design-canvas-src/gv-screens.jsx"></script>
+<script type="text/babel">
+  const stack = document.getElementById('stack');
+  const root = ReactDOM.createRoot(stack);
+  root.render(<window.GVApp />);
+</script>
+
+</body>
+</html>

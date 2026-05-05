@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>PTIT Contest — Mockup BCN (Web) — v01</title>
+<style>
+  :root {
+    --red: #C8102E; --red-soft: #FEE5E9; --bg: #f3f4f6; --white: #ffffff;
+    --border: #e5e7eb; --text: #111827; --muted: #6b7280;
+    --success: #16a34a; --warning: #d97706; --info: #2563eb;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    padding: 24px 16px 80px; -webkit-font-smoothing: antialiased; font-size: 13px;
+  }
+  .doc-header {
+    max-width: 1340px; margin: 0 auto 32px;
+    background: var(--white); border: 1px solid var(--border);
+    padding: 20px 24px; border-radius: 12px;
+  }
+  .doc-header h1 { font-size: 20px; margin-bottom: 6px; }
+  .doc-header p { color: var(--muted); font-size: 13px; line-height: 1.6; }
+  .doc-header .meta { display: inline-flex; gap: 8px; margin-top: 12px; font-size: 12px; }
+  .badge { background: var(--red); color: #fff; padding: 4px 10px; border-radius: 6px; font-weight: 600; }
+  .badge.gray { background: #6b7280; }
+  .badge.outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+
+  .stack { max-width: 1340px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+  .screen-wrap { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+  .screen-label { font-size: 13px; font-weight: 600; text-align: center; max-width: 1280px; }
+  .screen-label .code { color: var(--muted); font-weight: 500; font-size: 11px; display: block; margin-top: 2px; }
+
+  .browser {
+    width: 1280px; min-height: 720px;
+    background: var(--white); border: 1px solid var(--border); border-radius: 8px;
+    overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    display: flex; flex-direction: column;
+  }
+  .browser-bar { display: flex; align-items: center; gap: 6px; padding: 10px 14px; background: #e5e7eb; border-bottom: 1px solid #d1d5db; }
+  .browser-bar .dot { width: 11px; height: 11px; border-radius: 50%; background: #9ca3af; }
+  .browser-bar .dot:nth-child(1) { background: #ef4444; }
+  .browser-bar .dot:nth-child(2) { background: #f59e0b; }
+  .browser-bar .dot:nth-child(3) { background: #10b981; }
+  .browser-bar .url { flex: 1; background: var(--white); border-radius: 6px; padding: 6px 12px; font-size: 12px; color: var(--muted); margin-left: 14px; font-family: monospace; }
+  .layout { display: flex; flex: 1; min-height: 680px; }
+
+  .sidebar { width: 240px; background: #1f2937; color: #d1d5db; padding: 18px 0; display: flex; flex-direction: column; }
+  .sidebar .brand { display: flex; align-items: center; gap: 10px; padding: 0 18px 18px; border-bottom: 1px solid #374151; }
+  .sidebar .brand .logo { width: 32px; height: 32px; background: var(--red); border-radius: 7px; display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 14px; }
+  .sidebar .brand b { font-size: 13px; color: #fff; }
+  .sidebar .brand p { font-size: 10px; color: #9ca3af; margin-top: 2px; }
+  .sidebar nav { padding: 10px 0; flex: 1; }
+  .sidebar nav .item { display: flex; align-items: center; gap: 10px; padding: 9px 18px; cursor: pointer; font-size: 13px; border-left: 3px solid transparent; }
+  .sidebar nav .item:hover { background: #374151; }
+  .sidebar nav .item.active { background: rgba(200,16,46,0.15); color: #fff; border-left-color: var(--red); }
+  .sidebar nav .item .ico { width: 18px; text-align: center; font-size: 13px; }
+  .sidebar nav .item .badge-num {
+    margin-left: auto; background: var(--red); color: #fff;
+    font-size: 10px; padding: 1px 6px; border-radius: 10px; font-weight: 700;
+  }
+  .sidebar nav .section { font-size: 10px; text-transform: uppercase; color: #6b7280; padding: 12px 18px 6px; letter-spacing: .5px; }
+  .sidebar .footer { padding: 14px 18px; border-top: 1px solid #374151; display: flex; align-items: center; gap: 10px; font-size: 12px; }
+  .sidebar .footer .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--red-soft); color: var(--red); display: grid; place-items: center; font-weight: 700; }
+
+  .main { flex: 1; padding: 24px 32px; overflow-y: auto; background: #fafafa; }
+  .page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .page-head h2 { font-size: 20px; }
+  .page-head .crumbs { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; background: var(--red); color: #fff; }
+  .btn.outline { background: var(--white); color: var(--text); border: 1px solid var(--border); }
+  .btn.success { background: var(--success); }
+  .btn.warn { background: var(--warning); }
+  .btn.gray { background: #6b7280; }
+  .btn.danger { background: #fee2e2; color: #dc2626; }
+  .btn.sm { padding: 5px 10px; font-size: 12px; }
+  .btn.lg { padding: 12px 24px; font-size: 14px; }
+
+  .card { background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 18px; }
+  .card .title { font-weight: 700; font-size: 14px; margin-bottom: 12px; }
+
+  .pill { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 11px; font-weight: 500; background: #f3f4f6; color: var(--muted); }
+  .pill.green { background: #dcfce7; color: var(--success); }
+  .pill.yellow { background: #fef3c7; color: var(--warning); }
+  .pill.red { background: var(--red-soft); color: var(--red); }
+  .pill.blue { background: #dbeafe; color: #1d4ed8; }
+  .pill.gray { background: #e5e7eb; color: var(--muted); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 10px 12px; background: #f9fafb; font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 600; border-bottom: 1px solid var(--border); }
+  td { padding: 12px; border-bottom: 1px solid var(--border); }
+  tr:hover td { background: #f9fafb; }
+
+  .input { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-family: inherit; background: var(--white); }
+  .label { font-size: 12px; color: var(--muted); margin-bottom: 5px; display: block; font-weight: 500; }
+  .form-row { margin-bottom: 14px; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+  .stat { background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .stat .label { font-size: 11px; color: var(--muted); text-transform: uppercase; }
+  .stat .num { font-size: 24px; font-weight: 700; margin-top: 4px; }
+  .stat .delta { font-size: 11px; color: var(--success); margin-top: 4px; }
+
+  .banner { border-left: 4px solid var(--info); background: #eff6ff; padding: 12px 16px; border-radius: 6px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; font-size: 13px; }
+  .banner.warn { border-color: var(--warning); background: #fef3c7; }
+  .banner.green { border-color: var(--success); background: #dcfce7; }
+  .banner.red { border-color: var(--red); background: var(--red-soft); }
+
+  hr.div { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+  /* Approval action panel */
+  .actions-panel {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 16px;
+  }
+  .action-btn {
+    border: 1px solid var(--border); border-radius: 8px; padding: 14px;
+    text-align: center; cursor: pointer; background: var(--white);
+    transition: all 0.15s;
+  }
+  .action-btn:hover { border-color: var(--red); }
+  .action-btn .ico { font-size: 24px; margin-bottom: 6px; display: block; }
+  .action-btn b { font-size: 13px; display: block; }
+  .action-btn .desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .action-btn.approve b { color: var(--success); }
+  .action-btn.revise b { color: var(--warning); }
+  .action-btn.reject b { color: var(--red); }
+
+  /* Diff viewer */
+  .diff {
+    font-family: monospace; font-size: 12px; background: #f9fafb;
+    border: 1px solid var(--border); border-radius: 6px; padding: 12px;
+    line-height: 1.6;
+  }
+  .diff .added { background: #dcfce7; color: #166534; }
+  .diff .removed { background: #fee2e2; color: #991b1b; text-decoration: line-through; }
+
+  /* Sidebar shorthand for repeated render */
+  .sb-active-approval-q1 nav .item:nth-child(2) { background: rgba(200,16,46,0.15); color: #fff; border-left-color: var(--red); }
+</style>
+</head>
+<body>
+
+<div class="doc-header">
+  <h1>🎓 Mockup Ban Chủ nhiệm khoa (BCN) — Web (v01)</h1>
+  <p>Desktop sidebar layout 1280×720. 7 màn hình cover 6 chức năng (BCN-01 đến BCN-06). Tập trung vào workflow phê duyệt 2 cấp QĐ1 / QĐ2.</p>
+  <div class="meta">
+    <span class="badge">BCN (Head of Department)</span>
+    <span class="badge gray">6 chức năng</span>
+    <span class="badge outline">role_code = HOD</span>
+  </div>
+</div>
+
+<div class="stack">
+
+  <!-- 1. Dashboard với queue -->
+  <div class="screen-wrap">
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">https://contest.ptit.edu.vn/dashboard</span>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand"><div class="logo">P</div><div><b>PTIT Contest</b><p>Cổng BCN khoa</p></div></div>
+          <nav>
+            <div class="item active"><span class="ico">📊</span>Dashboard</div>
+            <div class="section">Phê duyệt</div>
+            <div class="item"><span class="ico">📝</span>Đề xuất chờ duyệt<span class="badge-num">5</span></div>
+            <div class="item"><span class="ico">🏆</span>Kết quả chờ duyệt<span class="badge-num">2</span></div>
+            <div class="item"><span class="ico">📜</span>Mẫu chứng nhận<span class="badge-num">1</span></div>
+            <div class="section">Theo dõi</div>
+            <div class="item"><span class="ico">👁</span>Giám sát cuộc thi</div>
+            <div class="item"><span class="ico">📈</span>Thống kê khoa</div>
+            <div class="item"><span class="ico">📚</span>Lịch sử quyết định</div>
+          </nav>
+          <div class="footer"><div class="avatar">TB</div><div><b style="color:#fff">BCN. Trần B</b><br/><span style="color:#9ca3af;font-size:10px">Trưởng khoa CNTT</span></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><div class="crumbs">Trang chủ</div><h2>Dashboard — Khoa CNTT</h2></div>
+            <div style="display:flex;gap:8px;align-items:center;color:var(--muted);font-size:12px">📅 04/05/2026 · Tuần 18</div>
+          </div>
+          <div class="stats">
+            <div class="stat"><div class="label">Đề xuất chờ duyệt (QĐ1)</div><div class="num" style="color:var(--warning)">5</div><div class="delta" style="color:var(--warning)">⏱ Cần xử lý</div></div>
+            <div class="stat"><div class="label">Kết quả chờ duyệt (QĐ2)</div><div class="num" style="color:var(--info)">2</div></div>
+            <div class="stat"><div class="label">Cuộc thi đang vận hành</div><div class="num">7</div></div>
+            <div class="stat"><div class="label">Mẫu chứng nhận chờ duyệt</div><div class="num" style="color:var(--red)">1</div></div>
+          </div>
+          <div style="display:grid;grid-template-columns:3fr 2fr;gap:16px">
+            <div class="card">
+              <div class="title">⏱ Đề xuất ưu tiên xử lý (BCN_QĐ1)</div>
+              <table>
+                <thead><tr><th>Cuộc thi</th><th>BTC</th><th>Submit</th><th>Lần</th><th></th></tr></thead>
+                <tbody>
+                  <tr><td><b>Hackathon Mùa hè 2026</b></td><td>GV. Nguyễn A</td><td>2 giờ trước</td><td><span class="pill">Lần 1</span></td><td><button class="btn sm">Xem →</button></td></tr>
+                  <tr><td><b>Cuộc thi LT C++ 2026</b></td><td>GV. Lê C</td><td>1 ngày trước</td><td><span class="pill yellow">Lần 3</span></td><td><button class="btn sm">Xem →</button></td></tr>
+                  <tr><td><b>Cuộc thi Web Dev 2026</b></td><td>GV. Phạm D</td><td>3 ngày trước</td><td><span class="pill">Lần 1</span></td><td><button class="btn sm">Xem →</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="card">
+              <div class="title">📈 Hoạt động khoa CNTT — Tháng 5</div>
+              <ul style="list-style:none;font-size:12px;line-height:2">
+                <li>📋 12 đề xuất gửi lên — duyệt 9, từ chối 1, đang chờ 5</li>
+                <li>🏆 4 cuộc thi đã hoàn thành</li>
+                <li>👥 234 SV tham gia (tăng 18% so với T4)</li>
+                <li>📜 5 chứng nhận đã cấp</li>
+              </ul>
+              <hr class="div"/>
+              <button class="btn outline" style="width:100%;justify-content:center">📊 Xem báo cáo đầy đủ</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">Dashboard BCN với queue ưu tiên<span class="code">BCN-01 (sau login) + summary BCN-02/04</span></div>
+  </div>
+
+  <!-- 2. Queue đề xuất QĐ1 -->
+  <div class="screen-wrap">
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">https://contest.ptit.edu.vn/approvals/proposals</span>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand"><div class="logo">P</div><div><b>PTIT Contest</b><p>Cổng BCN khoa</p></div></div>
+          <nav>
+            <div class="item"><span class="ico">📊</span>Dashboard</div>
+            <div class="section">Phê duyệt</div>
+            <div class="item active"><span class="ico">📝</span>Đề xuất chờ duyệt<span class="badge-num">5</span></div>
+            <div class="item"><span class="ico">🏆</span>Kết quả chờ duyệt<span class="badge-num">2</span></div>
+            <div class="item"><span class="ico">📜</span>Mẫu chứng nhận<span class="badge-num">1</span></div>
+            <div class="section">Theo dõi</div>
+            <div class="item"><span class="ico">👁</span>Giám sát cuộc thi</div>
+            <div class="item"><span class="ico">📈</span>Thống kê khoa</div>
+          </nav>
+          <div class="footer"><div class="avatar">TB</div><div><b style="color:#fff">BCN. Trần B</b></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><div class="crumbs">Phê duyệt › Đề xuất cuộc thi</div><h2>Queue đề xuất chờ duyệt (BCN_QĐ1)</h2></div>
+            <div style="display:flex;gap:8px">
+              <select class="input" style="width:auto"><option>Tất cả lần submit</option></select>
+              <button class="btn outline">📥 Lịch sử quyết định</button>
+            </div>
+          </div>
+          <div class="banner">
+            <span>ℹ️</span>
+            <span>Bạn đang xem queue của <b>khoa CNTT</b> (BCN khoa khác không thấy được). Filter qua <code>contests.host_faculty_id</code> = <code>department_heads.faculty_id</code>.</span>
+          </div>
+          <div class="card" style="padding:0;overflow:hidden">
+            <table>
+              <thead>
+                <tr><th>#</th><th>Cuộc thi</th><th>BTC đề xuất</th><th>Submit lúc</th><th>Lần submit</th><th>Comment lần trước</th><th>Hành động</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>7</td>
+                  <td><b>Hackathon Mùa hè 2026</b><br/><span style="font-size:11px;color:var(--muted)">Đội · 01/06 → 03/06</span></td>
+                  <td>GV. Nguyễn A</td>
+                  <td>04/05 14:30<br/><span style="font-size:11px;color:var(--muted)">2 giờ trước</span></td>
+                  <td><span class="pill">Lần 1</span></td>
+                  <td>—</td>
+                  <td><button class="btn sm">Xem & Quyết định</button></td>
+                </tr>
+                <tr>
+                  <td>5</td>
+                  <td><b>Cuộc thi LT C++ 2026</b><br/><span style="font-size:11px;color:var(--muted)">Cá nhân · 20/05</span></td>
+                  <td>GV. Lê C</td>
+                  <td>03/05 09:15<br/><span style="font-size:11px;color:var(--muted)">1 ngày trước</span></td>
+                  <td><span class="pill yellow">Lần 3</span></td>
+                  <td style="font-size:12px;color:var(--muted)">"Bổ sung thêm rubric chấm điểm"</td>
+                  <td><button class="btn sm">Xem & Quyết định</button></td>
+                </tr>
+                <tr>
+                  <td>4</td>
+                  <td><b>Cuộc thi Web Dev 2026</b></td>
+                  <td>GV. Phạm D</td>
+                  <td>01/05 16:42<br/><span style="font-size:11px;color:var(--muted)">3 ngày trước</span></td>
+                  <td><span class="pill">Lần 1</span></td>
+                  <td>—</td>
+                  <td><button class="btn sm">Xem & Quyết định</button></td>
+                </tr>
+                <tr>
+                  <td>3</td>
+                  <td><b>Cuộc thi Designer 2026</b></td>
+                  <td>GV. Hoàng E</td>
+                  <td>30/04 10:00</td>
+                  <td><span class="pill yellow">Lần 2</span></td>
+                  <td style="font-size:12px;color:var(--muted)">"Sửa thời gian start_at"</td>
+                  <td><button class="btn sm">Xem & Quyết định</button></td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td><b>Cuộc thi Data Science 2026</b></td>
+                  <td>GV. Vũ F</td>
+                  <td>28/04 11:30</td>
+                  <td><span class="pill">Lần 1</span></td>
+                  <td>—</td>
+                  <td><button class="btn sm">Xem & Quyết định</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">Queue đề xuất chờ duyệt QĐ1<span class="code">BCN-02 · GET /api/me/pending-approvals?type=CONTEST_PROPOSAL</span></div>
+  </div>
+
+  <!-- 3. Detail đề xuất + 3 nút -->
+  <div class="screen-wrap">
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">https://contest.ptit.edu.vn/approvals/proposals/7</span>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand"><div class="logo">P</div><div><b>PTIT Contest</b><p>Cổng BCN khoa</p></div></div>
+          <nav>
+            <div class="item"><span class="ico">📊</span>Dashboard</div>
+            <div class="item active"><span class="ico">📝</span>Đề xuất chờ duyệt<span class="badge-num">5</span></div>
+            <div class="item"><span class="ico">🏆</span>Kết quả chờ duyệt<span class="badge-num">2</span></div>
+          </nav>
+          <div class="footer"><div class="avatar">TB</div><div><b style="color:#fff">BCN. Trần B</b></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><div class="crumbs">Phê duyệt › Đề xuất › #7 Hackathon Mùa hè 2026</div><h2>Xét duyệt: Hackathon Mùa hè 2026 <span class="pill yellow" style="vertical-align:middle">Lần 1 / PROPOSED</span></h2></div>
+            <button class="btn outline">← Quay lại queue</button>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px">
+            <div>
+              <div class="card" style="margin-bottom:14px">
+                <div class="title">📋 Thông tin cuộc thi</div>
+                <table style="border:none">
+                  <tr><td style="color:var(--muted);width:160px">Slug</td><td><code>hackathon-2026</code></td></tr>
+                  <tr><td style="color:var(--muted)">Mô tả</td><td>Cuộc thi lập trình theo đội kéo dài 48h, tổ chức tại PTIT.</td></tr>
+                  <tr><td style="color:var(--muted)">Hình thức</td><td>Đội (3-5 thành viên) · Hybrid (online + offline)</td></tr>
+                  <tr><td style="color:var(--muted)">Số slot</td><td>40 đội</td></tr>
+                  <tr><td style="color:var(--muted)">Đăng ký</td><td>15/05 → 28/05/2026</td></tr>
+                  <tr><td style="color:var(--muted)">Thời gian thi</td><td>01/06 08:00 → 03/06 17:00</td></tr>
+                  <tr><td style="color:var(--muted)">Khoa chủ trì</td><td>CNTT</td></tr>
+                  <tr><td style="color:var(--muted)">BTC đề xuất</td><td>GV. Nguyễn Văn A (organizer_id=12)</td></tr>
+                </table>
+              </div>
+              <div class="card" style="margin-bottom:14px">
+                <div class="title">🔄 Vòng thi (3 rounds)</div>
+                <table>
+                  <thead><tr><th>#</th><th>Tên</th><th>Loại</th><th>Thời gian</th><th>Nộp bài</th></tr></thead>
+                  <tbody>
+                    <tr><td>1</td><td>Vòng loại</td><td>QUALIFIER</td><td>01/06 08:00 - 12:00</td><td>—</td></tr>
+                    <tr><td>2</td><td>Bán kết</td><td>SEMI_FINAL</td><td>02/06 08:00 - 17:00</td><td>02/06 17:00</td></tr>
+                    <tr><td>3</td><td>Chung kết</td><td>FINAL</td><td>03/06 08:00 - 17:00</td><td>03/06 17:00</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="card">
+                <div class="title">📜 Thể lệ + Giải thưởng (preview)</div>
+                <p style="font-size:13px;color:var(--text);line-height:1.7">
+                  <b>Quy định:</b> Mỗi đội 3-5 SV PTIT. Sản phẩm phải original. Thời gian: 48h liên tục.<br/><br/>
+                  <b>Giải:</b> Nhất 10 triệu, Nhì 5 triệu, Ba 3 triệu, Khuyến khích 1 triệu × 3.<br/><br/>
+                  <b>Kinh phí dự trù:</b> 30 triệu (giải thưởng) + 8 triệu (vận hành) = 38 triệu — đã được khoa duyệt sơ bộ.
+                </p>
+              </div>
+            </div>
+            <div>
+              <div class="card" style="margin-bottom:14px;background:#fffbeb;border-color:#fbbf24">
+                <div class="title">⚖️ Quyết định</div>
+                <label class="label">Comment / Lý do (gửi cho BTC)</label>
+                <textarea class="input" rows="4" placeholder="Nếu approve: comment optional. Nếu request_revision/reject: bắt buộc nêu lý do cụ thể..."></textarea>
+                <div class="actions-panel" style="margin-top:14px">
+                  <div class="action-btn approve">
+                    <span class="ico">✅</span>
+                    <b>Approve</b>
+                    <div class="desc">→ status: PUBLISHED</div>
+                  </div>
+                  <div class="action-btn revise">
+                    <span class="ico">↻</span>
+                    <b>Request Revision</b>
+                    <div class="desc">→ status: REVISION_REQUESTED</div>
+                  </div>
+                  <div class="action-btn reject">
+                    <span class="ico">✗</span>
+                    <b>Reject</b>
+                    <div class="desc">→ status: DRAFT</div>
+                  </div>
+                </div>
+              </div>
+              <div class="card" style="margin-bottom:14px">
+                <div class="title">📚 Lịch sử lần submit</div>
+                <p style="font-size:12px;color:var(--muted);text-align:center;padding:16px 0">
+                  Đây là lần submit đầu tiên (revision_round = 1).<br/>Chưa có lịch sử trước đó.
+                </p>
+              </div>
+              <div class="card" style="background:#f9fafb">
+                <div class="title">🔍 Snapshot JSON</div>
+                <code style="font-size:11px;display:block;background:#fff;padding:8px;border-radius:4px;border:1px solid var(--border);max-height:120px;overflow:auto">
+{<br/>
+&nbsp;&nbsp;"title":"Hackathon Mùa hè 2026",<br/>
+&nbsp;&nbsp;"delivery_mode":"HYBRID",<br/>
+&nbsp;&nbsp;"start_at":"2026-06-01T08:00:00Z",<br/>
+&nbsp;&nbsp;"rounds":[3 items],<br/>
+&nbsp;&nbsp;"max_entries":40<br/>
+}
+                </code>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">Detail đề xuất + 3 nút quyết định<span class="code">BCN-02 · GET /api/approvals/{id} + POST /api/approvals/{id}/decide</span></div>
+  </div>
+
+  <!-- 4. Detail đề xuất với revision history (Lần 3) -->
+  <div class="screen-wrap">
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">https://contest.ptit.edu.vn/approvals/proposals/5</span>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand"><div class="logo">P</div><div><b>PTIT Contest</b><p>Cổng BCN khoa</p></div></div>
+          <nav>
+            <div class="item"><span class="ico">📊</span>Dashboard</div>
+            <div class="item active"><span class="ico">📝</span>Đề xuất chờ duyệt</div>
+          </nav>
+          <div class="footer"><div class="avatar">TB</div><div><b style="color:#fff">BCN. Trần B</b></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><div class="crumbs">Phê duyệt › Đề xuất › #5 LT C++ 2026</div><h2>Xét duyệt: Cuộc thi LT C++ 2026 <span class="pill yellow" style="vertical-align:middle">Lần 3 / PROPOSED</span></h2></div>
+            <button class="btn outline">← Quay lại queue</button>
+          </div>
+          <div class="banner warn">
+            <span>↻</span>
+            <span>Đây là <b>lần submit thứ 3</b> sau 2 lần BCN yêu cầu chỉnh sửa. BTC đã sửa theo comment trước. Xem diff để check.</span>
+          </div>
+          <div class="card" style="margin-bottom:14px">
+            <div class="title">📚 Lịch sử các lần submit (revision_round)</div>
+            <table>
+              <thead><tr><th>#</th><th>Submit lúc</th><th>BCN duyệt</th><th>Status</th><th>Comment BCN</th></tr></thead>
+              <tbody>
+                <tr><td>1</td><td>20/04 09:15</td><td>BCN. Trần B</td><td><span class="pill yellow">REVISION_REQUESTED</span></td><td style="font-size:12px">"Bổ sung thông tin về kinh phí + nguồn tài trợ"</td></tr>
+                <tr><td>2</td><td>27/04 14:30</td><td>BCN. Trần B</td><td><span class="pill yellow">REVISION_REQUESTED</span></td><td style="font-size:12px">"Sửa rubric chấm điểm — chia rõ thành 4 tiêu chí"</td></tr>
+                <tr style="background:#fffbeb"><td>3</td><td>03/05 09:15</td><td>—</td><td><span class="pill blue">PENDING (you)</span></td><td>—</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card" style="margin-bottom:14px">
+            <div class="title">🔍 Diff so với lần 2</div>
+            <div class="diff">
++ rules_text: Đã thêm rubric 4 tiêu chí (Đúng thuật toán 40%, Code style 20%, Hiệu năng 30%, Doc 10%)<br/>
++ award_text: Bổ sung thông tin nguồn tài trợ "Sponsored by Microsoft Vietnam"<br/>
+~ description: Sửa từ "20 sinh viên" → "30 sinh viên"<br/>
+- (không có gì bị xóa)<br/>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px">
+            <div class="card">
+              <div class="title">📋 Nội dung hiện tại (revision 3)</div>
+              <p style="font-size:13px;line-height:1.7;color:var(--text)">
+                Cuộc thi Lập trình C++ dành cho 30 sinh viên năm 2-4 khoa CNTT. Sponsored by Microsoft Vietnam.<br/>
+                Thi cá nhân, online qua Codeforces. 4 tiêu chí chấm điểm.
+              </p>
+            </div>
+            <div class="card" style="background:#fffbeb;border-color:#fbbf24">
+              <div class="title">⚖️ Quyết định lần 3</div>
+              <textarea class="input" rows="3" placeholder="Comment..."></textarea>
+              <button class="btn success" style="width:100%;margin-top:10px;justify-content:center">✅ Approve (kết thúc loop)</button>
+              <button class="btn outline" style="width:100%;margin-top:6px;justify-content:center">↻ Yêu cầu sửa lại lần nữa</button>
+              <button class="btn danger" style="width:100%;margin-top:6px;justify-content:center">✗ Reject hoàn toàn</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">Detail đề xuất với lịch sử revision (lần 3)<span class="code">BCN-02 với revision_round = 3</span></div>
+  </div>
+
+  <!-- 5. Queue kết quả QĐ2 + Detail -->
+  <div class="screen-wrap">
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">https://contest.ptit.edu.vn/approvals/results/12</span>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand"><div class="logo">P</div><div><b>PTIT Contest</b><p>Cổng BCN khoa</p></div></div>
+          <nav>
+            <div class="item"><span class="ico">📊</span>Dashboard</div>
+            <div class="item"><span class="ico">📝</span>Đề xuất chờ duyệt</div>
+            <div class="item active"><span class="ico">🏆</span>Kết quả chờ duyệt<span class="badge-num">2</span></div>
+          </nav>
+          <div class="footer"><div class="avatar">TB</div><div><b style="color:#fff">BCN. Trần B</b></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><div class="crumbs">Phê duyệt › Kết quả › #12 Olympic Tin học 2025</div><h2>Xét duyệt kết quả: Olympic Tin học 2025 <span class="pill blue" style="vertical-align:middle">PENDING / BCN_QĐ2</span></h2></div>
+            <button class="btn outline">← Quay lại queue</button>
+          </div>
+          <div class="banner">
+            <span>ℹ️</span>
+            <span>BTC đã chốt ranking từ <b>3 vòng</b>. Bạn cần rà soát ranking + giải thưởng trước khi BTC được publish kết quả ra cho SV.</span>
+          </div>
+          <div class="card" style="margin-bottom:14px;padding:0;overflow:hidden">
+            <div style="padding:14px 18px;background:#f9fafb;border-bottom:1px solid var(--border)">
+              <div class="title" style="margin:0">🏆 Bảng xếp hạng đề xuất bởi BTC</div>
+            </div>
+            <table>
+              <thead><tr><th>Hạng</th><th>MSSV</th><th>Họ tên</th><th>V1</th><th>V2</th><th>V3</th><th>Final</th><th>Giải thưởng</th></tr></thead>
+              <tbody>
+                <tr style="background:#fff7ed"><td><b style="color:var(--red)">🥇 1</b></td><td>B22DCCN033</td><td>Lê Quang B</td><td>92</td><td>95</td><td>94</td><td><b>93.7</b></td><td><b>Giải Nhất (5 triệu)</b></td></tr>
+                <tr style="background:#f9fafb"><td><b>🥈 2</b></td><td>B22DCCN087</td><td>Trần Thị C</td><td>90</td><td>91</td><td>92</td><td><b>91.0</b></td><td><b>Giải Nhì (3 triệu)</b></td></tr>
+                <tr style="background:#fef3c7"><td><b>🥉 3</b></td><td>B22DCCN112</td><td>Phạm Văn D</td><td>87</td><td>89</td><td>90</td><td><b>88.7</b></td><td><b>Giải Ba (1 triệu)</b></td></tr>
+                <tr><td>4</td><td>B22DCCN001</td><td>Nguyễn Văn A</td><td>85</td><td>87</td><td>85</td><td>85.7</td><td>—</td></tr>
+                <tr><td>5</td><td>B22DCCN045</td><td>Hoàng Thị E</td><td>83</td><td>85</td><td>84</td><td>84.0</td><td>—</td></tr>
+                <tr style="color:var(--muted)"><td colspan="8" style="text-align:center;padding:14px">... 119 entries khác (xem hết trong file Excel)</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px">
+            <div class="card">
+              <div class="title">📊 Phân tích & validate</div>
+              <ul style="font-size:13px;line-height:1.9">
+                <li>✅ Tổng entries: <b>124</b> (khớp với contest_entries.APPROVED)</li>
+                <li>✅ Final score = SUM(round × weight) — công thức đúng</li>
+                <li>✅ Top 3 cách biệt rõ rệt, không tie</li>
+                <li>⚠️ Không có entry nào bị flag điểm bất thường</li>
+                <li>📊 Phân bố điểm: median 75, std 8.4</li>
+              </ul>
+              <button class="btn outline" style="margin-top:10px">📥 Tải file Excel kết quả đầy đủ</button>
+            </div>
+            <div class="card" style="background:#fffbeb;border-color:#fbbf24">
+              <div class="title">⚖️ Quyết định BCN_QĐ2</div>
+              <textarea class="input" rows="3" placeholder="Comment..."></textarea>
+              <button class="btn success" style="width:100%;margin-top:10px;justify-content:center">✅ Approve — Cho phép publish</button>
+              <button class="btn outline" style="width:100%;margin-top:6px;justify-content:center">↻ Yêu cầu BTC sửa ranking</button>
+              <p style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5">
+                ℹ️ Sau APPROVE, BTC sẽ được phép gọi <code>POST /results/publish</code> để hiển thị cho SV. Trước đó SV không thấy kết quả.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">Detail kết quả chờ duyệt QĐ2<span class="code">BCN-04 · GET /api/approvals/{id} (CONTEST_RESULT)</span></div>
+  </div>
+
+  <!-- 6. Mẫu chứng nhận -->
+  <div class="screen-wrap">
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">https://contest.ptit.edu.vn/certificates/templates</span>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand"><div class="logo">P</div><div><b>PTIT Contest</b><p>Cổng BCN khoa</p></div></div>
+          <nav>
+            <div class="item"><span class="ico">📊</span>Dashboard</div>
+            <div class="item"><span class="ico">📝</span>Đề xuất chờ duyệt</div>
+            <div class="item"><span class="ico">🏆</span>Kết quả chờ duyệt</div>
+            <div class="item active"><span class="ico">📜</span>Mẫu chứng nhận<span class="badge-num">1</span></div>
+          </nav>
+          <div class="footer"><div class="avatar">TB</div><div><b style="color:#fff">BCN. Trần B</b></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><div class="crumbs">Mẫu chứng nhận › Hackathon 2026</div><h2>Duyệt mẫu chứng nhận</h2></div>
+            <button class="btn outline">← Danh sách template</button>
+          </div>
+          <div class="banner">
+            <span>ℹ️</span>
+            <span>BTC đã upload mẫu HTML certificate. BCN cần duyệt trước khi BTC được phép issue cho thí sinh thắng giải.</span>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px">
+            <div class="card" style="padding:0;overflow:hidden">
+              <div style="padding:14px 18px;background:#f9fafb;border-bottom:1px solid var(--border)">
+                <div class="title" style="margin:0">👁 Preview mẫu</div>
+              </div>
+              <div style="padding:24px;background:#f3f4f6;display:grid;place-items:center;min-height:400px">
+                <div style="background:#fff;border:6px double var(--red);padding:32px 48px;width:560px;text-align:center">
+                  <div style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:2px">Học viện CN Bưu chính Viễn thông</div>
+                  <h1 style="font-size:28px;color:var(--red);margin:14px 0;font-family:serif">GIẤY CHỨNG NHẬN</h1>
+                  <p style="font-size:13px;color:var(--muted)">Chứng nhận sinh viên</p>
+                  <h2 style="font-size:22px;margin:8px 0">{{full_name}}</h2>
+                  <p style="font-size:13px;color:var(--muted)">MSSV: {{student_code}}</p>
+                  <p style="margin:16px 0;font-size:14px">Đã đạt <b>{{award_title}}</b></p>
+                  <p style="font-size:14px">Tại cuộc thi <b>{{contest_title}}</b></p>
+                  <p style="font-size:12px;color:var(--muted);margin-top:14px">Ngày {{issued_date}}</p>
+                  <div style="display:flex;justify-content:space-between;align-items:end;margin-top:32px">
+                    <div style="font-size:11px">QR verify:<br/><div style="width:60px;height:60px;background:#000;display:grid;place-items:center;color:#fff;font-size:9px;margin-top:4px">[QR]</div></div>
+                    <div style="text-align:center;font-size:12px;color:var(--muted)"><i>{{bcn_signature}}</i><br/>Trưởng khoa</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="card" style="margin-bottom:14px">
+                <div class="title">📋 Thông tin template</div>
+                <table style="border:none;font-size:12px">
+                  <tr><td style="color:var(--muted);width:120px">Tên</td><td>Hackathon 2026 — Cert v1</td></tr>
+                  <tr><td style="color:var(--muted)">Cuộc thi</td><td>Hackathon Mùa hè 2026</td></tr>
+                  <tr><td style="color:var(--muted)">BTC tạo</td><td>GV. Nguyễn A</td></tr>
+                  <tr><td style="color:var(--muted)">Tạo lúc</td><td>02/05 10:30</td></tr>
+                  <tr><td style="color:var(--muted)">Variables</td><td><code>full_name, student_code, award_title, contest_title, issued_date</code></td></tr>
+                </table>
+              </div>
+              <div class="card" style="background:#fffbeb;border-color:#fbbf24">
+                <div class="title">⚖️ Duyệt mẫu</div>
+                <textarea class="input" rows="3" placeholder="Comment (tùy chọn)..."></textarea>
+                <button class="btn success" style="width:100%;margin-top:10px;justify-content:center">✅ Duyệt + Activate</button>
+                <button class="btn outline" style="width:100%;margin-top:6px;justify-content:center">↻ Yêu cầu sửa template</button>
+                <p style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5">
+                  ℹ️ Activate sẽ set is_active=TRUE. Mỗi contest chỉ có 1 template active (partial unique index).
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">Duyệt mẫu chứng nhận (BCN_QĐ3)<span class="code">BCN-06 · GET/PATCH /api/certificates/templates/{id}</span></div>
+  </div>
+
+  <!-- 7. Giám sát + Statistics -->
+  <div class="screen-wrap">
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">https://contest.ptit.edu.vn/monitor</span>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand"><div class="logo">P</div><div><b>PTIT Contest</b><p>Cổng BCN khoa</p></div></div>
+          <nav>
+            <div class="item"><span class="ico">📊</span>Dashboard</div>
+            <div class="section">Phê duyệt</div>
+            <div class="item"><span class="ico">📝</span>Đề xuất chờ duyệt</div>
+            <div class="item"><span class="ico">🏆</span>Kết quả chờ duyệt</div>
+            <div class="section">Theo dõi</div>
+            <div class="item active"><span class="ico">👁</span>Giám sát cuộc thi</div>
+            <div class="item"><span class="ico">📈</span>Thống kê khoa</div>
+          </nav>
+          <div class="footer"><div class="avatar">TB</div><div><b style="color:#fff">BCN. Trần B</b></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><div class="crumbs">Theo dõi › Giám sát</div><h2>Giám sát cuộc thi đang diễn ra (Khoa CNTT)</h2></div>
+            <select class="input" style="width:auto"><option>Tất cả status</option><option>REG_OPEN</option><option>ONGOING</option></select>
+          </div>
+          <div class="card" style="padding:0;overflow:hidden">
+            <table>
+              <thead>
+                <tr><th>Cuộc thi</th><th>BTC</th><th>Status</th><th>Đăng ký</th><th>% Nộp bài</th><th>% Chấm</th><th>Tiến độ</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><b>Olympic Tin học 2026</b><br/><span style="font-size:11px;color:var(--muted)">15/05 → 20/05</span></td>
+                  <td>GV. Nguyễn A</td>
+                  <td><span class="pill green">REG_OPEN</span></td>
+                  <td>124/200<br/><div style="background:var(--border);height:4px;border-radius:2px;margin-top:4px;width:100%"><div style="background:var(--success);height:100%;width:62%;border-radius:2px"></div></div></td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td><span class="pill green">Đúng tiến độ</span></td>
+                </tr>
+                <tr>
+                  <td><b>Robocon PTIT 2026</b><br/><span style="font-size:11px;color:var(--muted)">10/05 → 25/05</span></td>
+                  <td>GV. Lê C</td>
+                  <td><span class="pill yellow">ONGOING</span></td>
+                  <td>40/40</td>
+                  <td>72%<br/><div style="background:var(--border);height:4px;border-radius:2px;margin-top:4px;width:100%"><div style="background:var(--info);height:100%;width:72%;border-radius:2px"></div></div></td>
+                  <td>0%</td>
+                  <td><span class="pill yellow">Chậm chấm bài</span></td>
+                </tr>
+                <tr>
+                  <td><b>Cuộc thi Web Dev 2025</b><br/><span style="font-size:11px;color:var(--muted)">Đã kết thúc 30/04</span></td>
+                  <td>GV. Phạm D</td>
+                  <td><span class="pill yellow">ONGOING</span></td>
+                  <td>87/100</td>
+                  <td>100%</td>
+                  <td>89%</td>
+                  <td><span class="pill red">⚠️ Quá hạn chấm bài 4 ngày</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="stats" style="margin-top:20px">
+            <div class="stat"><div class="label">Tổng cuộc thi (2026)</div><div class="num">12</div></div>
+            <div class="stat"><div class="label">Đang vận hành</div><div class="num" style="color:var(--info)">3</div></div>
+            <div class="stat"><div class="label">Đã hoàn thành</div><div class="num" style="color:var(--success)">8</div></div>
+            <div class="stat"><div class="label">Tổng SV tham gia (khoa)</div><div class="num">347</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">Giám sát tiến độ + Thống kê khoa<span class="code">BCN-03 + BCN-05 · GET /api/admin/contests/monitor + /reports/faculty-summary</span></div>
+  </div>
+
+</div>
+
+</body>
+</html>

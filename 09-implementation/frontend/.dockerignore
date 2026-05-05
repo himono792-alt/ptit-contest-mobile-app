@@ -1,0 +1,15 @@
+build
+.dart_tool
+.flutter-plugins*
+.metadata
+.idea
+.vscode
+.git
+*.iml
+android/.gradle
+ios/Pods
+ios/Flutter/Generated.xcconfig
+linux
+macos
+windows
+test

@@ -1,0 +1,208 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PTIT Contest â€” Mobile App</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="design-canvas-src/tokens.css">
+
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--fg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "ss01", "cv11";
+  }
+  /* Compensate for canvas drag/zoom feel */
+  body[data-theme="dark"] { background: oklch(0.145 0.008 60); }
+  /* page-level title overlay */
+  .page-mast {
+    position: fixed; top: 14px; left: 18px;
+    z-index: 50; pointer-events: none;
+    font-family: var(--font-display);
+  }
+  .page-mast .row { display: flex; align-items: center; gap: 10px; }
+  .page-mast .logo {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: var(--accent); color: #fff;
+    display: grid; place-items: center;
+    font-weight: 800; font-size: 14px;
+    box-shadow: var(--shadow-sm);
+  }
+  .page-mast h1 {
+    margin: 0; font-size: 14.5px; font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--fg);
+  }
+  .page-mast .sub {
+    font-size: 11px; color: var(--fg-muted);
+    margin-top: 1px; font-weight: 500;
+    letter-spacing: -0.005em;
+  }
+  /* Brief intro card under masthead, shown only at default zoom */
+  .legend {
+    position: fixed; right: 16px; top: 14px;
+    z-index: 50;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 11px; color: var(--fg-muted);
+    box-shadow: var(--shadow-sm);
+    display: flex; gap: 14px; align-items: center;
+  }
+  .legend kbd {
+    padding: 2px 6px; border-radius: 4px;
+    background: var(--bg-sunken);
+    border: 1px solid var(--border);
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--fg);
+  }
+  /* DC artboard internal scrollbars hidden by canvas already; ensure phones don't show them */
+  .phone-skin * { scrollbar-width: none; }
+  .phone-skin *::-webkit-scrollbar { display: none; }
+</style>
+</head>
+
+<body>
+
+<div class="page-mast">
+  <div class="row">
+    <div class="logo">P</div>
+    <div>
+      <h1>PTIT Contest Â· Mobile App</h1>
+      <div class="sub">Hi-fi mockup Â· 4 vai trÃ² Â· 32 mÃ n hÃ¬nh</div>
+    </div>
+  </div>
+</div>
+
+<div class="legend">
+  <span><kbd>scroll</kbd> zoom</span>
+  <span><kbd>drag</kbd> pan</span>
+  <span><kbd>â¤¢</kbd> focus</span>
+</div>
+
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas-src/design-canvas.jsx"></script>
+<script type="text/babel" src="design-canvas-src/tweaks-panel.jsx"></script>
+<script type="text/babel" src="design-canvas-src/ui.jsx"></script>
+<script type="text/babel" src="design-canvas-src/screens-sv.jsx"></script>
+<script type="text/babel" src="design-canvas-src/screens-gv.jsx"></script>
+<script type="text/babel" src="design-canvas-src/screens-bcn.jsx"></script>
+<script type="text/babel" src="design-canvas-src/screens-adm.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "darkMode": false,
+  "accentHue": 16
+}/*EDITMODE-END*/;
+
+function App() {
+  const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+  // Apply theme + accent to body
+  useEffect(() => {
+    document.body.dataset.theme = tweaks.darkMode ? "dark" : "light";
+    // Re-tune brand around chosen hue (range 0â€“60 â†’ reds/oranges)
+    const h = tweaks.accentHue;
+    const root = document.documentElement.style;
+    root.setProperty("--brand-600", `oklch(0.547 0.207 ${h})`);
+    root.setProperty("--brand-700", `oklch(0.480 0.180 ${h})`);
+    root.setProperty("--brand-800", `oklch(0.400 0.150 ${h})`);
+    root.setProperty("--accent-soft", tweaks.darkMode
+      ? `oklch(0.250 0.060 ${h})`
+      : `oklch(0.965 0.022 ${h})`);
+    root.setProperty("--accent-soft-fg", tweaks.darkMode
+      ? `oklch(0.870 0.080 ${h})`
+      : `oklch(0.480 0.180 ${h})`);
+  }, [tweaks.darkMode, tweaks.accentHue]);
+
+  const sections = [
+    {
+      id: "sv",
+      title: "Sinh viÃªn",
+      subtitle: "16 mÃ n Â· onboarding, Ä‘Äƒng kÃ½, dá»± thi, leaderboard, chá»©ng nháº­n",
+      screens: window.SV_SCREENS,
+    },
+    {
+      id: "gv",
+      title: "Giáº£ng viÃªn / BTC",
+      subtitle: "5 mÃ n Â· cháº¥m thi, hÃ ng Ä‘á»£i, bÃ¡o cÃ¡o",
+      screens: window.GV_SCREENS,
+    },
+    {
+      id: "bcn",
+      title: "BCN Khoa",
+      subtitle: "5 mÃ n Â· phÃª duyá»‡t, tá»•ng quan, bÃ¡o cÃ¡o, lá»‹ch",
+      screens: window.BCN_SCREENS,
+    },
+    {
+      id: "adm",
+      title: "Admin Há»‡ thá»‘ng",
+      subtitle: "6 mÃ n Â· health, users, RBAC, config, audit log",
+      screens: window.ADM_SCREENS,
+    },
+  ];
+
+  return (
+    <>
+      <DesignCanvas>
+        {sections.map(s => (
+          <DCSection key={s.id} id={s.id} title={s.title} subtitle={s.subtitle}>
+            {s.screens.map(scr => (
+              <DCArtboard key={scr.id} id={scr.id} label={scr.label}
+                          width={scr.w} height={scr.h}>
+                {scr.render()}
+              </DCArtboard>
+            ))}
+          </DCSection>
+        ))}
+      </DesignCanvas>
+
+      <TweaksPanel>
+        <TweakSection label="Giao diá»‡n">
+          <TweakToggle
+            label="Cháº¿ Ä‘á»™ tá»‘i"
+            value={tweaks.darkMode}
+            onChange={v => setTweak("darkMode", v)}
+          />
+          <TweakSlider
+            label="Hue chá»§ Ä‘áº¡o"
+            min={0} max={60} step={1}
+            value={tweaks.accentHue}
+            unit="Â°"
+            onChange={v => setTweak("accentHue", v)}
+          />
+        </TweakSection>
+        <TweakSection label="Preset nhanh">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+            <TweakButton label="PTIT chuáº©n" onClick={() => setTweak({ darkMode: false, accentHue: 19 })}/>
+            <TweakButton label="PTIT Â· dark" secondary onClick={() => setTweak({ darkMode: true, accentHue: 19 })}/>
+          </div>
+        </TweakSection>
+      </TweaksPanel>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+
+</body>
+</html>
