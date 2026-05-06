@@ -8,6 +8,7 @@ import '../features/auth/login_screen.dart';
 import '../features/student/contest_detail_screen.dart';
 import '../features/student/register_screen.dart';
 import '../features/student/student_shell.dart';
+import '../features/student/student_shell_scaffold.dart';
 import '../features/student/submission_screen.dart';
 import '../core/models/contest_detail.dart';
 import '../core/models/user.dart';
@@ -62,10 +63,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/', builder: (_, __) => const StudentShell()),
       GoRoute(path: '/admin', builder: (_, __) => const AdminShell()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+      // Sprint 2 fix C3+M1 (2026-05-06): wrap 3 sub-routes vào StudentShellScaffold
+      // để desktop ≥900px hiện sidebar (consistency với shell chính). Mobile/APK
+      // vẫn render child raw (existing back-arrow behavior).
+      // activeTabHint: 1=Cuộc thi, 2=Của tôi → highlight tab tương ứng trong sidebar.
       GoRoute(
         path: '/contests/:slug',
-        builder: (_, state) =>
-            ContestDetailScreen(slug: state.pathParameters['slug']!),
+        builder: (_, state) => StudentShellScaffold(
+          activeTabHint: 1, // Cuộc thi
+          child: ContestDetailScreen(slug: state.pathParameters['slug']!),
+        ),
       ),
       GoRoute(
         path: '/admin/contests/:id/manage',
@@ -75,13 +82,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/contests/:slug/register',
-        builder: (_, state) =>
-            RegisterContestScreen(contest: state.extra as ContestDetail),
+        builder: (_, state) => StudentShellScaffold(
+          activeTabHint: 1, // Cuộc thi
+          child: RegisterContestScreen(contest: state.extra as ContestDetail),
+        ),
       ),
       GoRoute(
         path: '/rounds/:roundId/submit',
-        builder: (_, state) => SubmissionScreen(
-            roundId: int.parse(state.pathParameters['roundId']!)),
+        builder: (_, state) => StudentShellScaffold(
+          activeTabHint: 2, // Của tôi
+          child: SubmissionScreen(
+              roundId: int.parse(state.pathParameters['roundId']!)),
+        ),
       ),
     ],
     errorBuilder: (_, state) => Scaffold(
