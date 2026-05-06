@@ -13,12 +13,14 @@ from app.models.entry import ContestEntry, EntryStatusLog, Team, TeamMember
 from app.models.enums import (
     ContestStatus,
     EntryType,
+    NotificationScope,
     ParticipantStatus,
     RegistrationStatus,
 )
 from app.models.identity import AppUser
 from app.models.master_data import Organizer, Student
 from app.schemas.entry import EntryReviewAction
+from app.services import notification_service
 
 
 async def _get_my_student(db: AsyncSession, user: AppUser) -> Student:
@@ -252,6 +254,32 @@ async def list_my_entries(
     return result
 
 
+async def _resolve_recipient_user_ids(
+    db: AsyncSession, entry: ContestEntry
+) -> list[int]:
+    """Phase 2 sprint 1 step 2.5 (2026-05-06): trả list user_id cần notify cho 1 entry.
+
+    - INDIVIDUAL: 1 SV (entry.student_id → Student.user_id)
+    - TEAM: tất cả members (TeamMember → Student.user_id list)
+    """
+    user_ids: list[int] = []
+    if entry.entry_type == EntryType.INDIVIDUAL and entry.student_id is not None:
+        stmt = select(Student.user_id).where(Student.student_id == entry.student_id)
+        uid = (await db.execute(stmt)).scalar_one_or_none()
+        if uid is not None:
+            user_ids.append(uid)
+    elif entry.entry_type == EntryType.TEAM and entry.team_id is not None:
+        # JOIN team_members → students để lấy user_id list
+        stmt = (
+            select(Student.user_id)
+            .join(TeamMember, TeamMember.student_id == Student.student_id)
+            .where(TeamMember.team_id == entry.team_id)
+        )
+        rows = (await db.execute(stmt)).scalars().all()
+        user_ids.extend(rows)
+    return user_ids
+
+
 async def review_entry(
     db: AsyncSession,
     user: AppUser,
@@ -286,6 +314,26 @@ async def review_entry(
         entry.registration_note = note
     await db.commit()
     await db.refresh(entry)
+
+    # Phase 2 sprint 1 step 2.5 (2026-05-06): notify SV về kết quả review.
+    # Wire vào để demo end-to-end Step 1 deep-link (notification target_route).
+    recipient_user_ids = await _resolve_recipient_user_ids(db, entry)
+    if recipient_user_ids:
+        action_label = "đã được duyệt" if action == EntryReviewAction.APPROVE else "đã bị từ chối"
+        await notification_service.notify_users(
+            db,
+            title=f"Đơn đăng ký {action_label}",
+            message=(
+                f"Đơn đăng ký cuộc thi #{entry.contest_id} của bạn {action_label}."
+                + (f" Lý do: {note}" if note else "")
+            ),
+            user_ids=recipient_user_ids,
+            scope=NotificationScope.CONTEST,
+            contest_id=entry.contest_id,
+            created_by=user.user_id,
+            target_route="/me/entries",  # SV click → tab "Của tôi" - Đơn đăng ký
+        )
+
     return entry
 
 
@@ -325,6 +373,7 @@ async def bulk_review_entries(
 
     success_count = 0
     failed: list[tuple[int, str]] = []
+    success_entries: list[ContestEntry] = []  # giữ ref để notify sau commit
 
     # Dedup entry_ids (phòng FE gửi trùng)
     for entry_id in dict.fromkeys(entry_ids):
@@ -350,9 +399,32 @@ async def bulk_review_entries(
         if note:
             entry.registration_note = note
         success_count += 1
+        success_entries.append(entry)
 
     # Commit 1 lần cho tất cả entries success
     if success_count > 0:
         await db.commit()
+
+        # Phase 2 sprint 1 step 2.5 (2026-05-06): notify SV cho từng entry success.
+        # 1 notification per entry — nếu SV có nhiều entries trong batch sẽ nhận
+        # nhiều notification (acceptable, mỗi cái có context entry riêng).
+        action_label = "đã được duyệt" if action == EntryReviewAction.APPROVE else "đã bị từ chối"
+        for entry in success_entries:
+            recipient_user_ids = await _resolve_recipient_user_ids(db, entry)
+            if not recipient_user_ids:
+                continue
+            await notification_service.notify_users(
+                db,
+                title=f"Đơn đăng ký {action_label}",
+                message=(
+                    f"Đơn đăng ký cuộc thi #{entry.contest_id} của bạn {action_label}."
+                    + (f" Lý do: {note}" if note else "")
+                ),
+                user_ids=recipient_user_ids,
+                scope=NotificationScope.CONTEST,
+                contest_id=entry.contest_id,
+                created_by=user.user_id,
+                target_route="/me/entries",
+            )
 
     return success_count, failed
