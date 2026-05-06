@@ -266,7 +266,22 @@ class _ContestCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fmt = DateFormat('dd/MM');
-    return MCard(
+    // Sprint 3 a11y (2026-05-07): wrap card bằng Semantics để screen reader
+    // đọc "title cuộc thi, status". Hint: nhấn để xem chi tiết.
+    final statusLabel = switch (contest.status) {
+      'REG_OPEN' => 'đang mở đăng ký',
+      'ONGOING' => 'đang diễn ra',
+      'PUBLISHED' => 'đã công bố',
+      'REG_CLOSED' => 'đã đóng đăng ký',
+      'FINISHED' => 'đã kết thúc',
+      'CANCELLED' => 'đã hủy',
+      _ => contest.status,
+    };
+    return Semantics(
+      label: '${contest.title}, $statusLabel',
+      button: true,
+      hint: 'Nhấn để xem chi tiết cuộc thi',
+      child: MCard(
       onTap: () => context.push('/contests/${contest.slug}'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -335,6 +350,7 @@ class _ContestCard extends StatelessWidget {
           ]),
         ],
       ),
+    ),
     );
   }
 

@@ -198,7 +198,16 @@ class _SVWideLayout extends ConsumerWidget {
                 children: List.generate(tabLabels.length, (i) {
                   final isActive = i == activeIdx;
                   final showBadge = i == 4 && unread > 0;
-                  return InkWell(
+                  // Sprint 3 a11y (2026-05-07): wrap sidebar item bằng Semantics
+                  // để screen reader đọc "tab Trang chủ, đã chọn" + button role.
+                  final badgeText = showBadge ? ', $unread thông báo chưa đọc' : '';
+                  return Semantics(
+                    label: '${tabLabels[i]}$badgeText',
+                    button: true,
+                    selected: isActive,
+                    hint: isActive ? 'Đang ở mục này' : 'Chuyển sang mục ${tabLabels[i]}',
+                    child: InkWell(
+                    excludeFromSemantics: true,
                     onTap: () => onSwitchTab(i),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -242,6 +251,7 @@ class _SVWideLayout extends ConsumerWidget {
                           ),
                       ]),
                     ),
+                  ),
                   );
                 }),
               ),

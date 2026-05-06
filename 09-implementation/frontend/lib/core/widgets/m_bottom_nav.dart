@@ -22,8 +22,19 @@ class MBottomNav extends StatelessWidget {
           children: List.generate(items.length, (i) {
             final active = i == selectedIndex;
             final item = items[i];
+            // Sprint 3 a11y (2026-05-07): wrap InkWell tab nav bằng Semantics để
+            // screen reader đọc "tab Trang chủ, đã chọn" + button role + badge count.
+            final badgeText = (item.badge != null && item.badge! > 0)
+                ? ', ${item.badge} thông báo chưa đọc'
+                : '';
             return Expanded(
-              child: InkWell(
+              child: Semantics(
+                label: '${item.label}$badgeText',
+                button: true,
+                selected: active,
+                hint: active ? 'Đang ở tab này' : 'Chuyển sang tab ${item.label}',
+                child: InkWell(
+                excludeFromSemantics: true, // tránh nested-interactive — Semantics outer đã đủ
                 onTap: () => onChanged(i),
                 borderRadius: BorderRadius.circular(8),
                 child: Padding(
@@ -83,6 +94,7 @@ class MBottomNav extends StatelessWidget {
                   ),
                 ),
               ),
+            ),
             );
           }),
         ),

@@ -433,6 +433,11 @@ class _BellButton extends ConsumerWidget {
       data: (d) => d['unread_count'] as int? ?? 0,
       orElse: () => 0,
     );
+    // Sprint 3 a11y (2026-05-07): wrap notification bell với Semantics rõ hơn
+    // (IconButton có tooltip default nhưng không nói số unread).
+    final unreadHint = unread > 0
+        ? 'Mở thông báo, $unread thông báo chưa đọc'
+        : 'Mở thông báo';
     return Stack(clipBehavior: Clip.none, children: [
       Container(
         decoration: BoxDecoration(
@@ -440,12 +445,17 @@ class _BellButton extends ConsumerWidget {
           border: Border.all(color: context.cardBorder),
           borderRadius: BorderRadius.circular(99),
         ),
-        child: IconButton(
+        child: Semantics(
+          label: unreadHint,
+          button: true,
+          excludeSemantics: true, // tránh nested với IconButton inner
+          child: IconButton(
           iconSize: 18,
           visualDensity: VisualDensity.compact,
           icon: Icon(Icons.notifications_outlined, color: context.textPrimary),
           onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+          ),
         ),
       ),
       if (unread > 0)
