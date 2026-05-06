@@ -34,6 +34,10 @@ dependencies = [
     # Phase 2 sprint 1 step 3 (2026-05-06): Excel export contest results
     # openpyxl: write .xlsx files in-memory (lighter than pandas, không cần numpy)
     "openpyxl>=3.1.0",
+    # Sprint 3 (2026-05-07): Cloudflare R2 object storage cho submission files.
+    # aiobotocore = async wrapper boto3 dùng cùng asyncpg event loop của FastAPI.
+    # R2 S3-compatible nên dùng client "s3" với endpoint_url = R2.
+    "aiobotocore>=2.15.0",
 ]
 
 [project.optional-dependencies]

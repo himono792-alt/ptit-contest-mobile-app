@@ -89,6 +89,9 @@ class SubmissionFile(Base):
     file_size_bytes: Mapped[int | None] = mapped_column(BigInteger)
     # Demo: lưu file bytes trong DB (≤10MB). Production nên dùng S3/R2.
     file_data: Mapped[bytes | None] = mapped_column(LargeBinary)
+    # Sprint 3 (2026-05-07): R2 object key path (vd: contests/123/rounds/45/...).
+    # Khi NOT NULL → file ở R2, BE proxy stream khi download. Khi NULL + file_data NOT NULL → legacy.
+    r2_object_key: Mapped[str | None] = mapped_column(String(500))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(),
     )

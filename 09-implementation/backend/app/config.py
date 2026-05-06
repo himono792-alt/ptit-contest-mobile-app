@@ -88,6 +88,17 @@ class Settings(BaseSettings):
     hsts_enabled: bool = True
     hsts_max_age: int = 31536000
 
+    # R2 object storage — Sprint 3 (2026-05-07)
+    # Cloudflare R2 S3-compatible (free 10GB + 1M Class A ops/mo).
+    # Skip nếu R2_BUCKET_NAME rỗng → fallback BYTEA in-DB (legacy mode).
+    # New submissions go R2, old BYTEA giữ nguyên (lazy migration).
+    r2_endpoint_url: str = ""  # https://{account_id}.r2.cloudflarestorage.com
+    r2_access_key_id: str = ""
+    r2_secret_access_key: str = ""
+    r2_bucket_name: str = ""
+    # Public URL cho download (tuỳ chọn — dùng presigned URL nếu rỗng)
+    r2_public_url: str = ""
+
 
 @lru_cache
 def get_settings() -> "Settings":

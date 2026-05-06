@@ -17,6 +17,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import r2_client
 from app.database import get_db
 from app.deps import CurrentUser
 from app.models.submission import SubmissionFile, SubmissionVersion
@@ -162,14 +163,55 @@ async def upload_file_to_version(
             f"Cho phép: PDF, Word, Excel, PowerPoint, ảnh, ZIP, text.",
         )
 
+    # Sprint 3 (2026-05-07): R2 mode khi env vars có. Fallback BYTEA legacy nếu chưa enable.
+    file_name = file.filename or "untitled"
+    r2_object_key: str | None = None
+    file_data_for_db: bytes | None = content
+
+    if r2_client.is_r2_enabled():
+        # Build R2 key có hierarchy: contests/{cid}/rounds/{rid}/entries/{eid}/v{n}/{filename}.
+        # Cần lookup contest_id + entry_id + round_id từ version_id qua join 3 tables.
+        from app.models.submission import Submission as _Sub  # avoid circular at module top
+        join_stmt = (
+            select(_Sub.round_id, _Sub.entry_id)
+            .join(SubmissionVersion, SubmissionVersion.submission_id == _Sub.submission_id)
+            .where(SubmissionVersion.submission_version_id == version_id)
+        )
+        row = (await db.execute(join_stmt)).first()
+        if row is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Submission hierarchy not found")
+        round_id, entry_id = row
+        # Lookup contest_id qua entry → contest hoặc round → contest. Dùng entry vì có index.
+        from app.models.entry import ContestEntry as _Entry
+        contest_id_stmt = select(_Entry.contest_id).where(_Entry.entry_id == entry_id)
+        contest_id = (await db.execute(contest_id_stmt)).scalar_one_or_none()
+        if contest_id is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Contest not found")
+        r2_object_key = r2_client.build_object_key(
+            contest_id=contest_id,
+            round_id=round_id,
+            entry_id=entry_id,
+            version_no=version.version_no,
+            file_name=file_name,
+        )
+        # Upload R2
+        await r2_client.put_object(
+            object_key=r2_object_key,
+            body=content,
+            content_type=file.content_type,
+        )
+        # Khi R2 OK, KHÔNG lưu BYTEA in-DB → tiết kiệm space.
+        file_data_for_db = None
+
     # Save to DB
     sub_file = SubmissionFile(
         submission_version_id=version_id,
-        file_name=file.filename or "untitled",
+        file_name=file_name,
         file_url=f"/api/submissions/files/{version_id}",  # Placeholder, sẽ update sau
         mime_type=file.content_type,
         file_size_bytes=len(content),
-        file_data=content,
+        file_data=file_data_for_db,
+        r2_object_key=r2_object_key,
     )
     db.add(sub_file)
     await db.flush()
@@ -204,7 +246,9 @@ async def download_file(
     sub_file = (await db.execute(stmt)).scalar_one_or_none()
     if sub_file is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "File not found")
-    if sub_file.file_data is None:
+    # Sprint 3 (2026-05-07): R2 mode khi r2_object_key NOT NULL.
+    # Fallback legacy BYTEA nếu r2_object_key NULL + file_data NOT NULL.
+    if sub_file.r2_object_key is None and sub_file.file_data is None:
         raise HTTPException(
             status.HTTP_404_NOT_FOUND,
             "File data trống (legacy file chưa migrate)",
@@ -220,15 +264,31 @@ async def download_file(
     # get_submission_detail đã raise 403 nếu không có quyền → tới đây là OK
     _ = submission  # silence unused var warning
 
-    def _iter():
-        yield bytes(sub_file.file_data)
-
     headers = {
         "Content-Disposition": f'inline; filename="{sub_file.file_name}"',
-        "Content-Length": str(sub_file.file_size_bytes or 0),
     }
+    if sub_file.file_size_bytes:
+        headers["Content-Length"] = str(sub_file.file_size_bytes)
+
+    if sub_file.r2_object_key is not None:
+        # R2 mode: stream từ R2 qua BE proxy.
+        body, meta = await r2_client.get_object_stream(sub_file.r2_object_key)
+
+        def _iter_r2():
+            yield body
+
+        return StreamingResponse(
+            _iter_r2(),
+            media_type=meta.get("ContentType") or sub_file.mime_type or "application/octet-stream",
+            headers=headers,
+        )
+
+    # Legacy BYTEA fallback
+    def _iter_bytea():
+        yield bytes(sub_file.file_data)
+
     return StreamingResponse(
-        _iter(),
+        _iter_bytea(),
         media_type=sub_file.mime_type or "application/octet-stream",
         headers=headers,
     )
