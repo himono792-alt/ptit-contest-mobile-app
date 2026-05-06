@@ -1,8 +1,13 @@
 // Admin shell — responsive theo screen width:
-//   - Web wide (≥768px): sidebar 240px (UX desktop hiện có)
-//   - Mobile (<768px hoặc APK): AppBar + Drawer (full menu) + Bottom nav 5 items chính
+//   - Web wide (≥1024px): sidebar 240px (UX desktop hiện có)
+//   - Mobile / Tablet (<1024px hoặc APK): AppBar + Drawer (full menu) + Bottom nav 5 items chính
 //
 // Cùng 1 set screens, chỉ thay đổi shell layout.
+//
+// Sprint 2 fix C4 (2026-05-06): hạ breakpoint 768 → 1024 (Material breakpoint chuẩn).
+// Lý do: ở 768px tablet, sidebar 240px chiếm 31% width → main area còn 528px quá
+// chen chúc cho dropdown filter + table. Material guideline: <1024px = mobile/tablet
+// dùng drawer, ≥1024px = desktop dùng sidebar.
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -71,9 +76,11 @@ class _AdminShellState extends ConsumerState<AdminShell> {
     final activeIdx = _idx.clamp(0, items.length - 1);
     final activeItem = items[activeIdx];
 
-    // Responsive: <768px hoặc APK → mobile layout. Web wide → sidebar.
+    // Responsive: <1024px hoặc APK → mobile/tablet layout (drawer). Web wide ≥1024 → sidebar.
+    // Sprint 2 fix C4: nâng threshold lên 1024 (Material breakpoint) để 768px tablet
+    // collapse vào hamburger drawer, tránh content cramp 528px.
     final width = MediaQuery.of(context).size.width;
-    final useMobileLayout = !kIsWeb || width < 768;
+    final useMobileLayout = !kIsWeb || width < 1024;
 
     if (useMobileLayout) {
       return _MobileAdminLayout(
