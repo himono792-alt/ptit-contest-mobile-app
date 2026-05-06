@@ -18,6 +18,11 @@ const Color successGreen = Color(0xFF16A34A);
 const Color successSoft = Color(0xFFDCFCE7);
 const Color warnOrange = Color(0xFFD97706);
 const Color warnSoft = Color(0xFFFEF3C7);
+// Sprint 2 fix M3 (2026-05-06): achievementGold tokens — dùng cho stat card "Giải
+// thưởng" + huy hiệu. Tách khỏi warn (dùng cho cảnh báo) để semantic rõ ràng.
+// Light: amber-700 fg trên amber-100 bg → tone gold rõ rệt, không lẫn với warn.
+const Color achievementGold = Color(0xFFB45309); // amber-700
+const Color achievementGoldSoft = Color(0xFFFEF3C7); // amber-100 (light bg)
 const Color infoBlue = Color(0xFF2563EB);
 const Color infoSoft = Color(0xFFDBEAFE);
 

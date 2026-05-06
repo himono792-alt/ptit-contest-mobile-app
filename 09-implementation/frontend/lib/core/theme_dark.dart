@@ -31,6 +31,11 @@ const Color successGreenDark = Color(0xFF22C55E);
 const Color successSoftDark = Color(0xFF14532D);
 const Color warnOrangeDark = Color(0xFFF59E0B);
 const Color warnSoftDark = Color(0xFF78350F);
+// Sprint 2 fix M3 (2026-05-06): achievementGold dark mode tokens.
+// fg = amber-300 (light gold), bg = amber-950 (gần đen, đậm gold) thay vì
+// amber-900 brown như warn. Stat "Giải thưởng" sẽ feel gold thay vì nâu.
+const Color achievementGoldDark = Color(0xFFFCD34D); // amber-300
+const Color achievementGoldSoftDark = Color(0xFF422006); // amber-950
 const Color infoBlueDark = Color(0xFF3B82F6);
 const Color infoSoftDark = Color(0xFF1E3A8A);
 

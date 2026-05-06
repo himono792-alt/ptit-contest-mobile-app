@@ -199,7 +199,9 @@ class _StatsRow extends ConsumerWidget {
         child: _StatCard(
           value: '$awarded',
           label: 'Giải thưởng',
-          tone: _StatTone.warn,
+          // Sprint 2 fix M3 (2026-05-06): tone gold thay vì warn để tránh
+          // dark mode render brown lệch palette (warnSoftDark = amber-900).
+          tone: _StatTone.gold,
           onTap: () => onSwitchTab?.call(2),
         ),
       ),
@@ -207,7 +209,7 @@ class _StatsRow extends ConsumerWidget {
   }
 }
 
-enum _StatTone { brand, neutral, warn }
+enum _StatTone { brand, neutral, warn, gold }
 
 class _StatCard extends StatelessWidget {
   final String value;
@@ -226,6 +228,7 @@ class _StatCard extends StatelessWidget {
     final colors = switch (tone) {
       _StatTone.brand => (bg: context.ptitRedSoft, fg: ptitRed),
       _StatTone.warn => (bg: context.warnSoft, fg: context.warnOrange),
+      _StatTone.gold => (bg: context.achievementGoldSoft, fg: context.achievementGold),
       _StatTone.neutral => (bg: const Color(0xFFF1ECE5), fg: context.textPrimary),
     };
     return InkWell(

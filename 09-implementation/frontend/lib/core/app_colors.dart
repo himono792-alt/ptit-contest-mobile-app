@@ -49,6 +49,9 @@ extension AppColors on BuildContext {
   Color get warnSoft => isDark ? dark.warnSoftDark : light.warnSoft;
   Color get infoBlue => isDark ? dark.infoBlueDark : light.infoBlue;
   Color get infoSoft => isDark ? dark.infoSoftDark : light.infoSoft;
+  // Sprint 2 fix M3 (2026-05-06): achievementGold semantic — stat huy hiệu, giải thưởng.
+  Color get achievementGold => isDark ? dark.achievementGoldDark : light.achievementGold;
+  Color get achievementGoldSoft => isDark ? dark.achievementGoldSoftDark : light.achievementGoldSoft;
 
   /// Material 3 ColorScheme — fallback khi cần colors chuẩn.
   ColorScheme get cs => Theme.of(this).colorScheme;
