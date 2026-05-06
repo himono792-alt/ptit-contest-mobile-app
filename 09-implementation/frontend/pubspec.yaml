@@ -28,6 +28,9 @@ dependencies:
   # File picker for submission upload
   file_picker: ^8.1.2
   # HTTP multipart upload (Dio đã có sẵn FormData)
+  # Phase 2 sprint 1 step 4 (2026-05-06): biometric login (FaceID/TouchID/Fingerprint)
+  # APK Android only — web sẽ skip qua kIsWeb check.
+  local_auth: ^2.3.0
 
 dev_dependencies:
   flutter_test:

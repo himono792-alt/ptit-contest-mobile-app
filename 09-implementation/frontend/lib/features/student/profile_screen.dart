@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/auth/auth_provider.dart';
+import '../../core/auth/biometric_service.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_top_bar.dart';
@@ -145,6 +146,9 @@ class ProfileScreen extends ConsumerWidget {
                       builder: (_) => const EditProfileScreen()))),
               const Divider(height: 1, color: cardBorder),
               _menuTile(Icons.lock_outline, 'Đổi mật khẩu', () => _changePasswordDialog(context, ref)),
+              const Divider(height: 1, color: cardBorder),
+              // Phase 2 sprint 1 step 4 (2026-05-06): biometric login toggle
+              const _BiometricToggleTile(),
               const Divider(height: 1, color: cardBorder),
               _menuTile(Icons.qr_code_scanner_outlined, 'Xác thực chứng nhận',
                   () => Navigator.of(context).push(MaterialPageRoute(
@@ -406,6 +410,101 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Phase 2 sprint 1 step 4 (2026-05-06): toggle bật/tắt biometric login.
+/// Hiện tile với Switch. Hide trên web (local_auth không support).
+/// Khi bật: lưu flag vào secure storage. Lần sau mở app → auto-prompt biometric.
+class _BiometricToggleTile extends ConsumerStatefulWidget {
+  const _BiometricToggleTile();
+
+  @override
+  ConsumerState<_BiometricToggleTile> createState() =>
+      _BiometricToggleTileState();
+}
+
+class _BiometricToggleTileState extends ConsumerState<_BiometricToggleTile> {
+  bool _available = false;
+  bool _enabled = false;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadState();
+  }
+
+  Future<void> _loadState() async {
+    final available = await BiometricService.instance.isAvailable();
+    final enabled = await ref.read(tokenStorageProvider).isBiometricEnabled();
+    if (!mounted) return;
+    setState(() {
+      _available = available;
+      _enabled = enabled;
+      _loading = false;
+    });
+  }
+
+  Future<void> _toggle(bool value) async {
+    final storage = ref.read(tokenStorageProvider);
+    if (value) {
+      // Bật: prompt biometric 1 lần để confirm device hỗ trợ + user accept
+      final ok = await BiometricService.instance.authenticate(
+        reason: 'Xác nhận để bật đăng nhập sinh trắc',
+      );
+      if (!ok) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Xác thực thất bại — chưa bật.')),
+        );
+        return;
+      }
+    }
+    await storage.setBiometricEnabled(value);
+    if (!mounted) return;
+    setState(() => _enabled = value);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(value
+          ? 'Đã bật đăng nhập sinh trắc'
+          : 'Đã tắt đăng nhập sinh trắc'),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const ListTile(
+        leading: Icon(Icons.fingerprint, color: ptitRed, size: 20),
+        title: Text('Đăng nhập sinh trắc',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+        trailing: SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(strokeWidth: 2, color: ptitRed),
+        ),
+      );
+    }
+
+    if (!_available) {
+      // Hide tile nếu device không support (web hoặc chưa setup biometric)
+      return const SizedBox.shrink();
+    }
+
+    return SwitchListTile(
+      secondary: const Icon(Icons.fingerprint, color: ptitRed, size: 20),
+      activeThumbColor: ptitRed,
+      title: const Text('Đăng nhập sinh trắc',
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+      subtitle: Text(
+        _enabled
+            ? 'Đã bật — mở khóa bằng FaceID/Vân tay'
+            : 'Tắt — vẫn nhập email + mật khẩu',
+        style: const TextStyle(fontSize: 11, color: textMuted),
+      ),
+      value: _enabled,
+      onChanged: _toggle,
     );
   }
 }

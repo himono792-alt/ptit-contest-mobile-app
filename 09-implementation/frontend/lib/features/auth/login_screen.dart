@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/auth/auth_provider.dart';
+import '../../core/auth/biometric_service.dart';
+import '../../core/secure_storage.dart';
 import '../../core/theme.dart';
 import 'forgot_password_request_screen.dart';
 
@@ -20,6 +22,47 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _loading = false;
   bool _showPwd = false;
   String? _error;
+
+  // Phase 2 sprint 1 step 4 (2026-05-06): biometric login button visibility.
+  // Hiện button "Đăng nhập sinh trắc" nếu user đã enable + có refresh token + device support.
+  bool _biometricVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBiometric();
+  }
+
+  Future<void> _checkBiometric() async {
+    final storage = ref.read(tokenStorageProvider);
+    final enabled = await storage.isBiometricEnabled();
+    final hasRefresh = (await storage.readRefreshToken())?.isNotEmpty ?? false;
+    final available = await BiometricService.instance.isAvailable();
+    if (!mounted) return;
+    setState(() {
+      _biometricVisible = enabled && hasRefresh && available;
+    });
+    // Auto-prompt khi mở app — nếu user đã enabled, không cần tap
+    if (_biometricVisible) {
+      _biometricLogin();
+    }
+  }
+
+  Future<void> _biometricLogin() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    final ok = await ref.read(authProvider.notifier).tryBiometricLogin();
+    if (!mounted) return;
+    if (!ok) {
+      setState(() {
+        _loading = false;
+        _error = 'Đăng nhập sinh trắc thất bại — hãy nhập email + mật khẩu.';
+      });
+    }
+    // Nếu success → authProvider tự update state → router redirect khỏi /login
+  }
 
   @override
   void dispose() {
@@ -197,16 +240,44 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ],
                 const SizedBox(height: 12),
 
+                // ============ Biometric button (Phase 2 step 4) ============
+                // Hiện nếu user đã enable trong Profile + có refresh token + device support.
+                if (_biometricVisible) ...[
+                  FilledButton.icon(
+                    icon: const Icon(Icons.fingerprint, size: 22),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: ptitRed,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onPressed: _loading ? null : _biometricLogin,
+                    label: const Text('Đăng nhập bằng sinh trắc',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+
                 // ============ Login button ============
                 FilledButton(
                   onPressed: _loading ? null : _submit,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _biometricVisible ? Colors.white : ptitRed,
+                    foregroundColor: _biometricVisible ? ptitRed : Colors.white,
+                    side: _biometricVisible
+                        ? const BorderSide(color: ptitRed, width: 1.5)
+                        : null,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
                   child: _loading
-                      ? const SizedBox(
+                      ? SizedBox(
                           height: 18,
                           width: 18,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white))
-                      : const Text('Đăng nhập'),
+                              strokeWidth: 2,
+                              color: _biometricVisible ? ptitRed : Colors.white))
+                      : Text(_biometricVisible
+                          ? 'Đăng nhập bằng email'
+                          : 'Đăng nhập'),
                 ),
 
                 const SizedBox(height: 18),
