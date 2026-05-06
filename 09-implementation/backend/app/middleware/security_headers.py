@@ -100,6 +100,15 @@ def _inject_security_headers(headers: list[tuple[bytes, bytes]], scope: dict) ->
     )
     headers.append((b"permissions-policy", permissions_policy.encode("ascii")))
 
+    # 6. Content-Security-Policy (CSP) — Phase 1.5 fix (2026-05-06)
+    # Backend chỉ trả JSON, KHÔNG render HTML → CSP cực kỳ chặt:
+    # - default-src 'none': deny mọi resource (script/style/img/connect/font/...)
+    # - frame-ancestors 'none': modern equivalent X-Frame-Options DENY
+    # Nếu accidentally trả HTML/JS, browser sẽ block load mọi resource → an toàn cực đại.
+    # Lưu ý: CSP KHÔNG ảnh hưởng client gọi API qua fetch/XHR (đó là CORS).
+    csp = "default-src 'none'; frame-ancestors 'none'"
+    headers.append((b"content-security-policy", csp.encode("ascii")))
+
 
 def _is_https_request(scope: dict) -> bool:
     """Detect HTTPS từ scope ASGI hoặc X-Forwarded-Proto header.
