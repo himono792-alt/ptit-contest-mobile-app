@@ -7,6 +7,7 @@ import '../../core/auth/auth_provider.dart';
 import '../../core/models/result.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
+import '../../core/widgets/m_shimmer.dart';
 import '../../core/widgets/m_top_bar.dart';
 import 'cert_verify_screen.dart';
 import 'review_dialog.dart';
@@ -26,7 +27,15 @@ class MyResultsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: const MTopBar(title: 'Kết quả'),
       body: asyncResults.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: ptitRed)),
+        // Phase 2 step 5: skeleton thay spinner — list rank dùng MListItemSkeleton
+        loading: () => ListView(
+          padding: const EdgeInsets.all(16),
+          children: const [
+            MListItemSkeleton(),
+            MListItemSkeleton(),
+            MListItemSkeleton(),
+          ],
+        ),
         error: (e, _) {
           final msg = e is DioException
               ? (e.response?.data is Map ? '${e.response?.data['detail']}' : e.message ?? '')

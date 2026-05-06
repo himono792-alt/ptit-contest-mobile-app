@@ -31,6 +31,9 @@ dependencies:
   # Phase 2 sprint 1 step 4 (2026-05-06): biometric login (FaceID/TouchID/Fingerprint)
   # APK Android only — web sẽ skip qua kIsWeb check.
   local_auth: ^2.3.0
+  # Phase 2 sprint 1 step 5 (2026-05-06): loading skeleton shimmer animation
+  # Wrap content placeholder với gradient animation, perceived load 2x faster.
+  shimmer: ^3.0.0
 
 dev_dependencies:
   flutter_test:

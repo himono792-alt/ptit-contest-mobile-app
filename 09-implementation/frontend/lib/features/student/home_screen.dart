@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
+import '../../core/widgets/m_shimmer.dart';
 import '../../core/widgets/pill.dart';
 import 'contest_list_screen.dart';
 import 'my_results_screen.dart';
@@ -307,9 +308,14 @@ class _FeaturedContests extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncList = ref.watch(contestListProvider);
     return asyncList.when(
+      // Phase 2 step 5: skeleton 3 contest cards thay spinner
       loading: () => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 24),
-        child: Center(child: CircularProgressIndicator(color: ptitRed)),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: MCardListSkeleton(
+          count: 3,
+          textLines: 2,
+          padding: EdgeInsets.zero,
+        ),
       ),
       error: (e, _) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 24),

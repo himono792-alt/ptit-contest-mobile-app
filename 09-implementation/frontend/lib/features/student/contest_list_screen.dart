@@ -8,6 +8,7 @@ import '../../core/auth/auth_provider.dart';
 import '../../core/models/contest.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
+import '../../core/widgets/m_shimmer.dart';
 import '../../core/widgets/m_top_bar.dart';
 import '../../core/widgets/pill.dart';
 import 'notifications_screen.dart';
@@ -122,7 +123,8 @@ class _ContestListScreenState extends ConsumerState<ContestListScreen> {
         // List
         Expanded(
           child: asyncList.when(
-            loading: () => const Center(child: CircularProgressIndicator(color: ptitRed)),
+            // Phase 2 step 5: skeleton thay spinner
+            loading: () => const MCardListSkeleton(count: 4, textLines: 2),
             error: (e, _) => _ErrorView(error: e, onRetry: () => ref.invalidate(contestListProvider)),
             data: (data) => RefreshIndicator(
               color: ptitRed,

@@ -15,6 +15,7 @@ import 'package:intl/intl.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
+import '../../core/widgets/m_shimmer.dart';
 import '../../core/widgets/m_top_bar.dart';
 import '../../core/widgets/pill.dart';
 
@@ -93,7 +94,8 @@ class _MyRegistrationsScreenState extends ConsumerState<MyRegistrationsScreen> {
         Expanded(
           child: asyncList.when(
             loading: () =>
-                const Center(child: CircularProgressIndicator(color: ptitRed)),
+                // Phase 2 step 5: skeleton thay spinner
+                const MCardListSkeleton(count: 3, textLines: 3),
             error: (e, _) {
               final msg = e is DioException
                   ? (e.response?.data is Map
