@@ -64,10 +64,11 @@ def _inject_security_headers(headers: list[tuple[bytes, bytes]], scope: dict) ->
     """Mutate headers list in-place. ASGI headers là list[tuple[bytes, bytes]]."""
 
     # 1. Strict-Transport-Security (HSTS)
-    # Chỉ add nếu request đến qua HTTPS (Railway/Netlify auto HTTPS, scheme="https").
-    # Skip cho HTTP để không lỡ enforce HSTS trên dev/local HTTP.
-    scheme = scope.get("scheme", "http")
-    if settings.hsts_enabled and scheme == "https":
+    # Phải check scheme HTTPS — KHÔNG add HSTS cho HTTP (vô nghĩa + có thể harmful).
+    # Railway/Heroku/Vercel proxy terminate TLS ở edge → backend nhận scheme="http".
+    # Cách đúng: đọc X-Forwarded-Proto header từ proxy. Pattern giống rate_limit
+    # đọc X-Forwarded-For thay socket peer IP (Phase 1.2 fix 2026-05-06).
+    if settings.hsts_enabled and _is_https_request(scope):
         # Format: "max-age=31536000; includeSubDomains; preload"
         # - max-age: thời gian browser nhớ HSTS (giây). Default 1 năm.
         # - includeSubDomains: áp dụng cho mọi subdomain (vd api.x.com → mọi *.x.com)
@@ -98,3 +99,18 @@ def _inject_security_headers(headers: list[tuple[bytes, bytes]], scope: dict) ->
         "usb=(), magnetometer=(), gyroscope=(), accelerometer=()"
     )
     headers.append((b"permissions-policy", permissions_policy.encode("ascii")))
+
+
+def _is_https_request(scope: dict) -> bool:
+    """Detect HTTPS từ scope ASGI hoặc X-Forwarded-Proto header.
+
+    Railway/Heroku/Vercel/Render proxy terminate TLS ở edge → ASGI scope nhận
+    scheme="http" dù client request HTTPS. Trust X-Forwarded-Proto (proxy set).
+    """
+    if scope.get("scheme") == "https":
+        return True
+    # ASGI raw headers = list[tuple[bytes, bytes]] lowercase keys
+    for k, v in scope.get("headers", []):
+        if k == b"x-forwarded-proto" and v.lower() == b"https":
+            return True
+    return False
