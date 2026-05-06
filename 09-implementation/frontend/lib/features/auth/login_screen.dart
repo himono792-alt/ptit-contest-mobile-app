@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -100,7 +101,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Form(
+          // Sprint 2 fix M4 (2026-05-06): cap maxWidth 480px desktop, center
+          // horizontal. Tránh form căng full 1440px → eye-flow tập trung.
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -302,50 +308,57 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 const SizedBox(height: 28),
                 // ============ Test accounts hint ============
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1ECE5),
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                  ),
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(children: [
-                          Icon(Icons.info_outline, size: 14, color: context.textMuted),
-                          const SizedBox(width: 6),
-                          Text('Tài khoản demo',
+                // Sprint 2 fix M5 (2026-05-06): chỉ show ở debug/staging, ẩn ở
+                // production (kReleaseMode) — tránh lộ credentials trên public URL.
+                if (!kReleaseMode) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1ECE5),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [
+                            Icon(Icons.info_outline, size: 14, color: context.textMuted),
+                            const SizedBox(width: 6),
+                            Text('Tài khoản demo',
+                                style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: context.textPrimary,
+                                    letterSpacing: 0.3)),
+                          ]),
+                          const SizedBox(height: 6),
+                          _DemoAccountRow(role: 'SV', email: 'b22dccn001@ptit.edu.vn'),
+                          _DemoAccountRow(role: 'GV', email: 'gv@ptit.edu.vn'),
+                          _DemoAccountRow(role: 'BCN', email: 'bcn@ptit.edu.vn'),
+                          const SizedBox(height: 4),
+                          Text('Mật khẩu chung: abc123',
                               style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: context.textPrimary,
-                                  letterSpacing: 0.3)),
+                                  fontSize: 10.5,
+                                  color: context.textMuted,
+                                  fontWeight: FontWeight.w500)),
                         ]),
-                        const SizedBox(height: 6),
-                        _DemoAccountRow(role: 'SV', email: 'b22dccn001@ptit.edu.vn'),
-                        _DemoAccountRow(role: 'GV', email: 'gv@ptit.edu.vn'),
-                        _DemoAccountRow(role: 'BCN', email: 'bcn@ptit.edu.vn'),
-                        const SizedBox(height: 4),
-                        Text('Mật khẩu chung: abc123',
-                            style: GoogleFonts.plusJakartaSans(
-                                fontSize: 10.5,
-                                color: context.textMuted,
-                                fontWeight: FontWeight.w500)),
-                      ]),
-                ),
-
-                const SizedBox(height: 16),
-                // ============ Footer ============
-                Center(
-                  child: Text('POST /api/auth/login · JWT HS256',
-                      style: GoogleFonts.jetBrainsMono(
-                        fontSize: 10,
-                        color: context.textFaint,
-                        fontWeight: FontWeight.w500,
-                      )),
-                ),
+                  ),
+                  const SizedBox(height: 16),
+                  // ============ Footer (debug only) ============
+                  // Sprint 2 fix M6 (2026-05-06): footer "POST /api/auth/login..."
+                  // chỉ show debug, ẩn ở production để tránh lộ implementation details.
+                  Center(
+                    child: Text('POST /api/auth/login · JWT HS256',
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 10,
+                          color: context.textFaint,
+                          fontWeight: FontWeight.w500,
+                        )),
+                  ),
+                ],
                 const SizedBox(height: 24),
               ],
+            ),
+              ),
             ),
           ),
         ),
