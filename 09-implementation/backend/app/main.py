@@ -15,6 +15,7 @@ from app.middleware.audit import (
     start_audit_worker,
     stop_audit_worker,
 )
+from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.rate_limit import limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -170,6 +171,11 @@ async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) 
 
 app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(AuditASGIMiddleware)
+
+# Phase 1 step 5 (2026-05-06): Security headers (HSTS + 4 headers còn lại)
+# Add cuối cùng = chạy đầu tiên trong response chain → chắc chắn header tới browser.
+# ASGI middleware order: outer (registered last) wraps inner (registered first).
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

@@ -80,6 +80,13 @@ class Settings(BaseSettings):
     # FE base URL — dùng cho link reset password trong email
     frontend_base_url: str = "https://luxury-crostata-3c5c69.netlify.app"
 
+    # Security headers — Phase 1 step 5 (2026-05-06)
+    # HSTS max-age default 1 năm = 31536000s. Đủ pass HSTS preload list.
+    # Nếu cần lock dài hơn (2 năm) → set HSTS_MAX_AGE=63072000 trên Railway env.
+    # Nếu cần test/dev → HSTS_ENABLED=false để tắt (vẫn còn 4 header còn lại).
+    hsts_enabled: bool = True
+    hsts_max_age: int = 31536000
+
 
 @lru_cache
 def get_settings() -> "Settings":
