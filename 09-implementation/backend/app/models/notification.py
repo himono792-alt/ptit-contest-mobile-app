@@ -24,6 +24,9 @@ class Notification(Base):
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
+    # Phase 2 sprint 1 step 1 (2026-05-06): deep-link route cho FE navigate khi click notification
+    # Format: "/contests/5", "/me/entries/12", "/cert-detail/abc". Null = không nav (default).
+    target_route: Mapped[str | None] = mapped_column(String(255))
     is_global: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_by: Mapped[int | None] = mapped_column(
         BigInteger, ForeignKey("app_users.user_id", ondelete="SET NULL"),

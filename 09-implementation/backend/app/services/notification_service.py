@@ -144,6 +144,7 @@ async def notify_users(
         title=title,
         message=message,
         is_global=False,
+        target_route=target_route,  # Phase 2 step 1: deep-link FE navigate
         created_by=created_by,
         published_at=datetime.now(timezone.utc),
     )

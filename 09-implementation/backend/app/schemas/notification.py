@@ -17,6 +17,8 @@ class NotificationOut(BaseModel):
     contest_id: int | None = None
     title: str
     message: str
+    # Phase 2 sprint 1 step 1 (2026-05-06): deep-link route cho FE navigate
+    target_route: str | None = None
     is_global: bool
     published_at: datetime | None = None
     created_at: datetime

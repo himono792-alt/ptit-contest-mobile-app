@@ -104,6 +104,8 @@ _PROFILE_MIGRATION_STATEMENTS = [
        ADD COLUMN IF NOT EXISTS nationality VARCHAR(50),
        ADD COLUMN IF NOT EXISTS secondary_email VARCHAR(255)""",
     "ALTER TABLE ptit_contest.submission_files ADD COLUMN IF NOT EXISTS file_data BYTEA",
+    # Phase 2 sprint 1 step 1 (2026-05-06): deep-link route cho notification onTap navigate
+    "ALTER TABLE ptit_contest.notifications ADD COLUMN IF NOT EXISTS target_route VARCHAR(255)",
 ]
 
 

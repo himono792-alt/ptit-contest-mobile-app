@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/auth/auth_provider.dart';
@@ -132,15 +133,41 @@ class NotificationsScreen extends ConsumerWidget {
 
   Future<void> _markRead(
       BuildContext context, WidgetRef ref, Map<String, dynamic> notif) async {
-    if (notif['is_read'] == true) return;
-    try {
-      final api = ref.read(apiClientProvider);
-      await api.dio.patch('/me/notifications/${notif['notification_id']}/read');
-      ref.invalidate(notificationsProvider);
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Lỗi: ${_msg(e)}')));
+    // Phase 2 sprint 1 step 1 (2026-05-06): mark read + deep-link navigate.
+    // Logic:
+    // - Nếu chưa đọc → PATCH mark read (fire-and-forget, không await navigate)
+    // - Nếu có target_route → navigate ngay (không cần đợi mark read xong)
+    // - Nếu null target_route → ở lại screen list (legacy behavior)
+    final notifId = notif['notification_id'];
+    final isRead = notif['is_read'] == true;
+    final targetRoute = notif['target_route'] as String?;
+
+    // Mark read async (không block navigate)
+    if (!isRead) {
+      try {
+        final api = ref.read(apiClientProvider);
+        // Không await — navigate trước, mark read background
+        api.dio.patch('/me/notifications/$notifId/read').then((_) {
+          ref.invalidate(notificationsProvider);
+        }).catchError((e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text('Lỗi: ${_msg(e)}')));
+          }
+        });
+      } catch (_) {/* swallow */}
+    }
+
+    // Deep-link navigate nếu có
+    if (targetRoute != null && targetRoute.isNotEmpty && context.mounted) {
+      try {
+        context.push(targetRoute);
+      } catch (e) {
+        // Route invalid (vd FE chưa có route đó) — graceful fallback: stay
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Không tìm thấy màn hình: $targetRoute')));
+        }
       }
     }
   }
