@@ -19,6 +19,11 @@ import 'my_results_screen.dart';
 import 'notifications_screen.dart';
 import 'profile_screen.dart';
 
+/// Phase 2 sprint 1 step 1 (2026-05-06): tab index global state.
+/// Cho phép notification deep-link switch tab từ ngoài StudentShell.
+/// Notification onTap với target_route='/me/entries' → set state=2 → tab 'Của tôi'.
+final studentTabProvider = StateProvider<int>((ref) => 0);
+
 class StudentShell extends ConsumerStatefulWidget {
   const StudentShell({super.key});
   @override
@@ -26,12 +31,17 @@ class StudentShell extends ConsumerStatefulWidget {
 }
 
 class _StudentShellState extends ConsumerState<StudentShell> {
-  int _idx = 0;
-
-  void _switchTab(int i) => setState(() => _idx = i);
+  void _switchTab(int i) =>
+      ref.read(studentTabProvider.notifier).state = i;
 
   @override
   Widget build(BuildContext context) {
+    // Phase 2 sprint 1 step 1: tab index từ global provider, cho phép
+    // notification deep-link switch tab từ NotificationsScreen sang tab khác.
+    final idx = ref.watch(studentTabProvider);
+    // Clamp để chống index out-of-range nếu provider có giá trị lỗi
+    final safeIdx = (idx >= 0 && idx < 6) ? idx : 0;
+
     final tabs = <Widget>[
       HomeScreen(onSwitchTab: _switchTab),
       const ContestListScreen(),
@@ -75,18 +85,18 @@ class _StudentShellState extends ConsumerState<StudentShell> {
         tabIcons: tabIcons,
         tabActiveIcons: tabActiveIcons,
         unread: unread,
-        activeIdx: _idx,
-        onSwitchTab: (i) => setState(() => _idx = i),
+        activeIdx: safeIdx,
+        onSwitchTab: _switchTab,
       );
     }
 
     // Mobile layout (default — APK + web mobile)
     return MobileFrame(
       child: Scaffold(
-        body: IndexedStack(index: _idx, children: tabs),
+        body: IndexedStack(index: safeIdx, children: tabs),
         bottomNavigationBar: MBottomNav(
-          selectedIndex: _idx,
-          onChanged: (i) => setState(() => _idx = i),
+          selectedIndex: safeIdx,
+          onChanged: _switchTab,
           items: List.generate(tabLabels.length, (i) => MBottomNavItem(
                 icon: tabIcons[i],
                 activeIcon: tabActiveIcons[i],

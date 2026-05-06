@@ -9,6 +9,18 @@ import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_top_bar.dart';
 import '../../core/widgets/pill.dart';
+import 'student_shell.dart' show studentTabProvider;
+
+/// Phase 2 sprint 1 step 1 (2026-05-06): map deep-link route ảo (BE convention)
+/// sang tab index của StudentShell. Lý do: StudentShell có 6 tab bottom nav,
+/// KHÔNG phải 6 GoRouter route riêng — tab index là state, KHÔNG phải URL.
+/// BE giữ semantic route `/me/entries` (intuitive), FE map sang tab index 2.
+const Map<String, int> _shellTabRoutes = {
+  '/me/entries': 2,        // Tab "Của tôi" — đơn đăng ký
+  '/me/results': 3,        // Tab "Kết quả"
+  '/me/notifications': 4,  // Tab "Thông báo" (đã ở đây)
+  '/me/profile': 5,        // Tab "Tôi"
+};
 
 final notificationsProvider =
     FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
@@ -160,13 +172,21 @@ class NotificationsScreen extends ConsumerWidget {
 
     // Deep-link navigate nếu có
     if (targetRoute != null && targetRoute.isNotEmpty && context.mounted) {
-      try {
-        context.push(targetRoute);
-      } catch (e) {
-        // Route invalid (vd FE chưa có route đó) — graceful fallback: stay
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text('Không tìm thấy màn hình: $targetRoute')));
+      // Phase 2 sprint 1 step 1 fix (2026-05-06): map route ảo /me/* sang
+      // tab index của StudentShell (vì 6 tab là state, KHÔNG phải GoRouter route).
+      final tabIdx = _shellTabRoutes[targetRoute];
+      if (tabIdx != null) {
+        // Set provider tab index → StudentShell tự switch tab tới target.
+        ref.read(studentTabProvider.notifier).state = tabIdx;
+      } else {
+        // Route thật (vd /contests/abc, /admin/contests/5/manage) → push như cũ.
+        try {
+          context.push(targetRoute);
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('Không tìm thấy màn hình: $targetRoute')));
+          }
         }
       }
     }
