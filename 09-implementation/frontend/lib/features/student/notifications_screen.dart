@@ -178,6 +178,13 @@ class NotificationsScreen extends ConsumerWidget {
       if (tabIdx != null) {
         // Set provider tab index → StudentShell tự switch tab tới target.
         ref.read(studentTabProvider.notifier).state = tabIdx;
+        // Phase 2 sprint 1 step 1 fix v2 (2026-05-06): nếu NotificationsScreen
+        // được mở như sub-route (push từ icon chuông top bar trên screen khác),
+        // pop nó về để user thấy StudentShell với tab vừa switch. Khi user
+        // đang ở tab Thông báo (trong StudentShell shell), canPop=false → no-op.
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
       } else {
         // Route thật (vd /contests/abc, /admin/contests/5/manage) → push như cũ.
         try {
