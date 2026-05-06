@@ -77,8 +77,9 @@ class Settings(BaseSettings):
     smtp_user: str = ""
     smtp_password: str = ""
     smtp_use_tls: bool = True
-    # FE base URL — dùng cho link reset password trong email
-    frontend_base_url: str = "https://luxury-crostata-3c5c69.netlify.app"
+    # FE base URL — dùng cho link reset password trong email + QR verify cert
+    # Migrate 2026-05-06: Netlify hết quota build → Cloudflare Pages thay thế.
+    frontend_base_url: str = "https://ptit-contest-app.pages.dev"
 
     # Security headers — Phase 1 step 5 (2026-05-06)
     # HSTS max-age default 1 năm = 31536000s. Đủ pass HSTS preload list.

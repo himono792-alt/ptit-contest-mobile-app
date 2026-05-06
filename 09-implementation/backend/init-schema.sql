@@ -880,7 +880,7 @@ INSERT INTO system_configs (config_key, config_value, value_type, description, i
 ('email.smtp_port',              '587',  'INT',    'SMTP port',                                                  FALSE),
 ('email.smtp_user',              '',     'STRING', 'SMTP username',                                              FALSE),
 ('email.smtp_password',          '',     'STRING', 'SMTP password — sensitive, mask trong UI',                   TRUE),
-('certificate.qr_verify_url_base','https://luxury-crostata-3c5c69.netlify.app/verify/', 'STRING', 'Base URL ghép vào QR code chứng nhận (Netlify production, fix P2-2 audit 2026-05-06)', FALSE);
+('certificate.qr_verify_url_base','https://ptit-contest-app.pages.dev/verify/', 'STRING', 'Base URL ghép vào QR code chứng nhận (Cloudflare Pages, migrate 2026-05-06 từ Netlify hết quota)', FALSE);
 
 -- =========================================================
 -- 13) AUDIT LOG
