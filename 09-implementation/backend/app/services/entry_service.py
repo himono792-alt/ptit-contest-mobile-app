@@ -287,3 +287,72 @@ async def review_entry(
     await db.commit()
     await db.refresh(entry)
     return entry
+
+
+async def bulk_review_entries(
+    db: AsyncSession,
+    user: AppUser,
+    contest_id: int,
+    entry_ids: list[int],
+    action: EntryReviewAction,
+    note: str | None,
+) -> tuple[int, list[tuple[int, str]]]:
+    """Phase 2 sprint 1 step 2 (2026-05-06): bulk approve/reject nhiều entries.
+
+    Partial commit pattern:
+    - Verify GV là organizer của contest 1 lần (không lặp 100 lần)
+    - Loop từng entry_id → process, append vào success/failed
+    - Commit 1 lần ở cuối (success entries đã modify, failed entries không touch)
+    - Trả tuple (success_count, failed list)
+
+    Tradeoff vs all-or-nothing: nếu 1 entry đã approved trước, all-or-nothing sẽ
+    fail toàn bộ. Partial commit cho user biết "98/100 done, 2 đã approved rồi".
+    """
+    if action == EntryReviewAction.REJECT and not (note and note.strip()):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Reject phải có lý do (note)")
+
+    # Verify quyền GV cho contest này 1 lần
+    contest = await db.get(Contest, contest_id)
+    if contest is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Contest not found")
+    await _ensure_organizer_of_contest(db, user, contest)
+
+    new_status = (
+        RegistrationStatus.APPROVED if action == EntryReviewAction.APPROVE
+        else RegistrationStatus.REJECTED
+    )
+    now = datetime.now(timezone.utc)
+
+    success_count = 0
+    failed: list[tuple[int, str]] = []
+
+    # Dedup entry_ids (phòng FE gửi trùng)
+    for entry_id in dict.fromkeys(entry_ids):
+        entry = await db.get(ContestEntry, entry_id)
+        if entry is None:
+            failed.append((entry_id, "Entry không tồn tại"))
+            continue
+        if entry.contest_id != contest_id:
+            # Bảo mật: entry phải thuộc contest đang review (chống bypass quyền GV)
+            failed.append((entry_id, "Entry không thuộc contest này"))
+            continue
+        if entry.registration_status != RegistrationStatus.PENDING:
+            failed.append((
+                entry_id,
+                f"Đã ở trạng thái {entry.registration_status.value}, bỏ qua",
+            ))
+            continue
+
+        # Modify (chưa commit)
+        entry.registration_status = new_status
+        entry.approved_by = user.user_id
+        entry.approved_at = now
+        if note:
+            entry.registration_note = note
+        success_count += 1
+
+    # Commit 1 lần cho tất cả entries success
+    if success_count > 0:
+        await db.commit()
+
+    return success_count, failed

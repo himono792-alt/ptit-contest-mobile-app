@@ -931,6 +931,10 @@ class _EntriesTab extends ConsumerStatefulWidget {
 }
 
 class _EntriesTabState extends ConsumerState<_EntriesTab> {
+  // Phase 2 sprint 1 step 2 (2026-05-06): bulk approve/reject
+  // Set chứa entry_id đang được chọn (chỉ entries PENDING mới chọn được)
+  final Set<int> _selectedIds = {};
+
   Future<void> _decide(int entryId, String action) async {
     final api = ref.read(apiClientProvider);
     try {
@@ -949,74 +953,258 @@ class _EntriesTabState extends ConsumerState<_EntriesTab> {
     }
   }
 
+  /// Bulk approve/reject N entries. Gọi POST /api/contests/{cid}/entries/bulk-review.
+  Future<void> _bulkDecide(String action) async {
+    if (_selectedIds.isEmpty) return;
+    final ids = _selectedIds.toList();
+    final actionLabel = action == 'approve' ? 'duyệt' : 'từ chối';
+
+    // Confirmation dialog chống misclick
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Xác nhận $actionLabel ${ids.length} entries'),
+        content: Text(
+          'Bạn sắp $actionLabel ${ids.length} đơn đăng ký. Hành động này không thể undo.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: action == 'approve' ? successGreen : ptitRed,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(actionLabel.toUpperCase(),
+                style: const TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    final api = ref.read(apiClientProvider);
+    try {
+      final res = await api.dio.post(
+        '/contests/${widget.contestId}/entries/bulk-review',
+        data: {
+          'entry_ids': ids,
+          'action': action,
+          'note': action == 'reject' ? 'Bulk reject từ admin panel' : null,
+        },
+      );
+      final body = res.data as Map<String, dynamic>;
+      final successCount = body['success_count'] ?? 0;
+      final failed = (body['failed'] as List?) ?? [];
+      _selectedIds.clear();
+      ref.invalidate(contestEntriesProvider(widget.contestId));
+      if (!mounted) return;
+      final msg = failed.isEmpty
+          ? 'Đã $actionLabel $successCount/${ids.length} entries'
+          : 'Đã $actionLabel $successCount/${ids.length}, ${failed.length} lỗi (xem console)';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(msg),
+        backgroundColor: failed.isEmpty ? successGreen : Colors.orange,
+      ));
+      if (failed.isNotEmpty) {
+        debugPrint('Bulk review failed items: $failed');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi bulk: ${_msgOf(e)}')),
+      );
+    }
+  }
+
+  /// Toggle select all PENDING entries trong list hiện tại.
+  void _toggleSelectAll(List<dynamic> entries) {
+    final pendingIds = entries
+        .where((e) => (e['registration_status'] as String?) == 'PENDING')
+        .map((e) => e['entry_id'] as int)
+        .toSet();
+    setState(() {
+      if (_selectedIds.containsAll(pendingIds) && _selectedIds.isNotEmpty) {
+        _selectedIds.clear();
+      } else {
+        _selectedIds.addAll(pendingIds);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final asyncEntries = ref.watch(contestEntriesProvider(widget.contestId));
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Đăng ký của SV — duyệt entries',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 12),
-        Expanded(
-          child: asyncEntries.when(
-            loading: () =>
-                const Center(child: CircularProgressIndicator(color: ptitRed)),
-            error: (e, _) => Center(
-                child: Text('Lỗi: ${_msgOf(e)}',
-                    style: const TextStyle(color: ptitRed))),
-            data: (entries) => entries.isEmpty
-                ? const _Empty('Chưa có SV nào đăng ký')
-                : ListView.builder(
-                    itemCount: entries.length,
-                    itemBuilder: (_, i) {
-                      final e = entries[i] as Map<String, dynamic>;
-                      final st = e['registration_status'] as String? ?? 'PENDING';
-                      return MCard(
-                        child: Row(children: [
-                          Expanded(
-                            child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                      'Entry #${e['entry_id']} · ${e['entry_type'] ?? '—'}',
-                                      style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700)),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                      'SV student_id #${e['student_id'] ?? '—'}'
-                                      ' · Team ${e['team_id'] ?? '—'}'
-                                      ' · Đăng ký ${_safeFmtIso(e['created_at'])}'
-                                      '${(e['registration_note'] ?? '').toString().isNotEmpty ? " · \"${e['registration_note']}\"" : ""}',
-                                      style: const TextStyle(
-                                          fontSize: 11, color: textMuted)),
-                                ]),
-                          ),
-                          Pill.status(st),
-                          const SizedBox(width: 10),
-                          if (st == 'PENDING') ...[
-                            IconButton(
-                              icon: const Icon(Icons.check,
-                                  color: successGreen, size: 20),
-                              tooltip: 'Duyệt',
-                              onPressed: () =>
-                                  _decide(e['entry_id'] as int, 'approve'),
-                            ),
-                            IconButton(
-                              icon:
-                                  const Icon(Icons.close, color: ptitRed, size: 20),
-                              tooltip: 'Từ chối',
-                              onPressed: () =>
-                                  _decide(e['entry_id'] as int, 'reject'),
-                            ),
-                          ],
-                        ]),
-                      );
-                    },
+      child: Stack(children: [
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // Header row: title + bulk select button (chỉ hiện khi có entries)
+          asyncEntries.when(
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+            data: (entries) {
+              final pendingCount = entries
+                  .where((e) =>
+                      (e['registration_status'] as String?) == 'PENDING')
+                  .length;
+              return Row(children: [
+                const Text('Đăng ký của SV — duyệt entries',
+                    style:
+                        TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                const Spacer(),
+                if (pendingCount > 0)
+                  TextButton.icon(
+                    icon: Icon(
+                      _selectedIds.isEmpty
+                          ? Icons.check_box_outline_blank
+                          : Icons.check_box,
+                      size: 18,
+                    ),
+                    label: Text(_selectedIds.isEmpty
+                        ? 'Chọn tất cả PENDING ($pendingCount)'
+                        : 'Bỏ chọn tất cả'),
+                    onPressed: () => _toggleSelectAll(entries),
                   ),
+              ]);
+            },
           ),
-        ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: asyncEntries.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator(color: ptitRed)),
+              error: (e, _) => Center(
+                  child: Text('Lỗi: ${_msgOf(e)}',
+                      style: const TextStyle(color: ptitRed))),
+              data: (entries) => entries.isEmpty
+                  ? const _Empty('Chưa có SV nào đăng ký')
+                  : ListView.builder(
+                      // Padding bottom để bulk action bar không che row cuối
+                      padding: EdgeInsets.only(
+                          bottom: _selectedIds.isEmpty ? 0 : 80),
+                      itemCount: entries.length,
+                      itemBuilder: (_, i) {
+                        final e = entries[i] as Map<String, dynamic>;
+                        final st =
+                            e['registration_status'] as String? ?? 'PENDING';
+                        final entryId = e['entry_id'] as int;
+                        final isPending = st == 'PENDING';
+                        final isSelected = _selectedIds.contains(entryId);
+                        return MCard(
+                          backgroundColor:
+                              isSelected ? ptitRedSoft.withValues(alpha: 0.3) : null,
+                          child: Row(children: [
+                            // Checkbox: chỉ hiện cho PENDING (KHÔNG cho approved/rejected)
+                            if (isPending)
+                              Checkbox(
+                                value: isSelected,
+                                activeColor: ptitRed,
+                                onChanged: (v) {
+                                  setState(() {
+                                    if (v == true) {
+                                      _selectedIds.add(entryId);
+                                    } else {
+                                      _selectedIds.remove(entryId);
+                                    }
+                                  });
+                                },
+                              )
+                            else
+                              const SizedBox(width: 48),
+                            Expanded(
+                              child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                        'Entry #$entryId · ${e['entry_type'] ?? '—'}',
+                                        style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700)),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                        'SV student_id #${e['student_id'] ?? '—'}'
+                                        ' · Team ${e['team_id'] ?? '—'}'
+                                        ' · Đăng ký ${_safeFmtIso(e['created_at'])}'
+                                        '${(e['registration_note'] ?? '').toString().isNotEmpty ? " · \"${e['registration_note']}\"" : ""}',
+                                        style: const TextStyle(
+                                            fontSize: 11, color: textMuted)),
+                                  ]),
+                            ),
+                            Pill.status(st),
+                            const SizedBox(width: 10),
+                            if (isPending) ...[
+                              IconButton(
+                                icon: const Icon(Icons.check,
+                                    color: successGreen, size: 20),
+                                tooltip: 'Duyệt',
+                                onPressed: () => _decide(entryId, 'approve'),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.close,
+                                    color: ptitRed, size: 20),
+                                tooltip: 'Từ chối',
+                                onPressed: () => _decide(entryId, 'reject'),
+                              ),
+                            ],
+                          ]),
+                        );
+                      },
+                    ),
+            ),
+          ),
+        ]),
+        // Floating bulk action bar — chỉ hiện khi có chọn ≥1
+        if (_selectedIds.isNotEmpty)
+          Positioned(
+            bottom: 16,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4)),
+                  ],
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Text('Đã chọn ${_selectedIds.length} entries',
+                      style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: textPrimary)),
+                  const SizedBox(width: 16),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.check, size: 16),
+                    label: const Text('Duyệt'),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: successGreen,
+                        foregroundColor: Colors.white),
+                    onPressed: () => _bulkDecide('approve'),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.close, size: 16),
+                    label: const Text('Từ chối'),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: ptitRed,
+                        foregroundColor: Colors.white),
+                    onPressed: () => _bulkDecide('reject'),
+                  ),
+                ]),
+              ),
+            ),
+          ),
       ]),
     );
   }

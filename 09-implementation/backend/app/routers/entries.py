@@ -9,6 +9,9 @@ from app.database import get_db
 from app.deps import CurrentUser
 from app.models.enums import RegistrationStatus
 from app.schemas.entry import (
+    BulkReviewFailedItem,
+    BulkReviewIn,
+    BulkReviewOut,
     EntryListItem,
     MyEntryItem,
     RegisterIndividualIn,
@@ -126,3 +129,29 @@ async def review_entry(
     """GV-03 — Approve/reject entry."""
     entry = await entry_service.review_entry(db, user, entry_id, data.action, data.note)
     return EntryListItem.model_validate(entry)
+
+
+@contest_entries_router.post(
+    "/{contest_id}/entries/bulk-review",
+    response_model=BulkReviewOut,
+)
+async def bulk_review_entries(
+    contest_id: int,
+    data: BulkReviewIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> BulkReviewOut:
+    """Phase 2 sprint 1 step 2 (2026-05-06) GV-03 bulk approve/reject.
+
+    Productivity: 50 entries × 3s = 2.5p → 1 request = 5s.
+    Partial commit: trả success_count + failed list (entry_id + reason).
+    Max 100 entries/request (validate ở schema).
+    """
+    success_count, failed = await entry_service.bulk_review_entries(
+        db, user, contest_id, data.entry_ids, data.action, data.note,
+    )
+    return BulkReviewOut(
+        success_count=success_count,
+        failed=[BulkReviewFailedItem(entry_id=eid, reason=reason) for eid, reason in failed],
+        total_requested=len(data.entry_ids),
+    )

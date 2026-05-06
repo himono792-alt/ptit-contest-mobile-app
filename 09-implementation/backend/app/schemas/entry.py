@@ -52,6 +52,39 @@ class ReviewEntryIn(BaseModel):
     note: str | None = Field(None, description="Bắt buộc nếu reject")
 
 
+# ---------- Phase 2 sprint 1 step 2 (2026-05-06): Bulk review ----------
+
+class BulkReviewIn(BaseModel):
+    """GV-03 POST /api/contests/{cid}/entries/bulk-review — duyệt/từ chối nhiều entries 1 lần.
+
+    Productivity feature: thay vì 50 click × 3s = 2.5p, chỉ 1 request = 5s.
+    Max 100 entries/request để chống timeout và làm dễ retry partial fail.
+    """
+
+    entry_ids: list[int] = Field(..., min_length=1, max_length=100,
+                                  description="Danh sách entry_id cần review (1-100)")
+    action: EntryReviewAction
+    note: str | None = Field(None, description="Bắt buộc nếu reject (áp dụng chung cho tất cả)")
+
+
+class BulkReviewFailedItem(BaseModel):
+    entry_id: int
+    reason: str
+
+
+class BulkReviewOut(BaseModel):
+    """Response bulk review.
+
+    Partial commit pattern: success entries đã commit, failed list để FE show user
+    biết entry nào còn pending. Không rollback toàn bộ vì có thể chỉ 1-2 entry bị
+    lỗi (vd đã approved trước đó) — không nên fail luôn 98 entries còn lại.
+    """
+
+    success_count: int
+    failed: list[BulkReviewFailedItem]
+    total_requested: int
+
+
 class MyEntryItem(BaseModel):
     """SV-10 GET /me/entries — entry của SV + contest info kèm theo."""
 
