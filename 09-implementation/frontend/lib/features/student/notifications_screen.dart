@@ -84,6 +84,8 @@ class NotificationsScreen extends ConsumerWidget {
         title: 'Thông báo',
         leading: canPop
             ? IconButton(
+                // Sprint 3 a11y fix: tooltip cho back arrow IconButton
+                tooltip: 'Quay lại',
                 icon: Icon(Icons.arrow_back, color: context.textMuted),
                 onPressed: () => Navigator.maybePop(context),
               )

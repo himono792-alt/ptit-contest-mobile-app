@@ -73,6 +73,8 @@ class _ForgotPasswordRequestScreenState
         appBar: AppBar(
           title: const Text('Quên mật khẩu'),
           leading: IconButton(
+            // Sprint 3 a11y fix: tooltip cho back arrow IconButton
+            tooltip: 'Quay lại',
             icon: const Icon(Icons.arrow_back),
             onPressed: () => Navigator.of(context).pop(),
           ),
@@ -165,6 +167,9 @@ class _ForgotPasswordRequestScreenState
                     ),
                     const SizedBox(height: 12),
                     Center(
+                      // TextButton.icon đã có label 'Quay về đăng nhập' làm
+                      // accessible name → không cần thêm tooltip (TextButton.icon
+                      // KHÔNG support param tooltip).
                       child: TextButton.icon(
                         icon: const Icon(Icons.arrow_back, size: 14),
                         label: const Text('Quay về đăng nhập'),

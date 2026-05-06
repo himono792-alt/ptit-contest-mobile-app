@@ -132,6 +132,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         appBar: AppBar(
           title: const Text('Cập nhật thông tin'),
           leading: IconButton(
+            // Sprint 3 a11y fix: tooltip cho back arrow IconButton
+            tooltip: 'Quay lại',
             icon: const Icon(Icons.arrow_back),
             onPressed: () => Navigator.maybePop(context),
           ),

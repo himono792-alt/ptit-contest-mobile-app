@@ -32,6 +32,8 @@ class ContestDetailScreen extends ConsumerWidget {
       appBar: MTopBar(
         title: 'Chi tiết',
         leading: IconButton(
+          // Sprint 3 a11y fix (2026-05-07): tooltip làm accessible name.
+          tooltip: 'Quay lại',
           icon: Icon(Icons.arrow_back, color: context.textMuted),
           onPressed: () => context.pop(),
         ),

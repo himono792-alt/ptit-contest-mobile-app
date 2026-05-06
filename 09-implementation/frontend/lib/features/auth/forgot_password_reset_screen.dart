@@ -81,6 +81,8 @@ class _ForgotPasswordResetScreenState
         appBar: AppBar(
           title: const Text('Reset mật khẩu'),
           leading: IconButton(
+            // Sprint 3 a11y fix: tooltip cho back arrow IconButton
+            tooltip: 'Quay lại',
             icon: const Icon(Icons.arrow_back),
             onPressed: () => Navigator.of(context).pop(),
           ),

@@ -194,9 +194,10 @@ class _Header extends StatelessWidget {
       color: context.cardBg,
       child: Row(children: [
         IconButton(
+          // Sprint 3 a11y fix: tooltip cho back arrow IconButton
+          tooltip: 'Quay lại',
           icon: Icon(Icons.arrow_back, size: 20, color: context.textPrimary),
           onPressed: () => context.pop(),
-          tooltip: 'Quay lại',
         ),
         const SizedBox(width: 8),
         Expanded(

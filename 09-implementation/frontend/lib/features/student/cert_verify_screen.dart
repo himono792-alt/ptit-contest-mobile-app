@@ -67,6 +67,8 @@ class _CertVerifyScreenState extends ConsumerState<CertVerifyScreen> {
       appBar: MTopBar(
         title: 'Xác thực chứng nhận',
         leading: IconButton(
+          // Sprint 3 a11y fix: tooltip cho back arrow IconButton
+          tooltip: 'Quay lại',
           icon: Icon(Icons.arrow_back, color: context.textMuted),
           onPressed: () => Navigator.maybePop(context),
         ),
