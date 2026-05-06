@@ -101,6 +101,12 @@ class Pill extends StatelessWidget {
       ),
       child: Text(
         label,
+        // Sprint 4 fix C5 (2026-05-07): softWrap=false + maxLines=1 + overflow=visible
+        // để badge KHÔNG wrap "FINISHE\nD" / "ONGOIN\nG" ở narrow column (admin
+        // table 567px). Container width sẽ flex theo text natural width.
+        softWrap: false,
+        maxLines: 1,
+        overflow: TextOverflow.visible,
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,

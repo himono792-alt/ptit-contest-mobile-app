@@ -12,6 +12,8 @@ class ContestSummary {
   final int? maxEntries;
   final int? hostFacultyId;
   final bool isPublic;
+  // Sprint 4 fix M10 (2026-05-07): count entries APPROVED+PENDING. BE inject.
+  final int entriesCount;
 
   ContestSummary({
     required this.contestId,
@@ -27,6 +29,7 @@ class ContestSummary {
     this.maxEntries,
     this.hostFacultyId,
     required this.isPublic,
+    this.entriesCount = 0,
   });
 
   factory ContestSummary.fromJson(Map<String, dynamic> json) => ContestSummary(
@@ -47,6 +50,7 @@ class ContestSummary {
         maxEntries: json['max_entries'] as int?,
         hostFacultyId: json['host_faculty_id'] as int?,
         isPublic: json['is_public'] as bool,
+        entriesCount: (json['entries_count'] as int?) ?? 0,
       );
 }
 

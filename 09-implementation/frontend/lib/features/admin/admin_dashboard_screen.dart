@@ -22,6 +22,21 @@ final myStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((ref) 
   return res.data as Map<String, dynamic>;
 });
 
+// Sprint 4 fix M7 (2026-05-07): BCN/HOD dashboard stats từ faculty-summary endpoint.
+// 4 cards thay vì 2 → fill space 1440 + meaningful info cho BCN role.
+final hodFacultyStatsProvider =
+    FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
+  final user = ref.read(authProvider).value;
+  if (user == null || !user.isHod) return null;
+  final api = ref.watch(apiClientProvider);
+  try {
+    final res = await api.dio.get('/reports/faculty-summary');
+    return res.data as Map<String, dynamic>;
+  } catch (_) {
+    return null;
+  }
+});
+
 class AdminDashboardScreen extends ConsumerWidget {
   const AdminDashboardScreen({super.key});
 
@@ -73,7 +88,30 @@ class AdminDashboardScreen extends ConsumerWidget {
                   error: (e, _) => _ErrorTile(error: e),
                   data: (data) => data == null ? const SizedBox.shrink() : _AdminStatsRow(data: data),
                 )
-              else
+              else if (user.isHod) ...[
+                // Sprint 4 fix M7 (2026-05-07): BCN/HOD dashboard 4 cards thay vì 2.
+                // Pull faculty-summary (BCN-05) + base contest count (myStats).
+                Builder(builder: (_) {
+                  final asyncHod = ref.watch(hodFacultyStatsProvider);
+                  return asyncHod.when(
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => asyncCount.when(
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
+                      data: (d) => _SimpleStatsRow(
+                          totalContests: d?['total'] ?? 0, user: user),
+                    ),
+                    data: (hod) => hod != null
+                        ? _HodStatsRow(stats: hod, user: user)
+                        : asyncCount.when(
+                            loading: () => const SizedBox.shrink(),
+                            error: (_, __) => const SizedBox.shrink(),
+                            data: (d) => _SimpleStatsRow(
+                                totalContests: d?['total'] ?? 0, user: user),
+                          ),
+                  );
+                }),
+              ] else
                 asyncCount.when(
                   loading: () => const SizedBox.shrink(),
                   error: (_, __) => const SizedBox.shrink(),
@@ -155,8 +193,13 @@ class _SimpleStatsRow extends StatelessWidget {
         const SizedBox(height: 12),
         _StatCard(
             label: 'Vai trò của bạn',
-            value: user.roles.length.toString(),
-            delta: user.roles.join(", ")),
+            // Sprint 4 fix M8 (2026-05-07): value là role chính (vd "HOD", "ADMIN")
+            // hoặc "Đa vai trò" nếu user có nhiều role. Trước đây value=count "1"
+            // confusing — số "1" trông như count cuộc thi/user, không phải role.
+            value: user.roles.length == 1
+                ? user.roles.first.toString()
+                : 'Đa vai trò',
+            delta: user.roles.length > 1 ? user.roles.join(', ') : null),
       ]);
     }
     return Row(children: [
@@ -168,6 +211,70 @@ class _SimpleStatsRow extends StatelessWidget {
               value: user.roles.length.toString(),
               delta: user.roles.join(", "))),
     ]);
+  }
+}
+
+// Sprint 4 fix M7 (2026-05-07): BCN/HOD 4 stats cards thay vì 2 → fill 1440 width
+// + meaningful info BCN role. Pull từ /api/reports/faculty-summary endpoint.
+class _HodStatsRow extends StatelessWidget {
+  final Map<String, dynamic> stats;
+  final dynamic user;
+  const _HodStatsRow({required this.stats, required this.user});
+  @override
+  Widget build(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+    final totalContests = (stats['total_contests'] as int?) ?? 0;
+    final ongoing = (stats['contests_ongoing'] as int?) ?? 0;
+    final pending = (stats['contests_draft_or_pending'] as int?) ?? 0;
+    final cards = [
+      _StatCard(
+        label: 'Tổng cuộc thi',
+        value: '$totalContests',
+        delta: 'khoa của bạn',
+      ),
+      _StatCard(
+        label: 'Đang diễn ra',
+        value: '$ongoing',
+        color: ptitRed,
+      ),
+      _StatCard(
+        label: 'Chờ duyệt',
+        value: '$pending',
+        delta: 'cần BCN action',
+      ),
+      _StatCard(
+        label: 'Vai trò của bạn',
+        value: user.roles.length == 1
+            ? user.roles.first.toString()
+            : 'Đa vai trò',
+        delta: user.roles.length > 1 ? user.roles.join(', ') : null,
+      ),
+    ];
+    if (w < 600) {
+      // Mobile: 2x2 grid stack
+      return Column(children: [
+        Row(children: [
+          Expanded(child: cards[0]),
+          const SizedBox(width: 10),
+          Expanded(child: cards[1]),
+        ]),
+        const SizedBox(height: 10),
+        Row(children: [
+          Expanded(child: cards[2]),
+          const SizedBox(width: 10),
+          Expanded(child: cards[3]),
+        ]),
+      ]);
+    }
+    // Desktop ≥600: 4 columns horizontal
+    return Row(
+      children: [
+        for (int i = 0; i < cards.length; i++) ...[
+          if (i > 0) const SizedBox(width: 14),
+          Expanded(child: cards[i]),
+        ],
+      ],
+    );
   }
 }
 

@@ -16,6 +16,20 @@ final adminContestsParamsProvider = StateProvider<_AdminContestsParams>(
   (ref) => const _AdminContestsParams(),
 );
 
+// Sprint 4 fix M9 (2026-05-07): admin cuộc thi sort theo status priority
+// thay vì ID arbitrary. Match pattern Sprint 2 C1 (Contest List SV).
+const _adminStatusOrder = {
+  'REG_OPEN': 0,
+  'ONGOING': 1,
+  'PUBLISHED': 2,
+  'REG_CLOSED': 3,
+  'PROPOSED': 4,
+  'DRAFT': 5,
+  'REVISION_REQUESTED': 6,
+  'FINISHED': 7,
+  'CANCELLED': 8,
+};
+
 final adminContestsProvider =
     FutureProvider.autoDispose<ContestListResponse>((ref) async {
   final params = ref.watch(adminContestsParamsProvider);
@@ -26,7 +40,21 @@ final adminContestsProvider =
     if (params.q != null && params.q!.isNotEmpty) 'q': params.q,
     if (params.status != null) 'status': params.status,
   });
-  return ContestListResponse.fromJson(res.data);
+  final response = ContestListResponse.fromJson(res.data);
+  // Sort: status priority asc, tie-break startAt desc (newest first)
+  final sortedItems = List<ContestSummary>.from(response.items)
+    ..sort((a, b) {
+      final orderA = _adminStatusOrder[a.status] ?? 99;
+      final orderB = _adminStatusOrder[b.status] ?? 99;
+      if (orderA != orderB) return orderA.compareTo(orderB);
+      return b.startAt.compareTo(a.startAt);
+    });
+  return ContestListResponse(
+    items: sortedItems,
+    total: response.total,
+    page: response.page,
+    size: response.size,
+  );
 });
 
 class AdminContestsScreen extends ConsumerStatefulWidget {
@@ -336,7 +364,13 @@ class _ContestRowState extends ConsumerState<_ContestRow> {
           SizedBox(
             width: 80,
             child: Text(
-              c.maxEntries != null ? 'max ${c.maxEntries}' : '—',
+              // Sprint 4 fix M10 (2026-05-07): format "X/max" thay vì "max N".
+              // Admin/BCN cần thấy actual count đã đăng ký, không phải chỉ max setting.
+              // Nếu max_entries null = unlimited, chỉ hiện count. Nếu count = 0 + max
+              // unlimited → "—".
+              c.maxEntries != null
+                  ? '${c.entriesCount}/${c.maxEntries}'
+                  : (c.entriesCount > 0 ? '${c.entriesCount}' : '—'),
               style: TextStyle(fontSize: 12, color: context.textMuted),
             ),
           ),
