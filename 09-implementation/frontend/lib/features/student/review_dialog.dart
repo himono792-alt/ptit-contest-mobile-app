@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 
@@ -114,13 +115,13 @@ class _ReviewDialogState extends ConsumerState<ReviewDialog> {
                         fontSize: 16, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 4),
                 Text(widget.contestTitle,
-                    style: const TextStyle(fontSize: 12, color: textMuted)),
+                    style: TextStyle(fontSize: 12, color: context.textMuted)),
                 const SizedBox(height: 18),
-                const Text('Rating *',
+                Text('Rating *',
                     style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: textPrimary)),
+                        color: context.textPrimary)),
                 const SizedBox(height: 8),
                 Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -133,7 +134,7 @@ class _ReviewDialogState extends ConsumerState<ReviewDialog> {
                             : () => setState(() => _rating = star),
                         icon: Icon(on ? Icons.star : Icons.star_border,
                             size: 36,
-                            color: on ? Colors.amber.shade600 : textMuted),
+                            color: on ? Colors.amber.shade600 : context.textMuted),
                       );
                     })),
                 Center(
@@ -143,16 +144,16 @@ class _ReviewDialogState extends ConsumerState<ReviewDialog> {
                         : '$_rating sao — ${_ratingLabel(_rating)}',
                     style: TextStyle(
                         fontSize: 12,
-                        color: _rating == 0 ? textMuted : textPrimary,
+                        color: _rating == 0 ? context.textMuted : context.textPrimary,
                         fontWeight: FontWeight.w600),
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text('Bình luận (tuỳ chọn)',
+                Text('Bình luận (tuỳ chọn)',
                     style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: textPrimary)),
+                        color: context.textPrimary)),
                 const SizedBox(height: 6),
                 TextField(
                   controller: _comment,

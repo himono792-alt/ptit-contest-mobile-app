@@ -19,6 +19,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/download_helper.dart';
 import '../../core/theme.dart';
@@ -142,7 +143,7 @@ class _ContestAdminDetailScreenState
               controller: _tab,
               isScrollable: true,
               labelColor: ptitRed,
-              unselectedLabelColor: textMuted,
+              unselectedLabelColor: context.textMuted,
               indicatorColor: ptitRed,
               indicatorWeight: 2.5,
               labelStyle: GoogleFonts.plusJakartaSans(
@@ -159,7 +160,7 @@ class _ContestAdminDetailScreenState
               ],
             ),
           ),
-          const Divider(height: 1, color: cardBorder),
+          Divider(height: 1, color: context.cardBorder),
           Expanded(
             child: TabBarView(
               controller: _tab,
@@ -193,7 +194,7 @@ class _Header extends StatelessWidget {
       color: Colors.white,
       child: Row(children: [
         IconButton(
-          icon: const Icon(Icons.arrow_back, size: 20, color: textPrimary),
+          icon: Icon(Icons.arrow_back, size: 20, color: context.textPrimary),
           onPressed: () => context.pop(),
           tooltip: 'Quay lại',
         ),
@@ -202,39 +203,39 @@ class _Header extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
               Text('#${contest['contest_id']}',
-                  style: const TextStyle(fontSize: 11, color: textMuted)),
+                  style: TextStyle(fontSize: 11, color: context.textMuted)),
               const SizedBox(width: 8),
               Pill.status(contest['status'] as String),
               const SizedBox(width: 6),
               Pill(
                 label: contest['delivery_mode'] ?? 'HYBRID',
-                color: textMuted,
+                color: context.textMuted,
                 bg: const Color(0xFFF3F4F6),
               ),
               const SizedBox(width: 6),
               Pill(
                 label: contest['participation_mode'] ?? 'INDIVIDUAL',
-                color: textMuted,
+                color: context.textMuted,
                 bg: const Color(0xFFF3F4F6),
               ),
             ]),
             const SizedBox(height: 4),
             Text(
               contest['title'] as String,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 19,
                 fontWeight: FontWeight.w800,
-                color: textPrimary,
+                color: context.textPrimary,
                 letterSpacing: -0.4,
               ),
             ),
             const SizedBox(height: 2),
             Text('Slug: ${contest['slug']}',
-                style: const TextStyle(fontSize: 11, color: textMuted)),
+                style: TextStyle(fontSize: 11, color: context.textMuted)),
           ]),
         ),
         IconButton(
-          icon: const Icon(Icons.refresh, color: textMuted, size: 20),
+          icon: Icon(Icons.refresh, color: context.textMuted, size: 20),
           tooltip: 'Refresh',
           onPressed: onRefresh,
         ),
@@ -332,11 +333,11 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
         // Workflow timeline
         MCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Workflow tiếp theo',
+            Text('Workflow tiếp theo',
                 style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: textPrimary)),
+                    color: context.textPrimary)),
             const SizedBox(height: 8),
             Wrap(spacing: 10, runSpacing: 10, children: [
               if (st == 'DRAFT' || st == 'REVISION_REQUESTED')
@@ -387,9 +388,9 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
               ),
             ]),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               'Workflow chuẩn: DRAFT → submit QĐ1 → BCN duyệt → APPROVED → mở reg → SV đăng ký → ONGOING → judge chấm → FINISHED → tính kết quả → submit QĐ2 → BCN duyệt → publish → cấp cert.',
-              style: TextStyle(fontSize: 11, color: textMuted, height: 1.5),
+              style: TextStyle(fontSize: 11, color: context.textMuted, height: 1.5),
             ),
           ]),
         ),
@@ -446,8 +447,8 @@ class _ActionBtn extends StatelessWidget {
       label: Text(label),
       style: FilledButton.styleFrom(
         backgroundColor: bg ?? Colors.white,
-        foregroundColor: fg ?? textPrimary,
-        side: const BorderSide(color: cardBorder),
+        foregroundColor: fg ?? context.textPrimary,
+        side: BorderSide(color: context.cardBorder),
         elevation: 0,
         textStyle:
             GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600),
@@ -470,12 +471,12 @@ class _InfoRow extends StatelessWidget {
           SizedBox(
             width: 160,
             child: Text(k,
-                style: const TextStyle(
-                    fontSize: 11.5, color: textMuted, letterSpacing: 0.2)),
+                style: TextStyle(
+                    fontSize: 11.5, color: context.textMuted, letterSpacing: 0.2)),
           ),
           Expanded(
               child:
-                  Text(v, style: const TextStyle(fontSize: 13, color: textPrimary))),
+                  Text(v, style: TextStyle(fontSize: 13, color: context.textPrimary))),
         ]),
       );
 }
@@ -635,10 +636,10 @@ class _RoundCardState extends ConsumerState<_RoundCard> {
                 style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
           ),
           if (r['round_type'] != null && r['round_type'] != 'OTHER')
-            Pill(label: r['round_type'].toString(), color: infoBlue, bg: infoSoft),
+            Pill(label: r['round_type'].toString(), color: context.infoBlue, bg: context.infoSoft),
           const SizedBox(width: 8),
           IconButton(
-            icon: const Icon(Icons.bar_chart, size: 18, color: warnOrange),
+            icon: Icon(Icons.bar_chart, size: 18, color: context.warnOrange),
             tooltip: 'Compute kết quả round (sau khi judge chấm xong)',
             onPressed: _computeRoundResults,
           ),
@@ -646,7 +647,7 @@ class _RoundCardState extends ConsumerState<_RoundCard> {
         if ((r['description'] ?? '').toString().isNotEmpty) ...[
           const SizedBox(height: 4),
           Text(r['description'] as String,
-              style: const TextStyle(fontSize: 12, color: textMuted)),
+              style: TextStyle(fontSize: 12, color: context.textMuted)),
         ],
         const SizedBox(height: 8),
         Row(children: [
@@ -666,10 +667,10 @@ class _RoundCardState extends ConsumerState<_RoundCard> {
                     child: Center(child: CircularProgressIndicator(color: ptitRed))),
               if (_criteria != null) ...[
                 if (_criteria!.isEmpty)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.all(8),
                     child: Text('Chưa có criterion nào',
-                        style: TextStyle(fontSize: 12, color: textMuted)),
+                        style: TextStyle(fontSize: 12, color: context.textMuted)),
                   )
                 else
                   ..._criteria!.map((c) {
@@ -682,8 +683,8 @@ class _RoundCardState extends ConsumerState<_RoundCard> {
                                 style: const TextStyle(fontSize: 12))),
                         const SizedBox(width: 8),
                         Text('Max ${m['max_score']} · ${m['weight_percent'] ?? 0}%',
-                            style: const TextStyle(
-                                fontSize: 11, color: textMuted)),
+                            style: TextStyle(
+                                fontSize: 11, color: context.textMuted)),
                       ]),
                     );
                   }),
@@ -977,7 +978,7 @@ class _EntriesTabState extends ConsumerState<_EntriesTab> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: action == 'approve' ? successGreen : ptitRed,
+              backgroundColor: action == 'approve' ? context.successGreen : ptitRed,
             ),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(actionLabel.toUpperCase(),
@@ -1009,7 +1010,7 @@ class _EntriesTabState extends ConsumerState<_EntriesTab> {
           : 'Đã $actionLabel $successCount/${ids.length}, ${failed.length} lỗi (xem console)';
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(msg),
-        backgroundColor: failed.isEmpty ? successGreen : Colors.orange,
+        backgroundColor: failed.isEmpty ? context.successGreen : Colors.orange,
       ));
       if (failed.isNotEmpty) {
         debugPrint('Bulk review failed items: $failed');
@@ -1098,7 +1099,7 @@ class _EntriesTabState extends ConsumerState<_EntriesTab> {
                         final isSelected = _selectedIds.contains(entryId);
                         return MCard(
                           backgroundColor:
-                              isSelected ? ptitRedSoft.withValues(alpha: 0.3) : null,
+                              isSelected ? context.ptitRedSoft.withValues(alpha: 0.3) : null,
                           child: Row(children: [
                             // Checkbox: chỉ hiện cho PENDING (KHÔNG cho approved/rejected)
                             if (isPending)
@@ -1133,16 +1134,16 @@ class _EntriesTabState extends ConsumerState<_EntriesTab> {
                                         ' · Team ${e['team_id'] ?? '—'}'
                                         ' · Đăng ký ${_safeFmtIso(e['created_at'])}'
                                         '${(e['registration_note'] ?? '').toString().isNotEmpty ? " · \"${e['registration_note']}\"" : ""}',
-                                        style: const TextStyle(
-                                            fontSize: 11, color: textMuted)),
+                                        style: TextStyle(
+                                            fontSize: 11, color: context.textMuted)),
                                   ]),
                             ),
                             Pill.status(st),
                             const SizedBox(width: 10),
                             if (isPending) ...[
                               IconButton(
-                                icon: const Icon(Icons.check,
-                                    color: successGreen, size: 20),
+                                icon: Icon(Icons.check,
+                                    color: context.successGreen, size: 20),
                                 tooltip: 'Duyệt',
                                 onPressed: () => _decide(entryId, 'approve'),
                               ),
@@ -1182,16 +1183,16 @@ class _EntriesTabState extends ConsumerState<_EntriesTab> {
                 ),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Text('Đã chọn ${_selectedIds.length} entries',
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: textPrimary)),
+                          color: context.textPrimary)),
                   const SizedBox(width: 16),
                   ElevatedButton.icon(
                     icon: const Icon(Icons.check, size: 16),
                     label: const Text('Duyệt'),
                     style: ElevatedButton.styleFrom(
-                        backgroundColor: successGreen,
+                        backgroundColor: context.successGreen,
                         foregroundColor: Colors.white),
                     onPressed: () => _bulkDecide('approve'),
                   ),
@@ -1255,9 +1256,9 @@ class _JudgingTabState extends ConsumerState<_JudgingTab> {
         const Text('Phân công Judge cho từng round',
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
         const SizedBox(height: 4),
-        const Text(
+        Text(
             'Mỗi assignment = 1 judge chấm 1 entry trong 1 round. Cần entry_id (ID đăng ký SV) + judge_id (ID judge từ tab Quản lý user).',
-            style: TextStyle(fontSize: 11, color: textMuted)),
+            style: TextStyle(fontSize: 11, color: context.textMuted)),
         const SizedBox(height: 12),
         Expanded(
           child: asyncRounds.when(
@@ -1497,7 +1498,7 @@ class _ResultsTabState extends ConsumerState<_ResultsTab> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Đã tải về: $filename'),
-          backgroundColor: successGreen,
+          backgroundColor: context.successGreen,
         ));
       } on UnsupportedError catch (e) {
         if (!mounted) return;
@@ -1567,13 +1568,13 @@ class _ResultsTabState extends ConsumerState<_ResultsTab> {
           _ActionBtn(
               label: '2. Submit QĐ2 cho BCN',
               icon: Icons.send,
-              bg: warnOrange,
+              bg: context.warnOrange,
               fg: Colors.white,
               onTap: _submitQd2),
           _ActionBtn(
               label: '3. Publish results (cần BCN OK)',
               icon: Icons.publish,
-              bg: successGreen,
+              bg: context.successGreen,
               fg: Colors.white,
               onTap: _publish),
           // Phase 2 sprint 1 step 3 (2026-05-06): Excel export
@@ -1586,7 +1587,7 @@ class _ResultsTabState extends ConsumerState<_ResultsTab> {
         ]),
         const SizedBox(height: 6),
         Text('Status hiện tại: $st',
-            style: const TextStyle(fontSize: 11, color: textMuted)),
+            style: TextStyle(fontSize: 11, color: context.textMuted)),
         const SizedBox(height: 14),
         const Text('Bảng xếp hạng (rank · award)',
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
@@ -1629,15 +1630,15 @@ class _ResultsTabState extends ConsumerState<_ResultsTab> {
                                       padding: const EdgeInsets.only(top: 4),
                                       child: Pill(
                                         label: r['award_title'] as String,
-                                        color: warnOrange,
-                                        bg: warnSoft,
+                                        color: context.warnOrange,
+                                        bg: context.warnSoft,
                                       ),
                                     ),
                                 ]),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.edit_outlined,
-                                size: 18, color: textMuted),
+                            icon: Icon(Icons.edit_outlined,
+                                size: 18, color: context.textMuted),
                             tooltip: 'Sửa giải thưởng',
                             onPressed: () => _editAward(
                                 r['contest_result_id'] as int,
@@ -1746,9 +1747,9 @@ class _CertsTabState extends ConsumerState<_CertsTab> {
           ),
         ]),
         const SizedBox(height: 4),
-        const Text(
+        Text(
             'Workflow: tạo template → BCN duyệt (QĐ3) qua tab Phê duyệt → BTC activate → cấp cert hàng loạt cho results.',
-            style: TextStyle(fontSize: 11, color: textMuted)),
+            style: TextStyle(fontSize: 11, color: context.textMuted)),
         const SizedBox(height: 12),
         Expanded(
           flex: 2,
@@ -1782,14 +1783,14 @@ class _CertsTabState extends ConsumerState<_CertsTab> {
                                         label: isApproved
                                             ? 'BCN duyệt OK'
                                             : 'Chờ BCN duyệt (QĐ3)',
-                                        color: isApproved ? successGreen : warnOrange,
-                                        bg: isApproved ? successSoft : warnSoft),
+                                        color: isApproved ? context.successGreen : context.warnOrange,
+                                        bg: isApproved ? context.successSoft : context.warnSoft),
                                     const SizedBox(width: 6),
                                     if (isActive)
-                                      const Pill(
+                                      Pill(
                                         label: 'ACTIVE',
-                                        color: successGreen,
-                                        bg: successSoft,
+                                        color: context.successGreen,
+                                        bg: context.successSoft,
                                       ),
                                   ]),
                                 ]),
@@ -1872,9 +1873,9 @@ class _AddCertTemplateDialogState extends State<_AddCertTemplateDialog> {
                 controller: _name,
                 decoration: const InputDecoration(labelText: 'Tên template *')),
             const SizedBox(height: 10),
-            const Text(
+            Text(
                 'HTML template — dùng {{full_name}}, {{student_code}}, {{award_title}}, {{contest_title}}, {{issued_date}}, {{qr_code}}',
-                style: TextStyle(fontSize: 11, color: textMuted)),
+                style: TextStyle(fontSize: 11, color: context.textMuted)),
             const SizedBox(height: 6),
             Expanded(
               child: TextField(
@@ -1940,11 +1941,11 @@ class _Empty extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(32),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.inbox_outlined, size: 48, color: textMuted),
+            Icon(Icons.inbox_outlined, size: 48, color: context.textMuted),
             const SizedBox(height: 10),
             Text(msg,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: textMuted, fontSize: 13)),
+                style: TextStyle(color: context.textMuted, fontSize: 13)),
           ]),
         ),
       );
@@ -1963,7 +1964,7 @@ class _ErrorView extends StatelessWidget {
             const SizedBox(height: 12),
             Text('Lỗi: ${_msgOf(error)}',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: textMuted, fontSize: 12)),
+                style: TextStyle(color: context.textMuted, fontSize: 12)),
             const SizedBox(height: 16),
             FilledButton(onPressed: onBack, child: const Text('Quay lại')),
           ]),

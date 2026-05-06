@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import 'admin_contests_screen.dart';
@@ -214,8 +215,8 @@ class _WideAdminLayout extends StatelessWidget {
                 Container(
                   width: 32,
                   height: 32,
-                  decoration: const BoxDecoration(
-                      color: ptitRedSoft, shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                      color: context.ptitRedSoft, shape: BoxShape.circle),
                   child: Center(
                     child: Text(
                       user.fullName.split(' ').last.substring(0, 1).toUpperCase(),
@@ -302,12 +303,12 @@ class _MobileAdminLayoutState extends State<_MobileAdminLayout> {
       backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
         title: Text(widget.activeLabel,
-            style: const TextStyle(
-                fontSize: 15, fontWeight: FontWeight.w800, color: textPrimary)),
+            style: TextStyle(
+                fontSize: 15, fontWeight: FontWeight.w800, color: context.textPrimary)),
         backgroundColor: Colors.white,
-        foregroundColor: textPrimary,
+        foregroundColor: context.textPrimary,
         elevation: 0,
-        iconTheme: const IconThemeData(color: textMuted),
+        iconTheme: IconThemeData(color: context.textMuted),
       ),
       drawer: _AdminDrawer(
         items: widget.items,
@@ -327,7 +328,7 @@ class _MobileAdminLayoutState extends State<_MobileAdminLayout> {
         type: BottomNavigationBarType.fixed,
         currentIndex: widget.activeIdx < bottomItems.length ? widget.activeIdx : 0,
         selectedItemColor: ptitRed,
-        unselectedItemColor: textMuted,
+        unselectedItemColor: context.textMuted,
         backgroundColor: Colors.white,
         showUnselectedLabels: true,
         selectedFontSize: 10.5,
@@ -416,20 +417,20 @@ class _AdminDrawer extends StatelessWidget {
               final isActive = i == activeIdx;
               return ListTile(
                 leading: Icon(items[i].icon,
-                    color: isActive ? ptitRed : textMuted, size: 20),
+                    color: isActive ? ptitRed : context.textMuted, size: 20),
                 title: Text(items[i].label,
                     style: TextStyle(
                         fontSize: 14,
-                        color: isActive ? ptitRed : textPrimary,
+                        color: isActive ? ptitRed : context.textPrimary,
                         fontWeight:
                             isActive ? FontWeight.w700 : FontWeight.w500)),
-                tileColor: isActive ? ptitRedSoft : null,
+                tileColor: isActive ? context.ptitRedSoft : null,
                 onTap: () => onSwitchTab(i),
               );
             }),
           ),
         ),
-        const Divider(height: 1, color: cardBorder),
+        Divider(height: 1, color: context.cardBorder),
         // User footer
         Container(
           padding: const EdgeInsets.all(14),
@@ -438,7 +439,7 @@ class _AdminDrawer extends StatelessWidget {
               width: 36,
               height: 36,
               decoration:
-                  const BoxDecoration(color: ptitRedSoft, shape: BoxShape.circle),
+                  BoxDecoration(color: context.ptitRedSoft, shape: BoxShape.circle),
               child: Center(
                 child: Text(
                   user.fullName.split(' ').last.substring(0, 1).toUpperCase(),
@@ -461,7 +462,7 @@ class _AdminDrawer extends StatelessWidget {
                     Text(user.roles.join(','),
                         overflow: TextOverflow.ellipsis,
                         style:
-                            const TextStyle(color: textMuted, fontSize: 11)),
+                            TextStyle(color: context.textMuted, fontSize: 11)),
                   ]),
             ),
             IconButton(

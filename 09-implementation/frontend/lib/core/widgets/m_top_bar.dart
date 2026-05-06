@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../app_colors.dart';
 import '../theme.dart';
 
 class MTopBar extends StatelessWidget implements PreferredSizeWidget {
@@ -15,9 +16,9 @@ class MTopBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 56,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(bottom: BorderSide(color: cardBorder)),
+        border: Border(bottom: BorderSide(color: context.cardBorder)),
       ),
       child: SafeArea(
         bottom: false,
@@ -28,7 +29,7 @@ class MTopBar extends StatelessWidget implements PreferredSizeWidget {
               child: Text(
                 title,
                 style: GoogleFonts.plusJakartaSans(
-                  color: textPrimary,
+                  color: context.textPrimary,
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.5,

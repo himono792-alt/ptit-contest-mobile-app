@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/models/submission.dart';
 import '../../core/theme.dart';
@@ -127,7 +128,7 @@ class _SubmissionScreenState extends ConsumerState<SubmissionScreen> {
           content: Text(_pendingFile != null
               ? 'Nộp bài + upload file thành công'
               : 'Nộp bài thành công'),
-          backgroundColor: successGreen,
+          backgroundColor: context.successGreen,
         ),
       );
       _titleCtrl.clear();
@@ -157,7 +158,7 @@ class _SubmissionScreenState extends ConsumerState<SubmissionScreen> {
         appBar: MTopBar(
           title: 'Nộp bài thi',
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: textMuted),
+            icon: Icon(Icons.arrow_back, color: context.textMuted),
             onPressed: () => context.pop(),
           ),
         ),
@@ -172,7 +173,7 @@ class _SubmissionScreenState extends ConsumerState<SubmissionScreen> {
                     height: 60,
                     child: Center(child: CircularProgressIndicator(color: ptitRed))),
                 error: (e, _) => MCard(
-                  backgroundColor: ptitRedSoft,
+                  backgroundColor: context.ptitRedSoft,
                   child: Text('$e', style: const TextStyle(color: ptitRed, fontSize: 12)),
                 ),
                 data: (s) => s == null
@@ -218,17 +219,17 @@ class _SubmissionScreenState extends ConsumerState<SubmissionScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: _pendingFile != null ? successSoft : appBg,
+                  color: _pendingFile != null ? context.successSoft : context.appBg,
                   border: Border.all(
-                      color: _pendingFile != null ? successGreen : cardBorder,
+                      color: _pendingFile != null ? context.successGreen : context.cardBorder,
                       width: 1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: _pendingFile == null
                     ? InkWell(
                         onTap: _pickFile,
-                        child: Row(children: const [
-                          Icon(Icons.attach_file, color: textMuted, size: 20),
+                        child: Row(children: [
+                          Icon(Icons.attach_file, color: context.textMuted, size: 20),
                           SizedBox(width: 10),
                           Expanded(
                             child: Column(
@@ -237,13 +238,13 @@ class _SubmissionScreenState extends ConsumerState<SubmissionScreen> {
                                 Text('Đính kèm file (tuỳ chọn)',
                                     style: TextStyle(
                                         fontSize: 13,
-                                        color: textPrimary,
+                                        color: context.textPrimary,
                                         fontWeight: FontWeight.w600)),
                                 SizedBox(height: 2),
                                 Text(
                                     'PDF, Word, Excel, PPT, ảnh, ZIP — tối đa 10 MB',
                                     style: TextStyle(
-                                        fontSize: 11, color: textMuted)),
+                                        fontSize: 11, color: context.textMuted)),
                               ],
                             ),
                           ),
@@ -251,23 +252,23 @@ class _SubmissionScreenState extends ConsumerState<SubmissionScreen> {
                         ]),
                       )
                     : Row(children: [
-                        const Icon(Icons.insert_drive_file,
-                            color: successGreen, size: 20),
+                        Icon(Icons.insert_drive_file,
+                            color: context.successGreen, size: 20),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(_pendingFile!.name,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w700,
-                                      color: successGreen),
+                                      color: context.successGreen),
                                   overflow: TextOverflow.ellipsis),
                               Text(
                                   '${(_pendingFile!.size / 1024).toStringAsFixed(1)} KB',
-                                  style: const TextStyle(
-                                      fontSize: 11, color: textMuted)),
+                                  style: TextStyle(
+                                      fontSize: 11, color: context.textMuted)),
                             ],
                           ),
                         ),
@@ -286,11 +287,11 @@ class _SubmissionScreenState extends ConsumerState<SubmissionScreen> {
                 LinearProgressIndicator(
                   value: _uploadProgress,
                   color: ptitRed,
-                  backgroundColor: ptitRedSoft,
+                  backgroundColor: context.ptitRedSoft,
                 ),
                 Text(
                     'Đang upload file: ${(_uploadProgress! * 100).toStringAsFixed(0)}%',
-                    style: const TextStyle(fontSize: 11, color: textMuted)),
+                    style: TextStyle(fontSize: 11, color: context.textMuted)),
               ],
               const SizedBox(height: 16),
               FilledButton.icon(
@@ -308,14 +309,14 @@ class _SubmissionScreenState extends ConsumerState<SubmissionScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                    color: infoSoft, borderRadius: BorderRadius.circular(8)),
-                child: const Row(children: [
-                  Icon(Icons.info_outline, size: 16, color: infoBlue),
+                    color: context.infoSoft, borderRadius: BorderRadius.circular(8)),
+                child: Row(children: [
+                  Icon(Icons.info_outline, size: 16, color: context.infoBlue),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Bạn có thể nộp lại nhiều lần trước hạn. Mỗi lần là 1 version, hệ thống tự dùng version mới nhất.',
-                      style: TextStyle(fontSize: 12, color: infoBlue, height: 1.4),
+                      style: TextStyle(fontSize: 12, color: context.infoBlue, height: 1.4),
                     ),
                   ),
                 ]),
@@ -334,13 +335,13 @@ class _NoSubmissionYet extends StatelessWidget {
   Widget build(BuildContext context) => MCard(
         backgroundColor: const Color(0xFFFAFAFA),
         flat: true,
-        child: const Row(children: [
-          Icon(Icons.upload_outlined, size: 18, color: textMuted),
+        child: Row(children: [
+          Icon(Icons.upload_outlined, size: 18, color: context.textMuted),
           SizedBox(width: 8),
           Expanded(
             child: Text(
               'Bạn chưa nộp version nào trong round này.',
-              style: TextStyle(color: textMuted, fontSize: 12),
+              style: TextStyle(color: context.textMuted, fontSize: 12),
             ),
           ),
         ]),
@@ -366,18 +367,18 @@ class _ExistingSubmission extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
               'Version ${sub.currentVersionNo} · tổng ${sub.versions.length} versions',
-              style: const TextStyle(color: textMuted, fontSize: 12)),
+              style: TextStyle(color: context.textMuted, fontSize: 12)),
           if (sub.submittedAt != null)
             Text(
                 'Submit gần nhất: ${fmt.format(sub.submittedAt!.toLocal())}',
-                style: const TextStyle(color: textMuted, fontSize: 12)),
+                style: TextStyle(color: context.textMuted, fontSize: 12)),
           if (sub.versions.isNotEmpty) ...[
-            const Divider(height: 16, color: cardBorder),
+            Divider(height: 16, color: context.cardBorder),
             ...sub.versions.reversed.take(3).map((v) => Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
                       'v${v.versionNo} · ${v.title ?? "(no title)"} · ${fmt.format(v.submittedAt.toLocal())}',
-                      style: const TextStyle(fontSize: 12, color: textPrimary)),
+                      style: TextStyle(fontSize: 12, color: context.textPrimary)),
                 )),
           ],
         ],

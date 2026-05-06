@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/auth/biometric_service.dart';
 import '../../core/secure_storage.dart';
@@ -95,7 +96,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: appBg,
+      backgroundColor: context.appBg,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -141,7 +142,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
-                      color: textPrimary,
+                      color: context.textPrimary,
                       letterSpacing: -0.85,
                       height: 1.15,
                     )),
@@ -149,7 +150,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Text('Đăng nhập với email PTIT để tiếp tục.',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
-                      color: textMuted,
+                      color: context.textMuted,
                       fontWeight: FontWeight.w500,
                     )),
                 const SizedBox(height: 26),
@@ -183,7 +184,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       icon: Icon(
                           _showPwd ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                           size: 18,
-                          color: textMuted),
+                          color: context.textMuted),
                       onPressed: () => setState(() => _showPwd = !_showPwd),
                     ),
                     hintText: '••••••••',
@@ -221,7 +222,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
-                      color: ptitRedSoft,
+                      color: context.ptitRedSoft,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: ptitRed.withValues(alpha: 0.3)),
                     ),
@@ -282,18 +283,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 const SizedBox(height: 18),
                 Row(children: [
-                  Expanded(child: Container(height: 1, color: cardBorder)),
+                  Expanded(child: Container(height: 1, color: context.cardBorder)),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     child: Text('HOẶC',
                         style: GoogleFonts.plusJakartaSans(
-                          color: textFaint,
+                          color: context.textFaint,
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 1,
                         )),
                   ),
-                  Expanded(child: Container(height: 1, color: cardBorder)),
+                  Expanded(child: Container(height: 1, color: context.cardBorder)),
                 ]),
                 const SizedBox(height: 18),
                 OutlinedButton.icon(
@@ -315,13 +316,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(children: [
-                          const Icon(Icons.info_outline, size: 14, color: textMuted),
+                          Icon(Icons.info_outline, size: 14, color: context.textMuted),
                           const SizedBox(width: 6),
                           Text('Tài khoản demo',
                               style: GoogleFonts.plusJakartaSans(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
-                                  color: textPrimary,
+                                  color: context.textPrimary,
                                   letterSpacing: 0.3)),
                         ]),
                         const SizedBox(height: 6),
@@ -332,7 +333,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         Text('Mật khẩu chung: abc123',
                             style: GoogleFonts.plusJakartaSans(
                                 fontSize: 10.5,
-                                color: textMuted,
+                                color: context.textMuted,
                                 fontWeight: FontWeight.w500)),
                       ]),
                 ),
@@ -343,7 +344,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: Text('POST /api/auth/login · JWT HS256',
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 10,
-                        color: textFaint,
+                        color: context.textFaint,
                         fontWeight: FontWeight.w500,
                       )),
                 ),
@@ -364,7 +365,7 @@ class _Label extends StatelessWidget {
   Widget build(BuildContext context) => Text(text,
       style: GoogleFonts.plusJakartaSans(
         fontSize: 12,
-        color: textMuted,
+        color: context.textMuted,
         fontWeight: FontWeight.w600,
         letterSpacing: -0.1,
       ));
@@ -397,7 +398,7 @@ class _DemoAccountRow extends StatelessWidget {
         Text(email,
             style: GoogleFonts.jetBrainsMono(
                 fontSize: 10.5,
-                color: textPrimary,
+                color: context.textPrimary,
                 fontWeight: FontWeight.w500)),
       ]),
     );

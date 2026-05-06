@@ -18,6 +18,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
+import '../app_colors.dart';
 import '../theme.dart';
 
 /// Color palette neutral xám nhạt (chọn C1 — KHÔNG dùng đỏ PTIT vì gây nhức mắt).
@@ -63,7 +64,7 @@ class MCardSkeleton extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: cardBorder),
+          border: Border.all(color: context.cardBorder),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,7 +163,7 @@ class MListItemSkeleton extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: cardBorder),
+          border: Border.all(color: context.cardBorder),
         ),
         child: Row(children: [
           // Rank circle

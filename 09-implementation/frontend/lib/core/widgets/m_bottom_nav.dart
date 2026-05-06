@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../app_colors.dart';
 import '../theme.dart';
 
 class MBottomNav extends StatelessWidget {
@@ -10,9 +11,9 @@ class MBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: cardBorder)),
+        border: Border(top: BorderSide(color: context.cardBorder)),
       ),
       padding: const EdgeInsets.fromLTRB(0, 8, 0, 14),
       child: SafeArea(
@@ -35,13 +36,13 @@ class MBottomNav extends StatelessWidget {
                           width: 28,
                           height: 28,
                           decoration: BoxDecoration(
-                            color: active ? ptitRedSoft : const Color(0xFFF3F4F6),
+                            color: active ? context.ptitRedSoft : const Color(0xFFF3F4F6),
                             borderRadius: BorderRadius.circular(7),
                           ),
                           child: Icon(
                             active ? item.activeIcon : item.icon,
                             size: 16,
-                            color: active ? ptitRed : textMuted,
+                            color: active ? ptitRed : context.textMuted,
                           ),
                         ),
                         if (item.badge != null && item.badge! > 0)
@@ -75,7 +76,7 @@ class MBottomNav extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 9.5,
-                            color: active ? ptitRed : textMuted,
+                            color: active ? ptitRed : context.textMuted,
                             fontWeight: active ? FontWeight.w700 : FontWeight.w500,
                           )),
                     ],

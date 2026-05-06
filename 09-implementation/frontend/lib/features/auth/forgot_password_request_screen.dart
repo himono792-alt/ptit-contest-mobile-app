@@ -7,6 +7,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import 'forgot_password_reset_screen.dart';
@@ -68,7 +69,7 @@ class _ForgotPasswordRequestScreenState
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
-        backgroundColor: appBg,
+        backgroundColor: context.appBg,
         appBar: AppBar(
           title: const Text('Quên mật khẩu'),
           leading: IconButton(
@@ -90,7 +91,7 @@ class _ForgotPasswordRequestScreenState
                         width: 64,
                         height: 64,
                         decoration: BoxDecoration(
-                          color: ptitRedSoft,
+                          color: context.ptitRedSoft,
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: const Icon(Icons.lock_reset,
@@ -98,20 +99,20 @@ class _ForgotPasswordRequestScreenState
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Text(
+                    Text(
                       'Quên mật khẩu?',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
-                          color: textPrimary,
+                          color: context.textPrimary,
                           letterSpacing: -0.5),
                     ),
                     const SizedBox(height: 6),
-                    const Text(
+                    Text(
                       'Nhập email PTIT để nhận link reset mật khẩu.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 13, color: textMuted),
+                      style: TextStyle(fontSize: 13, color: context.textMuted),
                     ),
                     const SizedBox(height: 28),
                     TextFormField(
@@ -136,7 +137,7 @@ class _ForgotPasswordRequestScreenState
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                            color: ptitRedSoft,
+                            color: context.ptitRedSoft,
                             borderRadius: BorderRadius.circular(8)),
                         child: Row(children: [
                           const Icon(Icons.error_outline,

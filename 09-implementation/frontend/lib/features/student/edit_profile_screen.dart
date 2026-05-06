@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 
@@ -105,8 +106,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       ref.invalidate(authProvider);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Đã lưu thông tin'), backgroundColor: successGreen),
+        SnackBar(
+            content: Text('Đã lưu thông tin'), backgroundColor: context.successGreen),
       );
       Navigator.of(context).pop();
     } on DioException catch (e) {
@@ -127,7 +128,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
-        backgroundColor: appBg,
+        backgroundColor: context.appBg,
         appBar: AppBar(
           title: const Text('Cập nhật thông tin'),
           leading: IconButton(
@@ -351,10 +352,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   Widget _section(String label) => Padding(
         padding: const EdgeInsets.only(bottom: 8, top: 4),
         child: Text(label,
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
-                color: textMuted,
+                color: context.textMuted,
                 letterSpacing: 0.6)),
       );
 
@@ -364,13 +365,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           SizedBox(
             width: 100,
             child: Text(k,
-                style: const TextStyle(fontSize: 11, color: textMuted)),
+                style: TextStyle(fontSize: 11, color: context.textMuted)),
           ),
           Expanded(
             child: Text(v,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 13,
-                    color: textPrimary,
+                    color: context.textPrimary,
                     fontWeight: FontWeight.w600)),
           ),
         ]),

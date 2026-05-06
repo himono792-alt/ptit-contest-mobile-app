@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import 'master_data_screen.dart' show facultiesProvider;
@@ -210,8 +211,8 @@ class _CreateContestDialogState extends ConsumerState<CreateContestDialog> {
             // Header
             Container(
               padding: const EdgeInsets.fromLTRB(20, 18, 12, 14),
-              decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: cardBorder)),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: context.cardBorder)),
               ),
               child: Row(children: [
                 Container(
@@ -237,7 +238,7 @@ class _CreateContestDialogState extends ConsumerState<CreateContestDialog> {
                                 letterSpacing: -0.5)),
                         Text('Sau khi tạo, contest ở status DRAFT — submit để BCN duyệt.',
                             style: GoogleFonts.plusJakartaSans(
-                                fontSize: 12, color: textMuted)),
+                                fontSize: 12, color: context.textMuted)),
                       ]),
                 ),
                 IconButton(
@@ -465,8 +466,8 @@ class _CreateContestDialogState extends ConsumerState<CreateContestDialog> {
             // Footer actions
             Container(
               padding: const EdgeInsets.all(14),
-              decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: cardBorder)),
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: context.cardBorder)),
               ),
               child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
                 TextButton(
@@ -535,7 +536,7 @@ class _DateTimeField extends StatelessWidget {
         child: Text(
           value == null ? 'Chọn...' : fmt.format(value!),
           style: TextStyle(
-            color: value == null ? textFaint : textPrimary,
+            color: value == null ? context.textFaint : context.textPrimary,
             fontSize: 13,
             fontWeight: FontWeight.w600,
           ),

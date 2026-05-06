@@ -29,10 +29,17 @@ class MCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasBorder = borderColor != null;
+    // Phase 2 Sprint 2 Step 1b (2026-05-06): đọc cardColor từ Theme.of()
+    // → tự invert sang cardBgDark (#25211D) trong dark mode.
+    // Caller có thể override qua backgroundColor prop.
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final defaultCardColor = isDark
+        ? Theme.of(context).cardColor
+        : Colors.white;
     return Container(
       margin: margin ?? const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: backgroundColor ?? Colors.white,
+        color: backgroundColor ?? defaultCardColor,
         border: hasBorder ? Border.all(color: borderColor!, width: 1) : null,
         borderRadius: BorderRadius.circular(14),
         boxShadow: flat ? null : (hasBorder ? null : shadowSm),

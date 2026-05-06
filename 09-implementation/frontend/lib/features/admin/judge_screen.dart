@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
@@ -28,29 +29,29 @@ class JudgeScreen extends ConsumerWidget {
       body: Column(children: [
         if (!isMobile) Container(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: Colors.white,
-            border: Border(bottom: BorderSide(color: cardBorder)),
+            border: Border(bottom: BorderSide(color: context.cardBorder)),
           ),
           child: Row(children: [
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Judge',
-                      style: TextStyle(color: textMuted, fontSize: 11)),
+                      style: TextStyle(color: context.textMuted, fontSize: 11)),
                   SizedBox(height: 2),
                   Text('Bài cần chấm',
                       style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
-                          color: textPrimary)),
+                          color: context.textPrimary)),
                 ],
               ),
             ),
             IconButton(
               tooltip: 'Refresh',
-              icon: const Icon(Icons.refresh, color: textMuted),
+              icon: Icon(Icons.refresh, color: context.textMuted),
               onPressed: () => ref.invalidate(myAssignmentsProvider),
             ),
           ]),
@@ -63,16 +64,16 @@ class JudgeScreen extends ConsumerWidget {
                 child: Text('Lỗi: ${_msg(e)}',
                     style: const TextStyle(color: ptitRed))),
             data: (items) => items.isEmpty
-                ? const Center(
+                ? Center(
                     child: Padding(
                       padding: EdgeInsets.all(40),
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(Icons.gavel, size: 56, color: textMuted),
+                        Icon(Icons.gavel, size: 56, color: context.textMuted),
                         SizedBox(height: 12),
                         Text(
                             'Bạn chưa có assignment nào.\nGV BTC cần phân công bạn chấm round trước.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: textMuted, fontSize: 13)),
+                            style: TextStyle(color: context.textMuted, fontSize: 13)),
                       ]),
                     ),
                   )
@@ -106,30 +107,30 @@ class _AssignmentCard extends ConsumerWidget {
           Row(children: [
             Expanded(
               child: Text('Assignment #${data['assignment_id']}',
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: textPrimary)),
+                      color: context.textPrimary)),
             ),
             Pill(
               label: canSeeId ? 'Open judging' : 'Blind',
-              color: canSeeId ? infoBlue : warnOrange,
-              bg: canSeeId ? infoSoft : warnSoft,
+              color: canSeeId ? context.infoBlue : context.warnOrange,
+              bg: canSeeId ? context.infoSoft : context.warnSoft,
             ),
           ]),
           const SizedBox(height: 6),
           Text(
               'Round #${data['round_id']} · Entry #${data['entry_id']}'
               '${data['submission_id'] != null ? ' · Submission #${data['submission_id']}' : ''}',
-              style: const TextStyle(fontSize: 12, color: textMuted)),
+              style: TextStyle(fontSize: 12, color: context.textMuted)),
           const SizedBox(height: 4),
           Text('Assigned at: ${fmt.format(DateTime.parse(data['assigned_at']))}',
-              style: const TextStyle(fontSize: 11, color: textMuted)),
+              style: TextStyle(fontSize: 11, color: context.textMuted)),
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: ptitRedSoft,
+              color: context.ptitRedSoft,
               borderRadius: BorderRadius.circular(4),
             ),
             child: const Text('Tap để nhập điểm',
@@ -275,8 +276,8 @@ class _ScoreDialogState extends ConsumerState<_ScoreDialog> {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Container(
         padding: const EdgeInsets.fromLTRB(20, 16, 12, 14),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: cardBorder)),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: context.cardBorder)),
         ),
         child: Row(children: [
           Expanded(
@@ -290,7 +291,7 @@ class _ScoreDialogState extends ConsumerState<_ScoreDialog> {
                   Text(
                       'Round #${a['round_id']} · Entry #${a['entry_id']}'
                       '${a['submission_id'] != null ? ' · Submission #${a['submission_id']}' : ''}',
-                      style: const TextStyle(fontSize: 12, color: textMuted)),
+                      style: TextStyle(fontSize: 12, color: context.textMuted)),
                 ]),
           ),
           IconButton(
@@ -302,21 +303,21 @@ class _ScoreDialogState extends ConsumerState<_ScoreDialog> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: _criteria!.isEmpty
-              ? const Padding(
+              ? Padding(
                   padding: EdgeInsets.all(20),
                   child: Center(
                       child: Text(
                           'Round này chưa có criteria. GV BTC cần thêm rubric trước.',
-                          style: TextStyle(color: textMuted))),
+                          style: TextStyle(color: context.textMuted))),
                 )
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Tiêu chí chấm',
+                    Text('Tiêu chí chấm',
                         style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: textMuted,
+                            color: context.textMuted,
                             letterSpacing: 0.5)),
                     const SizedBox(height: 10),
                     ..._criteria!.map((c) => _buildCriterion(c)),
@@ -326,8 +327,8 @@ class _ScoreDialogState extends ConsumerState<_ScoreDialog> {
       ),
       Container(
         padding: const EdgeInsets.all(14),
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: cardBorder)),
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: context.cardBorder)),
         ),
         child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
           TextButton(
@@ -359,7 +360,7 @@ class _ScoreDialogState extends ConsumerState<_ScoreDialog> {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: const Color(0xFFFAFAFA),
-          border: Border.all(color: cardBorder),
+          border: Border.all(color: context.cardBorder),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -374,18 +375,18 @@ class _ScoreDialogState extends ConsumerState<_ScoreDialog> {
               if (weight != null)
                 Pill(
                     label: 'weight $weight%',
-                    color: infoBlue,
-                    bg: infoSoft),
+                    color: context.infoBlue,
+                    bg: context.infoSoft),
               const SizedBox(width: 6),
               Pill(
                   label: 'max $maxScore',
-                  color: textMuted,
+                  color: context.textMuted,
                   bg: const Color(0xFFF3F4F6)),
             ]),
             if (c['description'] != null) ...[
               const SizedBox(height: 4),
               Text(c['description'],
-                  style: const TextStyle(fontSize: 11, color: textMuted)),
+                  style: TextStyle(fontSize: 11, color: context.textMuted)),
             ],
             const SizedBox(height: 8),
             Row(children: [

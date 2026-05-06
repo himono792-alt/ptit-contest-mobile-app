@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
@@ -36,22 +37,22 @@ class ApprovalQueueScreen extends ConsumerWidget {
         // Top bar
         if (!isMobile) Container(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: Colors.white,
-            border: Border(bottom: BorderSide(color: cardBorder)),
+            border: Border(bottom: BorderSide(color: context.cardBorder)),
           ),
-          child: Row(children: const [
+          child: Row(children: [
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('BCN', style: TextStyle(color: textMuted, fontSize: 11)),
+                  Text('BCN', style: TextStyle(color: context.textMuted, fontSize: 11)),
                   SizedBox(height: 2),
                   Text('Phê duyệt đề xuất',
                       style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
-                          color: textPrimary)),
+                          color: context.textPrimary)),
                 ],
               ),
             ),
@@ -90,7 +91,7 @@ class ApprovalQueueScreen extends ConsumerWidget {
             const SizedBox(width: 8),
             IconButton(
               tooltip: 'Refresh',
-              icon: const Icon(Icons.refresh, color: textMuted),
+              icon: Icon(Icons.refresh, color: context.textMuted),
               onPressed: () => ref.invalidate(pendingApprovalsProvider),
             ),
           ]),
@@ -137,17 +138,17 @@ class _ApprovalCard extends ConsumerWidget {
             Expanded(
               child: Text(
                 data['contest_title'] ?? '#${data['contest_id']}',
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: textPrimary),
+                    color: context.textPrimary),
               ),
             ),
             const SizedBox(width: 8),
             Pill(
               label: isQd1 ? 'QĐ1 Đề xuất' : 'QĐ2 Kết quả',
-              color: isQd1 ? infoBlue : warnOrange,
-              bg: isQd1 ? infoSoft : warnSoft,
+              color: isQd1 ? context.infoBlue : context.warnOrange,
+              bg: isQd1 ? context.infoSoft : context.warnSoft,
             ),
             const SizedBox(width: 6),
             Pill.status(data['status'] as String),
@@ -156,7 +157,7 @@ class _ApprovalCard extends ConsumerWidget {
           Text(
             'Slug: ${data['contest_slug'] ?? '—'} · Vòng revision #${data['revision_round']} · '
             'Submitted by user #${data['submitted_by']} lúc ${fmt.format(submittedAt)}',
-            style: const TextStyle(fontSize: 12, color: textMuted),
+            style: TextStyle(fontSize: 12, color: context.textMuted),
           ),
           if ((data['submission_note'] ?? '').toString().isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -164,11 +165,11 @@ class _ApprovalCard extends ConsumerWidget {
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: const Color(0xFFFAFAFA),
-                border: Border.all(color: cardBorder),
+                border: Border.all(color: context.cardBorder),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text('“${data['submission_note']}”',
-                  style: const TextStyle(fontSize: 12, color: textPrimary)),
+                  style: TextStyle(fontSize: 12, color: context.textPrimary)),
             ),
           ],
         ],
@@ -298,8 +299,8 @@ class _ApprovalDetailDialogState
       // Header
       Container(
         padding: const EdgeInsets.fromLTRB(20, 16, 12, 14),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: cardBorder)),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: context.cardBorder)),
         ),
         child: Row(children: [
           Expanded(
@@ -311,14 +312,14 @@ class _ApprovalDetailDialogState
               Row(children: [
                 Pill(
                   label: isQd1 ? 'QĐ1 Đề xuất' : 'QĐ2 Kết quả',
-                  color: isQd1 ? infoBlue : warnOrange,
-                  bg: isQd1 ? infoSoft : warnSoft,
+                  color: isQd1 ? context.infoBlue : context.warnOrange,
+                  bg: isQd1 ? context.infoSoft : context.warnSoft,
                 ),
                 const SizedBox(width: 6),
                 Pill.status(d['status'] as String),
                 const SizedBox(width: 6),
                 Text('Vòng revision #${d['revision_round']}',
-                    style: const TextStyle(fontSize: 11, color: textMuted)),
+                    style: TextStyle(fontSize: 11, color: context.textMuted)),
               ]),
             ]),
           ),
@@ -342,26 +343,26 @@ class _ApprovalDetailDialogState
             if (d['bcn_comment'] != null)
               _kv('Last BCN comment', d['bcn_comment']),
             const SizedBox(height: 12),
-            const Text('Snapshot dữ liệu đã submit',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: textMuted, letterSpacing: 0.5)),
+            Text('Snapshot dữ liệu đã submit',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 0.5)),
             const SizedBox(height: 6),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: const Color(0xFFF9FAFB),
-                border: Border.all(color: cardBorder),
+                border: Border.all(color: context.cardBorder),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: SelectableText(
                 snapshotPretty,
-                style: const TextStyle(
-                    fontFamily: 'monospace', fontSize: 11, color: textPrimary, height: 1.4),
+                style: TextStyle(
+                    fontFamily: 'monospace', fontSize: 11, color: context.textPrimary, height: 1.4),
               ),
             ),
             const SizedBox(height: 18),
-            const Text('Comment của BCN (bắt buộc nếu reject hoặc request revision)',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textPrimary)),
+            Text('Comment của BCN (bắt buộc nếu reject hoặc request revision)',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.textPrimary)),
             const SizedBox(height: 6),
             TextField(
               controller: _commentCtrl,
@@ -376,8 +377,8 @@ class _ApprovalDetailDialogState
       // Footer actions
       Container(
         padding: const EdgeInsets.all(14),
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: cardBorder)),
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: context.cardBorder)),
         ),
         child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
           OutlinedButton.icon(
@@ -392,12 +393,12 @@ class _ApprovalDetailDialogState
           const SizedBox(width: 10),
           OutlinedButton.icon(
             onPressed: _busy ? null : () => _decide('request_revision'),
-            icon: const Icon(Icons.history, size: 16, color: warnOrange),
-            label: const Text('Request revision',
-                style: TextStyle(color: warnOrange)),
+            icon: Icon(Icons.history, size: 16, color: context.warnOrange),
+            label: Text('Request revision',
+                style: TextStyle(color: context.warnOrange)),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(160, 38),
-              side: const BorderSide(color: warnOrange),
+              side: BorderSide(color: context.warnOrange),
             ),
           ),
           const SizedBox(width: 10),
@@ -407,7 +408,7 @@ class _ApprovalDetailDialogState
             label: const Text('Approve'),
             style: FilledButton.styleFrom(
               minimumSize: const Size(120, 38),
-              backgroundColor: successGreen,
+              backgroundColor: context.successGreen,
             ),
           ),
         ]),
@@ -421,13 +422,13 @@ class _ApprovalDetailDialogState
           SizedBox(
             width: 140,
             child: Text(k,
-                style: const TextStyle(
-                    fontSize: 11, color: textMuted, letterSpacing: 0.3)),
+                style: TextStyle(
+                    fontSize: 11, color: context.textMuted, letterSpacing: 0.3)),
           ),
           Expanded(
               child: Text('$v',
-                  style: const TextStyle(
-                      fontSize: 13, color: textPrimary, height: 1.4))),
+                  style: TextStyle(
+                      fontSize: 13, color: context.textPrimary, height: 1.4))),
         ]),
       );
 }
@@ -435,14 +436,14 @@ class _ApprovalDetailDialogState
 class _EmptyView extends StatelessWidget {
   const _EmptyView();
   @override
-  Widget build(BuildContext context) => const Center(
+  Widget build(BuildContext context) => Center(
         child: Padding(
           padding: EdgeInsets.all(32),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.inbox_outlined, size: 56, color: textMuted),
+            Icon(Icons.inbox_outlined, size: 56, color: context.textMuted),
             SizedBox(height: 12),
             Text('Không có đề xuất nào đang chờ duyệt',
-                style: TextStyle(color: textMuted, fontSize: 13)),
+                style: TextStyle(color: context.textMuted, fontSize: 13)),
           ]),
         ),
       );
@@ -467,7 +468,7 @@ class _ErrorView extends StatelessWidget {
           const SizedBox(height: 12),
           Text(msg,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: textMuted, fontSize: 12)),
+              style: TextStyle(color: context.textMuted, fontSize: 12)),
           const SizedBox(height: 16),
           FilledButton(onPressed: onRetry, child: const Text('Thử lại')),
         ]),

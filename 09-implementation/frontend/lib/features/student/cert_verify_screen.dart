@@ -5,6 +5,7 @@ import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/config.dart';
 import '../../core/theme.dart';
@@ -66,7 +67,7 @@ class _CertVerifyScreenState extends ConsumerState<CertVerifyScreen> {
       appBar: MTopBar(
         title: 'Xác thực chứng nhận',
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: textMuted),
+          icon: Icon(Icons.arrow_back, color: context.textMuted),
           onPressed: () => Navigator.maybePop(context),
         ),
       ),
@@ -171,17 +172,17 @@ class _ResultCard extends StatelessWidget {
     final valid = data['valid'] == true;
     final fmt = DateFormat('dd/MM/yyyy');
     return MCard(
-      borderColor: valid ? successGreen : ptitRed,
+      borderColor: valid ? context.successGreen : ptitRed,
       backgroundColor: valid
-          ? successSoft.withValues(alpha: 0.4)
-          : ptitRedSoft.withValues(alpha: 0.4),
+          ? context.successSoft.withValues(alpha: 0.4)
+          : context.ptitRedSoft.withValues(alpha: 0.4),
       child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
               Icon(
                 valid ? Icons.verified : Icons.cancel,
-                color: valid ? successGreen : ptitRed,
+                color: valid ? context.successGreen : ptitRed,
                 size: 24,
               ),
               const SizedBox(width: 10),
@@ -193,13 +194,13 @@ class _ResultCard extends StatelessWidget {
                   style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: valid ? successGreen : ptitRed),
+                      color: valid ? context.successGreen : ptitRed),
                 ),
               ),
               Pill(
                 label: data['status'] ?? '—',
-                color: valid ? successGreen : ptitRed,
-                bg: valid ? successSoft : ptitRedSoft,
+                color: valid ? context.successGreen : ptitRed,
+                bg: valid ? context.successSoft : context.ptitRedSoft,
               ),
             ]),
             if (!valid && data['reason'] != null) ...[
@@ -242,13 +243,13 @@ class _ResultCard extends StatelessWidget {
           SizedBox(
             width: 90,
             child: Text(k,
-                style: const TextStyle(fontSize: 11, color: textMuted)),
+                style: TextStyle(fontSize: 11, color: context.textMuted)),
           ),
           Expanded(
             child: SelectableText('${v ?? "—"}',
                 style: TextStyle(
                   fontSize: 12,
-                  color: textPrimary,
+                  color: context.textPrimary,
                   fontFamily: mono ? 'monospace' : null,
                   fontWeight: FontWeight.w500,
                 )),

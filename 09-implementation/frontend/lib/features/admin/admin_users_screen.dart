@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
@@ -74,23 +75,23 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
         // Top bar
         if (!isMobile) Container(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: Colors.white,
-            border: Border(bottom: BorderSide(color: cardBorder)),
+            border: Border(bottom: BorderSide(color: context.cardBorder)),
           ),
           child: Row(children: [
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Quản trị',
-                      style: TextStyle(color: textMuted, fontSize: 11)),
+                      style: TextStyle(color: context.textMuted, fontSize: 11)),
                   SizedBox(height: 2),
                   Text('Quản lý user',
                       style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
-                          color: textPrimary)),
+                          color: context.textPrimary)),
                 ],
               ),
             ),
@@ -187,7 +188,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
             const SizedBox(width: 8),
             IconButton(
               tooltip: 'Refresh',
-              icon: const Icon(Icons.refresh, color: textMuted),
+              icon: Icon(Icons.refresh, color: context.textMuted),
               onPressed: () => ref.invalidate(usersListProvider),
             ),
           ]),
@@ -205,9 +206,9 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               return Padding(
                 padding: EdgeInsets.all(isMobile ? 14 : 24),
                 child: items.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Text('Không có user',
-                            style: TextStyle(color: textMuted)))
+                            style: TextStyle(color: context.textMuted)))
                     : MCard(
                         padding: EdgeInsets.zero,
                         margin: EdgeInsets.zero,
@@ -330,9 +331,9 @@ class _BulkImportDialogState extends ConsumerState<_BulkImportDialog> {
             const Text('Bulk import student directory (CSV)',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
-            const Text(
+            Text(
                 'Paste CSV với header: student_code, ptit_email, full_name, faculty_code, major_code, class_code',
-                style: TextStyle(fontSize: 11, color: textMuted)),
+                style: TextStyle(fontSize: 11, color: context.textMuted)),
             const SizedBox(height: 12),
             Expanded(
               child: TextField(
@@ -351,12 +352,12 @@ class _BulkImportDialogState extends ConsumerState<_BulkImportDialog> {
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF9FAFB),
-                  border: Border.all(color: cardBorder),
+                  border: Border.all(color: context.cardBorder),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(_resultMsg!,
-                    style: const TextStyle(
-                        fontSize: 12, color: textPrimary, height: 1.5)),
+                    style: TextStyle(
+                        fontSize: 12, color: context.textPrimary, height: 1.5)),
               ),
             ],
             const SizedBox(height: 14),
@@ -397,9 +398,9 @@ class _UsersTable extends ConsumerWidget {
     return Column(children: [
       Container(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: Color(0xFFF9FAFB),
-          border: Border(bottom: BorderSide(color: cardBorder)),
+          border: Border(bottom: BorderSide(color: context.cardBorder)),
           borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
         ),
         child: Row(children: const [
@@ -414,13 +415,13 @@ class _UsersTable extends ConsumerWidget {
       ...items.map((u) => _UserRow(data: u, refresh: refresh)),
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: cardBorder)),
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: context.cardBorder)),
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
         ),
         alignment: Alignment.centerLeft,
         child: Text('Tổng: $total user',
-            style: const TextStyle(color: textMuted, fontSize: 12)),
+            style: TextStyle(color: context.textMuted, fontSize: 12)),
       ),
     ]);
   }
@@ -431,10 +432,10 @@ class _Th extends StatelessWidget {
   const _Th(this.label);
   @override
   Widget build(BuildContext context) => Text(label,
-      style: const TextStyle(
+      style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: textMuted,
+          color: context.textMuted,
           letterSpacing: 0.5));
 }
 
@@ -483,16 +484,16 @@ class _UserRowState extends ConsumerState<_UserRow> {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: cardBorder)),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: context.cardBorder)),
       ),
       child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
         SizedBox(
             width: 50,
             child: Text('#${u['user_id']}',
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 12,
-                    color: textMuted,
+                    color: context.textMuted,
                     fontWeight: FontWeight.w500))),
         Expanded(
           flex: 3,
@@ -500,15 +501,15 @@ class _UserRowState extends ConsumerState<_UserRow> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(u['full_name'] ?? '',
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: textPrimary),
+                        color: context.textPrimary),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 2),
                 Text(u['email'] ?? '',
-                    style: const TextStyle(fontSize: 11, color: textMuted),
+                    style: TextStyle(fontSize: 11, color: context.textMuted),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis),
               ]),
@@ -522,7 +523,7 @@ class _UserRowState extends ConsumerState<_UserRow> {
                 .map<Widget>((r) => Pill(
                       label: '$r',
                       color: ptitRed,
-                      bg: ptitRedSoft,
+                      bg: context.ptitRedSoft,
                     ))
                 .toList(),
           ),
@@ -534,7 +535,7 @@ class _UserRowState extends ConsumerState<_UserRow> {
               u['last_login_at'] != null
                   ? fmt.format(DateTime.parse(u['last_login_at']))
                   : '—',
-              style: const TextStyle(fontSize: 11, color: textMuted)),
+              style: TextStyle(fontSize: 11, color: context.textMuted)),
         ),
         SizedBox(
           width: 130,
@@ -555,7 +556,7 @@ class _UserRowState extends ConsumerState<_UserRow> {
                           isLocked ? 'Đã unlock' : 'Đã lock'),
                       icon: Icon(
                           isLocked ? Icons.lock_open : Icons.lock_outline,
-                          color: isLocked ? successGreen : warnOrange),
+                          color: isLocked ? context.successGreen : context.warnOrange),
                     ),
                   IconButton(
                     tooltip: 'Đổi roles',
@@ -588,7 +589,7 @@ class _UserRowState extends ConsumerState<_UserRow> {
                         }
                       }
                     },
-                    icon: const Icon(Icons.shield_outlined, color: infoBlue),
+                    icon: Icon(Icons.shield_outlined, color: context.infoBlue),
                   ),
                   if (!isDeleted)
                     IconButton(
@@ -730,11 +731,11 @@ class _CreateUserDialogState extends ConsumerState<_CreateUserDialog> {
                     decoration:
                         const InputDecoration(labelText: 'Phone (optional)')),
                 const SizedBox(height: 14),
-                const Text('Roles *',
+                Text('Roles *',
                     style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: textPrimary)),
+                        color: context.textPrimary)),
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 8,
@@ -745,19 +746,19 @@ class _CreateUserDialogState extends ConsumerState<_CreateUserDialog> {
                       selected: selected,
                       onSelected: (v) => setState(
                           () => v ? _roles.add(r) : _roles.remove(r)),
-                      selectedColor: ptitRedSoft,
+                      selectedColor: context.ptitRedSoft,
                       checkmarkColor: ptitRed,
                     );
                   }).toList(),
                 ),
                 if (_roles.contains('STUDENT') ||
                     _roles.contains('HOD'))
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.only(top: 10),
                     child: Text(
                       '⚠ Note: STUDENT cần directory_id, HOD cần faculty_id. Profile fields không có ở dialog này — tạo sẽ fail nếu chọn STUDENT/HOD. Dùng API trực tiếp hoặc bổ sung field sau.',
                       style: TextStyle(
-                          fontSize: 11, color: warnOrange, height: 1.4),
+                          fontSize: 11, color: context.warnOrange, height: 1.4),
                     ),
                   ),
                 const SizedBox(height: 18),
@@ -822,7 +823,7 @@ class _RolesDialogState extends State<_RolesDialog> {
             selected: on,
             onSelected: (v) =>
                 setState(() => v ? _selected.add(r) : _selected.remove(r)),
-            selectedColor: ptitRedSoft,
+            selectedColor: context.ptitRedSoft,
             checkmarkColor: ptitRed,
           );
         }).toList(),
@@ -862,7 +863,7 @@ class _ErrorView extends StatelessWidget {
           const SizedBox(height: 12),
           Text(msg,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: textMuted, fontSize: 12)),
+              style: TextStyle(color: context.textMuted, fontSize: 12)),
           const SizedBox(height: 16),
           FilledButton(onPressed: onRetry, child: const Text('Thử lại')),
         ]),

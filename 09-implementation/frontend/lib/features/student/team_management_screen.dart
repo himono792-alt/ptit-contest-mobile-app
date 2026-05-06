@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
@@ -47,7 +48,7 @@ class TeamManagementScreen extends ConsumerWidget {
             ? 'Chọn / tạo team'
             : 'Team của tôi',
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: textMuted),
+          icon: Icon(Icons.arrow_back, color: context.textMuted),
           onPressed: () => Navigator.maybePop(context),
         ),
       ),
@@ -64,7 +65,7 @@ class TeamManagementScreen extends ConsumerWidget {
               child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: Text('Lỗi: $msg',
-                      style: const TextStyle(color: textMuted))));
+                      style: TextStyle(color: context.textMuted))));
         },
         data: (teams) {
           final filtered = filterContestId != null
@@ -102,17 +103,17 @@ class TeamManagementScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                      color: infoSoft,
+                      color: context.infoSoft,
                       borderRadius: BorderRadius.circular(8)),
-                  child: const Row(children: [
-                    Icon(Icons.info_outline, size: 16, color: infoBlue),
+                  child: Row(children: [
+                    Icon(Icons.info_outline, size: 16, color: context.infoBlue),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Mỗi cuộc thi cần team riêng. SV có thể là leader 1 team + member nhiều team.',
                         style: TextStyle(
                             fontSize: 11.5,
-                            color: infoBlue,
+                            color: context.infoBlue,
                             height: 1.5),
                       ),
                     ),
@@ -156,8 +157,8 @@ class _EmptyTeamView extends StatelessWidget {
         Container(
           width: 80,
           height: 80,
-          decoration: const BoxDecoration(
-              color: ptitRedSoft, shape: BoxShape.circle),
+          decoration: BoxDecoration(
+              color: context.ptitRedSoft, shape: BoxShape.circle),
           child: const Icon(Icons.groups_outlined,
               size: 40, color: ptitRed),
         ),
@@ -166,13 +167,13 @@ class _EmptyTeamView extends StatelessWidget {
           forContest
               ? 'Bạn chưa có team cho cuộc thi này'
               : 'Bạn chưa thuộc team nào',
-          style: const TextStyle(
-              fontSize: 14, fontWeight: FontWeight.w700, color: textPrimary),
+          style: TextStyle(
+              fontSize: 14, fontWeight: FontWeight.w700, color: context.textPrimary),
         ),
         const SizedBox(height: 6),
-        const Text(
+        Text(
           'Tạo team mới và mời các bạn cùng tham gia',
-          style: TextStyle(fontSize: 12, color: textMuted),
+          style: TextStyle(fontSize: 12, color: context.textMuted),
         ),
       ]),
     );
@@ -189,7 +190,7 @@ class _ContestHeader extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: ptitRedSoft,
+        color: context.ptitRedSoft,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(children: [
@@ -241,9 +242,9 @@ class _TeamCardState extends ConsumerState<_TeamCard> {
         return AlertDialog(
           title: const Text('Thêm thành viên'),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Text(
+            Text(
                 'Nhập MSSV của bạn muốn thêm. SV đó phải đã có tài khoản hệ thống.',
-                style: TextStyle(fontSize: 12, color: textMuted)),
+                style: TextStyle(fontSize: 12, color: context.textMuted)),
             const SizedBox(height: 12),
             TextField(
               controller: ctrl,
@@ -302,9 +303,9 @@ class _TeamCardState extends ConsumerState<_TeamCard> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
             content: Text('Đăng ký team thành công, chờ BTC duyệt'),
-            backgroundColor: successGreen),
+            backgroundColor: context.successGreen),
       );
       widget.onRegistered?.call();
     } on DioException catch (e) {
@@ -335,21 +336,21 @@ class _TeamCardState extends ConsumerState<_TeamCard> {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(t['team_name'] as String,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
-                        color: textPrimary)),
+                        color: context.textPrimary)),
               ),
               Pill.status(t['status'] as String? ?? 'ACTIVE'),
             ]),
             const SizedBox(height: 6),
             Text(
                 'Contest #${t['contest_id']} · Leader student #${t['leader_student_id']} · ${fmt.format(DateTime.parse(t['created_at']))}',
-                style: const TextStyle(fontSize: 11, color: textMuted)),
-            const Divider(height: 18, color: cardBorder),
+                style: TextStyle(fontSize: 11, color: context.textMuted)),
+            Divider(height: 18, color: context.cardBorder),
             Text('Thành viên (${members.length})',
-                style: const TextStyle(
-                    fontSize: 11, color: textMuted, letterSpacing: 0.5)),
+                style: TextStyle(
+                    fontSize: 11, color: context.textMuted, letterSpacing: 0.5)),
             const SizedBox(height: 6),
             ...members.map((m) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 3),
@@ -360,7 +361,7 @@ class _TeamCardState extends ConsumerState<_TeamCard> {
                       decoration: BoxDecoration(
                         color: m['is_leader'] == true
                             ? ptitRed
-                            : ptitRedSoft,
+                            : context.ptitRedSoft,
                         shape: BoxShape.circle,
                       ),
                       child: Center(
@@ -380,15 +381,15 @@ class _TeamCardState extends ConsumerState<_TeamCard> {
                       child: Text(
                         'Student #${m['student_id']}'
                         '${m['is_leader'] == true ? "  (Leader)" : ""}',
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 12,
-                            color: textPrimary,
+                            color: context.textPrimary,
                             fontWeight: FontWeight.w500),
                       ),
                     ),
                     Text(
                       DateFormat('dd/MM/yy').format(DateTime.parse(m['joined_at'])),
-                      style: const TextStyle(fontSize: 10, color: textMuted),
+                      style: TextStyle(fontSize: 10, color: context.textMuted),
                     ),
                   ]),
                 )),
@@ -505,15 +506,15 @@ class _CreateTeamSheetState extends ConsumerState<_CreateTeamSheet> {
             height: 4,
             margin: const EdgeInsets.only(bottom: 14),
             decoration: BoxDecoration(
-                color: cardBorder, borderRadius: BorderRadius.circular(2)),
+                color: context.cardBorder, borderRadius: BorderRadius.circular(2)),
           ),
-          const Text('Tạo team mới',
+          Text('Tạo team mới',
               style: TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.w800, color: textPrimary)),
+                  fontSize: 16, fontWeight: FontWeight.w800, color: context.textPrimary)),
           const SizedBox(height: 4),
           if (widget.defaultContestTitle != null)
             Text('Cho cuộc thi: ${widget.defaultContestTitle}',
-                style: const TextStyle(fontSize: 12, color: textMuted)),
+                style: TextStyle(fontSize: 12, color: context.textMuted)),
           const SizedBox(height: 16),
           TextField(
             controller: _nameCtrl,
@@ -526,9 +527,9 @@ class _CreateTeamSheetState extends ConsumerState<_CreateTeamSheet> {
             textCapitalization: TextCapitalization.words,
           ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Bạn sẽ là leader. Sau khi tạo team có thể thêm thành viên bằng MSSV.',
-            style: TextStyle(fontSize: 11, color: textMuted, height: 1.5),
+            style: TextStyle(fontSize: 11, color: context.textMuted, height: 1.5),
           ),
           const SizedBox(height: 16),
           SizedBox(

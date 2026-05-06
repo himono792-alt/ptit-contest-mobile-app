@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
@@ -91,12 +92,12 @@ class ReviewModerationScreen extends ConsumerWidget {
         if (!isMobile) Container(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
           color: Colors.white,
-          child: Row(children: const [
+          child: Row(children: [
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Quản trị', style: TextStyle(color: textMuted, fontSize: 11)),
+                  Text('Quản trị', style: TextStyle(color: context.textMuted, fontSize: 11)),
                   SizedBox(height: 2),
                   Text('Đánh giá / bình luận',
                       style: TextStyle(
@@ -114,12 +115,12 @@ class ReviewModerationScreen extends ConsumerWidget {
               selected: onlyHidden,
               onSelected: (v) =>
                   ref.read(reviewModerationFilterProvider.notifier).state = v,
-              selectedColor: ptitRedSoft,
+              selectedColor: context.ptitRedSoft,
               checkmarkColor: ptitRed,
             ),
             const SizedBox(width: 8),
             IconButton(
-              icon: const Icon(Icons.refresh, color: textMuted),
+              icon: Icon(Icons.refresh, color: context.textMuted),
               onPressed: () => ref.invalidate(reviewModerationListProvider),
             ),
           ]),
@@ -136,11 +137,11 @@ class ReviewModerationScreen extends ConsumerWidget {
               ),
             ),
             data: (reviews) => reviews.isEmpty
-                ? const Center(
+                ? Center(
                     child: Padding(
                       padding: EdgeInsets.all(40),
                       child: Text('Chưa có review nào',
-                          style: TextStyle(color: textMuted)),
+                          style: TextStyle(color: context.textMuted)),
                     ),
                   )
                 : ListView.builder(
@@ -161,44 +162,44 @@ class ReviewModerationScreen extends ConsumerWidget {
                                           i < (r['rating'] as int)
                                               ? Icons.star
                                               : Icons.star_border,
-                                          color: warnOrange,
+                                          color: context.warnOrange,
                                           size: 16,
                                         )),
                                 const SizedBox(width: 8),
                                 Text('Review #${r['review_id']}',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                         fontSize: 12,
-                                        color: textMuted,
+                                        color: context.textMuted,
                                         fontWeight: FontWeight.w600)),
                                 const SizedBox(width: 8),
                                 Text(
                                     'Contest #${r['contest_id']} · SV #${r['student_id']}',
-                                    style: const TextStyle(
-                                        fontSize: 11, color: textMuted)),
+                                    style: TextStyle(
+                                        fontSize: 11, color: context.textMuted)),
                                 const Spacer(),
                                 Pill(
                                   label: visible ? 'HIỆN' : 'ẨN',
                                   color:
-                                      visible ? successGreen : ptitRed,
+                                      visible ? context.successGreen : ptitRed,
                                   bg: visible
-                                      ? successSoft
-                                      : ptitRedSoft,
+                                      ? context.successSoft
+                                      : context.ptitRedSoft,
                                 ),
                               ]),
                               const SizedBox(height: 6),
                               Text(
                                   (r['comment_text'] ?? '(không có comment)')
                                       .toString(),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontSize: 13,
-                                      color: textPrimary,
+                                      color: context.textPrimary,
                                       height: 1.5)),
                               const SizedBox(height: 8),
                               Row(children: [
                                 Text(
                                     'Tạo: ${fmt.format(DateTime.parse(r['created_at']).toLocal())}',
-                                    style: const TextStyle(
-                                        fontSize: 11, color: textMuted)),
+                                    style: TextStyle(
+                                        fontSize: 11, color: context.textMuted)),
                                 const Spacer(),
                                 if (visible)
                                   TextButton.icon(
@@ -211,10 +212,10 @@ class ReviewModerationScreen extends ConsumerWidget {
                                   )
                                 else
                                   TextButton.icon(
-                                    icon: const Icon(Icons.visibility,
-                                        size: 16, color: successGreen),
-                                    label: const Text('Hiện lại',
-                                        style: TextStyle(color: successGreen)),
+                                    icon: Icon(Icons.visibility,
+                                        size: 16, color: context.successGreen),
+                                    label: Text('Hiện lại',
+                                        style: TextStyle(color: context.successGreen)),
                                     onPressed: () => _moderate(
                                         context, ref, r['review_id'] as int, true),
                                   ),

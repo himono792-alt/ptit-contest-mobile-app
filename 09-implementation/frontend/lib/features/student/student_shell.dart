@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_bottom_nav.dart';
@@ -141,21 +142,22 @@ class _SVWideLayout extends ConsumerWidget {
         : 'S';
 
     return Scaffold(
-      backgroundColor: appBg,
+      // Phase 2 Sprint 2 step 1b: bỏ explicit backgroundColor để Theme.of() tự áp dụng
+      // → dark mode tự switch sang appBgDark (#1C1815).
       body: Row(children: [
-        // Sidebar 240px
+        // Sidebar 240px — dùng Theme.of(context).cardColor để invert dark mode
         Container(
           width: 240,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            border: Border(right: BorderSide(color: cardBorder)),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            border: Border(right: BorderSide(color: Theme.of(context).dividerColor)),
           ),
           child: Column(children: [
             // Brand
             Container(
               padding: const EdgeInsets.fromLTRB(18, 22, 18, 18),
-              decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: cardBorder)),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: context.cardBorder)),
               ),
               child: Row(children: [
                 Container(
@@ -174,17 +176,17 @@ class _SVWideLayout extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                const Expanded(
+                Expanded(
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('PTIT Contest',
                             style: TextStyle(
-                                color: textPrimary,
+                                color: context.textPrimary,
                                 fontSize: 13,
                                 fontWeight: FontWeight.w800)),
                         Text('Sinh viên',
-                            style: TextStyle(color: textMuted, fontSize: 10)),
+                            style: TextStyle(color: context.textMuted, fontSize: 10)),
                       ]),
                 ),
               ]),
@@ -202,7 +204,7 @@ class _SVWideLayout extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 18, vertical: 10),
                       decoration: BoxDecoration(
-                        color: isActive ? ptitRedSoft : null,
+                        color: isActive ? context.ptitRedSoft : null,
                         border: Border(
                           left: BorderSide(
                             color: isActive ? ptitRed : Colors.transparent,
@@ -212,13 +214,13 @@ class _SVWideLayout extends ConsumerWidget {
                       ),
                       child: Row(children: [
                         Icon(isActive ? tabActiveIcons[i] : tabIcons[i],
-                            size: 18, color: isActive ? ptitRed : textMuted),
+                            size: 18, color: isActive ? ptitRed : context.textMuted),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(tabLabels[i],
                               style: TextStyle(
                                 fontSize: 13,
-                                color: isActive ? ptitRed : textPrimary,
+                                color: isActive ? ptitRed : context.textPrimary,
                                 fontWeight: isActive
                                     ? FontWeight.w700
                                     : FontWeight.w500,
@@ -247,15 +249,15 @@ class _SVWideLayout extends ConsumerWidget {
             // Footer user
             Container(
               padding: const EdgeInsets.all(14),
-              decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: cardBorder)),
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: context.cardBorder)),
               ),
               child: Row(children: [
                 Container(
                   width: 32,
                   height: 32,
-                  decoration: const BoxDecoration(
-                      color: ptitRedSoft, shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                      color: context.ptitRedSoft, shape: BoxShape.circle),
                   child: Center(
                     child: Text(initial,
                         style: const TextStyle(
@@ -271,16 +273,17 @@ class _SVWideLayout extends ConsumerWidget {
                       children: [
                         Text(user.fullName,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
+                                color: context.textPrimary,
                                 fontSize: 12, fontWeight: FontWeight.w700)),
                         Text(user.email,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: textMuted, fontSize: 10)),
+                            style: TextStyle(
+                                color: context.textMuted, fontSize: 10)),
                       ]),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.logout, size: 16, color: textMuted),
+                  icon: Icon(Icons.logout, size: 16, color: context.textMuted),
                   tooltip: 'Đăng xuất',
                   onPressed: () => ref.read(authProvider.notifier).logout(),
                 ),

@@ -7,6 +7,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 
@@ -76,7 +77,7 @@ class _ForgotPasswordResetScreenState
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
-        backgroundColor: appBg,
+        backgroundColor: context.appBg,
         appBar: AppBar(
           title: const Text('Reset mật khẩu'),
           leading: IconButton(
@@ -104,18 +105,18 @@ class _ForgotPasswordResetScreenState
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              color: warnSoft,
+              color: context.warnSoft,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Icon(Icons.vpn_key, color: warnOrange, size: 32),
+            child: Icon(Icons.vpn_key, color: context.warnOrange, size: 32),
           ),
         ),
         const SizedBox(height: 16),
         Text(
           'Reset mật khẩu cho\n${widget.email}',
           textAlign: TextAlign.center,
-          style: const TextStyle(
-              fontSize: 16, fontWeight: FontWeight.w700, color: textPrimary),
+          style: TextStyle(
+              fontSize: 16, fontWeight: FontWeight.w700, color: context.textPrimary),
         ),
         const SizedBox(height: 6),
         Text(
@@ -125,7 +126,7 @@ class _ForgotPasswordResetScreenState
           textAlign: TextAlign.center,
           style: TextStyle(
               fontSize: 12,
-              color: widget.prefilledToken != null ? successGreen : textMuted),
+              color: widget.prefilledToken != null ? context.successGreen : context.textMuted),
         ),
         const SizedBox(height: 24),
         TextFormField(
@@ -169,7 +170,7 @@ class _ForgotPasswordResetScreenState
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-                color: ptitRedSoft, borderRadius: BorderRadius.circular(8)),
+                color: context.ptitRedSoft, borderRadius: BorderRadius.circular(8)),
             child: Row(children: [
               const Icon(Icons.error_outline, size: 16, color: ptitRed),
               const SizedBox(width: 8),
@@ -204,20 +205,20 @@ class _ForgotPasswordResetScreenState
           width: 80,
           height: 80,
           decoration: BoxDecoration(
-            color: successSoft,
+            color: context.successSoft,
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.check, color: successGreen, size: 48),
+          child: Icon(Icons.check, color: context.successGreen, size: 48),
         ),
         const SizedBox(height: 20),
-        const Text('Đổi mật khẩu thành công',
+        Text('Đổi mật khẩu thành công',
             style: TextStyle(
-                fontSize: 18, fontWeight: FontWeight.w800, color: successGreen)),
+                fontSize: 18, fontWeight: FontWeight.w800, color: context.successGreen)),
         const SizedBox(height: 8),
         Text(
           'Email: ${widget.email}\nĐăng nhập lại bằng mật khẩu mới.',
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 13, color: textMuted, height: 1.5),
+          style: TextStyle(fontSize: 13, color: context.textMuted, height: 1.5),
         ),
         const SizedBox(height: 28),
         FilledButton.icon(

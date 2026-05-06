@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/models/result.dart';
 import '../../core/theme.dart';
@@ -40,19 +41,19 @@ class MyResultsScreen extends ConsumerWidget {
           final msg = e is DioException
               ? (e.response?.data is Map ? '${e.response?.data['detail']}' : e.message ?? '')
               : '$e';
-          return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(msg, style: const TextStyle(color: textMuted))));
+          return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(msg, style: TextStyle(color: context.textMuted))));
         },
         data: (results) => RefreshIndicator(
           color: ptitRed,
           onRefresh: () async => ref.invalidate(myResultsProvider),
           child: results.isEmpty
-              ? const Center(
+              ? Center(
                   child: Padding(
                     padding: EdgeInsets.all(32),
                     child: Text(
                       'Chưa có kết quả nào.\nKết quả sẽ hiện sau khi cuộc thi FINISHED + BCN duyệt.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: textMuted),
+                      style: TextStyle(color: context.textMuted),
                     ),
                   ),
                 )
@@ -86,8 +87,8 @@ class _ResultCard extends StatelessWidget {
     final hasAward = result.awardTitle != null && result.awardTitle!.isNotEmpty;
 
     return MCard(
-      backgroundColor: hasAward ? ptitRedSoft : Colors.white,
-      borderColor: hasAward ? ptitRed : cardBorder,
+      backgroundColor: hasAward ? context.ptitRedSoft : Colors.white,
+      borderColor: hasAward ? ptitRed : context.cardBorder,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -99,8 +100,8 @@ class _ResultCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(result.contestTitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12, color: textMuted)),
-          const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Divider(color: cardBorder, height: 1)),
+              style: TextStyle(fontSize: 12, color: context.textMuted)),
+          Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Divider(color: context.cardBorder, height: 1)),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Column(
@@ -154,12 +155,12 @@ class _ScoreRow extends StatelessWidget {
   Widget build(BuildContext context) => Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: textMuted)),
+          Text(label, style: TextStyle(fontSize: 12, color: context.textMuted)),
           Text(value,
               style: TextStyle(
                 fontSize: bold ? 16 : 13,
                 fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
-                color: color ?? textPrimary,
+                color: color ?? context.textPrimary,
               )),
         ],
       );

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
@@ -82,29 +83,29 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
       body: Column(children: [
         if (!isMobile) Container(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: Colors.white,
-            border: Border(bottom: BorderSide(color: cardBorder)),
+            border: Border(bottom: BorderSide(color: context.cardBorder)),
           ),
           child: Row(children: [
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Quản trị',
-                      style: TextStyle(color: textMuted, fontSize: 11)),
+                      style: TextStyle(color: context.textMuted, fontSize: 11)),
                   SizedBox(height: 2),
                   Text('Audit log',
                       style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
-                          color: textPrimary)),
+                          color: context.textPrimary)),
                 ],
               ),
             ),
             IconButton(
               tooltip: 'Refresh',
-              icon: const Icon(Icons.refresh, color: textMuted),
+              icon: Icon(Icons.refresh, color: context.textMuted),
               onPressed: () => ref.invalidate(auditLogsProvider),
             ),
           ]),
@@ -179,9 +180,9 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
               return Padding(
                 padding: EdgeInsets.all(isMobile ? 14 : 24),
                 child: items.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Text('Không có log nào',
-                            style: TextStyle(color: textMuted)))
+                            style: TextStyle(color: context.textMuted)))
                     : MCard(
                         padding: EdgeInsets.zero,
                         margin: EdgeInsets.zero,
@@ -189,10 +190,10 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
                           Container(
                             padding:
                                 const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                            decoration: const BoxDecoration(
+                            decoration: BoxDecoration(
                               color: Color(0xFFF9FAFB),
                               border: Border(
-                                  bottom: BorderSide(color: cardBorder)),
+                                  bottom: BorderSide(color: context.cardBorder)),
                               borderRadius: BorderRadius.vertical(
                                   top: Radius.circular(10)),
                             ),
@@ -210,16 +211,16 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 10),
-                            decoration: const BoxDecoration(
+                            decoration: BoxDecoration(
                               border: Border(
-                                  top: BorderSide(color: cardBorder)),
+                                  top: BorderSide(color: context.cardBorder)),
                               borderRadius: BorderRadius.vertical(
                                   bottom: Radius.circular(10)),
                             ),
                             alignment: Alignment.centerLeft,
                             child: Text('Tổng: $total log',
-                                style: const TextStyle(
-                                    color: textMuted, fontSize: 12)),
+                                style: TextStyle(
+                                    color: context.textMuted, fontSize: 12)),
                           ),
                         ]),
                       ),
@@ -237,10 +238,10 @@ class _Th extends StatelessWidget {
   const _Th(this.label);
   @override
   Widget build(BuildContext context) => Text(label,
-      style: const TextStyle(
+      style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: textMuted,
+          color: context.textMuted,
           letterSpacing: 0.5));
 }
 
@@ -252,16 +253,16 @@ class _AuditRow extends StatelessWidget {
     switch (action) {
       case 'CREATE':
       case 'INSERT':
-        return successGreen;
+        return context.successGreen;
       case 'UPDATE':
       case 'PATCH':
-        return infoBlue;
+        return context.infoBlue;
       case 'DELETE':
       case 'LOCK':
       case 'REJECT':
         return ptitRed;
       default:
-        return textMuted;
+        return context.textMuted;
     }
   }
 
@@ -277,25 +278,25 @@ class _AuditRow extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: cardBorder)),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: context.cardBorder)),
       ),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         SizedBox(
             width: 60,
             child: Text('#${data['log_id']}',
-                style: const TextStyle(
-                    fontSize: 11, color: textMuted))),
+                style: TextStyle(
+                    fontSize: 11, color: context.textMuted))),
         SizedBox(
             width: 70,
             child: Text(
                 data['user_id'] != null ? '#${data['user_id']}' : '—',
-                style: const TextStyle(fontSize: 11, color: textMuted))),
+                style: TextStyle(fontSize: 11, color: context.textMuted))),
         SizedBox(
           width: 100,
           child: action == null
-              ? const Text('—',
-                  style: TextStyle(fontSize: 11, color: textMuted))
+              ? Text('—',
+                  style: TextStyle(fontSize: 11, color: context.textMuted))
               : Pill(
                   label: action,
                   color: _actionColor(action),
@@ -308,36 +309,36 @@ class _AuditRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(data['entity_name'] ?? '',
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 11,
-                        color: textPrimary,
+                        color: context.textPrimary,
                         fontWeight: FontWeight.w600)),
                 if (data['entity_id'] != null)
                   Text('#${data['entity_id']}',
-                      style: const TextStyle(
-                          fontSize: 10, color: textMuted)),
+                      style: TextStyle(
+                          fontSize: 10, color: context.textMuted)),
               ]),
         ),
         SizedBox(
             width: 100,
             child: Text(data['ip_address'] ?? '—',
-                style: const TextStyle(
+                style: TextStyle(
                     fontFamily: 'monospace',
                     fontSize: 10,
-                    color: textMuted))),
+                    color: context.textMuted))),
         Expanded(
           child: Text(detailsText,
-              style: const TextStyle(
+              style: TextStyle(
                   fontFamily: 'monospace',
                   fontSize: 10,
-                  color: textPrimary),
+                  color: context.textPrimary),
               maxLines: 2,
               overflow: TextOverflow.ellipsis),
         ),
         SizedBox(
             width: 130,
             child: Text(fmt.format(created),
-                style: const TextStyle(fontSize: 10, color: textMuted))),
+                style: TextStyle(fontSize: 10, color: context.textMuted))),
       ]),
     );
   }

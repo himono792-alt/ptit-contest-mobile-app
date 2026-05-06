@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
@@ -28,29 +29,29 @@ class ConfigsScreen extends ConsumerWidget {
       body: Column(children: [
         if (!isMobile) Container(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: Colors.white,
-            border: Border(bottom: BorderSide(color: cardBorder)),
+            border: Border(bottom: BorderSide(color: context.cardBorder)),
           ),
           child: Row(children: [
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Quản trị',
-                      style: TextStyle(color: textMuted, fontSize: 11)),
+                      style: TextStyle(color: context.textMuted, fontSize: 11)),
                   SizedBox(height: 2),
                   Text('Cấu hình hệ thống',
                       style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
-                          color: textPrimary)),
+                          color: context.textPrimary)),
                 ],
               ),
             ),
             IconButton(
               tooltip: 'Refresh',
-              icon: const Icon(Icons.refresh, color: textMuted),
+              icon: Icon(Icons.refresh, color: context.textMuted),
               onPressed: () => ref.invalidate(configsProvider),
             ),
           ]),
@@ -65,19 +66,19 @@ class ConfigsScreen extends ConsumerWidget {
             data: (items) => Padding(
               padding: EdgeInsets.all(isMobile ? 14 : 24),
               child: items.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Text('Không có config nào',
-                          style: TextStyle(color: textMuted)))
+                          style: TextStyle(color: context.textMuted)))
                   : MCard(
                       padding: EdgeInsets.zero,
                       margin: EdgeInsets.zero,
                       child: Column(children: [
                         Container(
                           padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             color: Color(0xFFF9FAFB),
                             border: Border(
-                                bottom: BorderSide(color: cardBorder)),
+                                bottom: BorderSide(color: context.cardBorder)),
                             borderRadius: BorderRadius.vertical(
                                 top: Radius.circular(10)),
                           ),
@@ -94,16 +95,16 @@ class ConfigsScreen extends ConsumerWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 10),
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             border: Border(
-                                top: BorderSide(color: cardBorder)),
+                                top: BorderSide(color: context.cardBorder)),
                             borderRadius: BorderRadius.vertical(
                                 bottom: Radius.circular(10)),
                           ),
                           alignment: Alignment.centerLeft,
                           child: Text('Tổng: ${items.length} config',
-                              style: const TextStyle(
-                                  color: textMuted, fontSize: 12)),
+                              style: TextStyle(
+                                  color: context.textMuted, fontSize: 12)),
                         ),
                       ]),
                     ),
@@ -120,10 +121,10 @@ class _Th extends StatelessWidget {
   const _Th(this.label);
   @override
   Widget build(BuildContext context) => Text(label,
-      style: const TextStyle(
+      style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: textMuted,
+          color: context.textMuted,
           letterSpacing: 0.5));
 }
 
@@ -138,8 +139,8 @@ class _ConfigRow extends ConsumerWidget {
     final updated = DateTime.parse(data['updated_at']);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: cardBorder)),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: context.cardBorder)),
       ),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Expanded(
@@ -150,21 +151,21 @@ class _ConfigRow extends ConsumerWidget {
                 Row(children: [
                   Flexible(
                     child: SelectableText(data['config_key'] ?? '',
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontFamily: 'monospace',
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: textPrimary)),
+                            color: context.textPrimary)),
                   ),
                   if (isSensitive) ...[
                     const SizedBox(width: 6),
-                    Pill(label: 'SENSITIVE', color: ptitRed, bg: ptitRedSoft),
+                    Pill(label: 'SENSITIVE', color: ptitRed, bg: context.ptitRedSoft),
                   ],
                 ]),
                 if (data['description'] != null) ...[
                   const SizedBox(height: 3),
                   Text(data['description'],
-                      style: const TextStyle(fontSize: 11, color: textMuted),
+                      style: TextStyle(fontSize: 11, color: context.textMuted),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis),
                 ],
@@ -174,19 +175,19 @@ class _ConfigRow extends ConsumerWidget {
           flex: 4,
           child: SelectableText(
             data['config_value']?.toString() ?? '—',
-            style: const TextStyle(
-                fontFamily: 'monospace', fontSize: 12, color: textPrimary),
+            style: TextStyle(
+                fontFamily: 'monospace', fontSize: 12, color: context.textPrimary),
             maxLines: 3,
           ),
         ),
         SizedBox(
             width: 80,
             child: Text(data['value_type'] ?? '',
-                style: const TextStyle(fontSize: 11, color: textMuted))),
+                style: TextStyle(fontSize: 11, color: context.textMuted))),
         Expanded(
           flex: 2,
           child: Text(fmt.format(updated),
-              style: const TextStyle(fontSize: 11, color: textMuted)),
+              style: TextStyle(fontSize: 11, color: context.textMuted)),
         ),
         SizedBox(
           width: 60,
@@ -195,7 +196,7 @@ class _ConfigRow extends ConsumerWidget {
             iconSize: 18,
             visualDensity: VisualDensity.compact,
             onPressed: () => _openEdit(context, ref),
-            icon: const Icon(Icons.edit_outlined, color: infoBlue),
+            icon: Icon(Icons.edit_outlined, color: context.infoBlue),
           ),
         ),
       ]),
@@ -267,11 +268,11 @@ class _ConfigEditDialogState extends ConsumerState<_ConfigEditDialog> {
                   padding: const EdgeInsets.only(bottom: 10),
                   child: Text(widget.data['description'],
                       style:
-                          const TextStyle(fontSize: 12, color: textMuted)),
+                          TextStyle(fontSize: 12, color: context.textMuted)),
                 ),
               Text('Type: $type',
                   style:
-                      const TextStyle(fontSize: 11, color: textMuted)),
+                      TextStyle(fontSize: 11, color: context.textMuted)),
               const SizedBox(height: 8),
               TextField(
                 controller: _value,

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/models/contest.dart';
 import '../../core/theme.dart';
@@ -66,7 +67,7 @@ class _ContestListScreenState extends ConsumerState<ContestListScreen> {
           tooltip: 'Bộ lọc',
           icon: Icon(
               _showFilters ? Icons.filter_alt : Icons.filter_alt_outlined,
-              color: hasFilter ? ptitRed : textMuted),
+              color: hasFilter ? ptitRed : context.textMuted),
           onPressed: () => setState(() => _showFilters = !_showFilters),
         ),
         NotificationBadge(
@@ -159,7 +160,7 @@ class _StatusChip extends ConsumerWidget {
         label: Text(label, style: TextStyle(
           fontSize: 11.5,
           fontWeight: FontWeight.w600,
-          color: selected ? Colors.white : textPrimary,
+          color: selected ? Colors.white : context.textPrimary,
         )),
         selected: selected,
         onSelected: (_) {
@@ -169,7 +170,7 @@ class _StatusChip extends ConsumerWidget {
         },
         selectedColor: ptitRed,
         backgroundColor: Colors.white,
-        side: BorderSide(color: selected ? ptitRed : cardBorder),
+        side: BorderSide(color: selected ? ptitRed : context.cardBorder),
         showCheckmark: false,
         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         visualDensity: VisualDensity.compact,
@@ -181,9 +182,9 @@ class _StatusChip extends ConsumerWidget {
 class _EmptyView extends StatelessWidget {
   const _EmptyView();
   @override
-  Widget build(BuildContext context) => const Center(
+  Widget build(BuildContext context) => Center(
         child: Padding(padding: EdgeInsets.all(32),
-            child: Text('Chưa có cuộc thi nào', style: TextStyle(color: textMuted))),
+            child: Text('Chưa có cuộc thi nào', style: TextStyle(color: context.textMuted))),
       );
 }
 
@@ -204,7 +205,7 @@ class _ErrorView extends StatelessWidget {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           const Icon(Icons.error_outline, size: 48, color: ptitRed),
           const SizedBox(height: 12),
-          Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: textMuted, fontSize: 12)),
+          Text(msg, textAlign: TextAlign.center, style: TextStyle(color: context.textMuted, fontSize: 12)),
           const SizedBox(height: 16),
           FilledButton(onPressed: onRetry, child: const Text('Thử lại')),
         ]),
@@ -224,9 +225,9 @@ class _ContestCard extends StatelessWidget {
       case 'PUBLISHED':
         return const LinearGradient(colors: [ptitRed, Color(0xFFFF6B7E)]);
       case 'ONGOING':
-        return const LinearGradient(colors: [warnOrange, Color(0xFFFBBF24)]);
+        return LinearGradient(colors: [context.warnOrange, Color(0xFFFBBF24)]);
       case 'FINISHED':
-        return const LinearGradient(colors: [infoBlue, Color(0xFF60A5FA)]);
+        return LinearGradient(colors: [context.infoBlue, Color(0xFF60A5FA)]);
       case 'CANCELLED':
         return const LinearGradient(
             colors: [Color(0xFF94A3B8), Color(0xFFCBD5E1)]);
@@ -258,10 +259,10 @@ class _ContestCard extends StatelessWidget {
               child: Text(contest.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 14,
-                      color: textPrimary,
+                      color: context.textPrimary,
                       letterSpacing: -0.2,
                       height: 1.3)),
             ),
@@ -288,21 +289,21 @@ class _ContestCard extends StatelessWidget {
           const SizedBox(height: 10),
           // Footer: date + max entries
           Row(children: [
-            const Icon(Icons.calendar_today_outlined, size: 13, color: textFaint),
+            Icon(Icons.calendar_today_outlined, size: 13, color: context.textFaint),
             const SizedBox(width: 4),
             Text('${fmt.format(contest.startAt)} – ${fmt.format(contest.endAt)}',
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 11,
-                    color: textMuted,
+                    color: context.textMuted,
                     fontWeight: FontWeight.w600)),
             if (contest.maxEntries != null) ...[
               const SizedBox(width: 14),
-              const Icon(Icons.people_outline, size: 13, color: textFaint),
+              Icon(Icons.people_outline, size: 13, color: context.textFaint),
               const SizedBox(width: 4),
               Text('max ${contest.maxEntries}',
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 11,
-                      color: textMuted,
+                      color: context.textMuted,
                       fontWeight: FontWeight.w600)),
             ],
           ]),
@@ -333,11 +334,11 @@ class _MetaChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(99),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 11, color: textMuted),
+        Icon(icon, size: 11, color: context.textMuted),
         const SizedBox(width: 4),
         Text(label,
-            style: const TextStyle(
-                fontSize: 10.5, color: textPrimary, fontWeight: FontWeight.w600)),
+            style: TextStyle(
+                fontSize: 10.5, color: context.textPrimary, fontWeight: FontWeight.w600)),
       ]),
     );
   }

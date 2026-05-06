@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
@@ -48,8 +49,8 @@ class HomeScreen extends ConsumerWidget {
                       Container(
                         width: 42,
                         height: 42,
-                        decoration: const BoxDecoration(
-                          color: ptitRedSoft,
+                        decoration: BoxDecoration(
+                          color: context.ptitRedSoft,
                           shape: BoxShape.circle,
                         ),
                         child: Center(
@@ -71,7 +72,7 @@ class HomeScreen extends ConsumerWidget {
                             Text('Xin chào,',
                                 style: GoogleFonts.plusJakartaSans(
                                     fontSize: 11.5,
-                                    color: textMuted,
+                                    color: context.textMuted,
                                     fontWeight: FontWeight.w500)),
                             Text(
                               user.fullName,
@@ -104,16 +105,16 @@ class HomeScreen extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  border: Border.all(color: cardBorder),
+                  border: Border.all(color: context.cardBorder),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Row(children: [
-                  const Icon(Icons.search, size: 17, color: textFaint),
+                  Icon(Icons.search, size: 17, color: context.textFaint),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text('Tìm cuộc thi, BTC...',
                         style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13, color: textFaint)),
+                            fontSize: 13, color: context.textFaint)),
                   ),
                 ]),
               ),
@@ -223,9 +224,9 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = switch (tone) {
-      _StatTone.brand => (bg: ptitRedSoft, fg: ptitRed),
-      _StatTone.warn => (bg: warnSoft, fg: warnOrange),
-      _StatTone.neutral => (bg: const Color(0xFFF1ECE5), fg: textPrimary),
+      _StatTone.brand => (bg: context.ptitRedSoft, fg: ptitRed),
+      _StatTone.warn => (bg: context.warnSoft, fg: context.warnOrange),
+      _StatTone.neutral => (bg: const Color(0xFFF1ECE5), fg: context.textPrimary),
     };
     return InkWell(
       onTap: onTap,
@@ -278,7 +279,7 @@ class _SectionHead extends StatelessWidget {
               fontSize: 15,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.3,
-              color: textPrimary,
+              color: context.textPrimary,
             )),
       ),
       if (actionLabel != null)
@@ -322,7 +323,7 @@ class _FeaturedContests extends ConsumerWidget {
         child: Center(
             child: Text('Không tải được cuộc thi',
                 style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12, color: textMuted))),
+                    fontSize: 12, color: context.textMuted))),
       ),
       data: (data) {
         // Lấy 3 contests đầu tiên (priority: REG_OPEN > PUBLISHED > others)
@@ -346,7 +347,7 @@ class _FeaturedContests extends ConsumerWidget {
                 child: Text(
                   'Chưa có cuộc thi nào.',
                   style: GoogleFonts.plusJakartaSans(
-                      color: textMuted, fontSize: 13),
+                      color: context.textMuted, fontSize: 13),
                 ),
               ),
             ),
@@ -391,7 +392,7 @@ class _FeaturedCard extends StatelessWidget {
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.2,
-                    color: textPrimary,
+                    color: context.textPrimary,
                     height: 1.3,
                   )),
             ),
@@ -400,17 +401,17 @@ class _FeaturedCard extends StatelessWidget {
           ]),
           const SizedBox(height: 8),
           Row(children: [
-            const Icon(Icons.calendar_today_outlined, size: 13, color: textFaint),
+            Icon(Icons.calendar_today_outlined, size: 13, color: context.textFaint),
             const SizedBox(width: 4),
             Text('${fmt.format(contest.startAt)} – ${fmt.format(contest.endAt)}',
                 style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11, color: textMuted, fontWeight: FontWeight.w500)),
+                    fontSize: 11, color: context.textMuted, fontWeight: FontWeight.w500)),
             const SizedBox(width: 14),
-            const Icon(Icons.location_on_outlined, size: 13, color: textFaint),
+            Icon(Icons.location_on_outlined, size: 13, color: context.textFaint),
             const SizedBox(width: 4),
             Text(_modeLabel(contest.deliveryMode),
                 style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11, color: textMuted, fontWeight: FontWeight.w500)),
+                    fontSize: 11, color: context.textMuted, fontWeight: FontWeight.w500)),
           ]),
         ],
       ),
@@ -435,13 +436,13 @@ class _BellButton extends ConsumerWidget {
       Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          border: Border.all(color: cardBorder),
+          border: Border.all(color: context.cardBorder),
           borderRadius: BorderRadius.circular(99),
         ),
         child: IconButton(
           iconSize: 18,
           visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.notifications_outlined, color: textPrimary),
+          icon: Icon(Icons.notifications_outlined, color: context.textPrimary),
           onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const NotificationsScreen())),
         ),

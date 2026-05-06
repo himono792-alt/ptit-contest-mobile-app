@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
@@ -45,7 +46,7 @@ class NotificationBadge extends ConsumerWidget {
     return Stack(clipBehavior: Clip.none, children: [
       IconButton(
         onPressed: onTap,
-        icon: const Icon(Icons.notifications_outlined, color: textMuted),
+        icon: Icon(Icons.notifications_outlined, color: context.textMuted),
         visualDensity: VisualDensity.compact,
       ),
       if (unread > 0)
@@ -83,7 +84,7 @@ class NotificationsScreen extends ConsumerWidget {
         title: 'Thông báo',
         leading: canPop
             ? IconButton(
-                icon: const Icon(Icons.arrow_back, color: textMuted),
+                icon: Icon(Icons.arrow_back, color: context.textMuted),
                 onPressed: () => Navigator.maybePop(context),
               )
             : null,
@@ -116,15 +117,15 @@ class NotificationsScreen extends ConsumerWidget {
         data: (data) {
           final items = (data['items'] as List).cast<Map<String, dynamic>>();
           if (items.isEmpty) {
-            return const Center(
+            return Center(
               child: Padding(
                 padding: EdgeInsets.all(40),
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Icon(Icons.notifications_off_outlined,
-                      size: 56, color: textMuted),
+                      size: 56, color: context.textMuted),
                   SizedBox(height: 12),
                   Text('Chưa có thông báo nào',
-                      style: TextStyle(color: textMuted, fontSize: 13)),
+                      style: TextStyle(color: context.textMuted, fontSize: 13)),
                 ]),
               ),
             );
@@ -233,7 +234,7 @@ class _NotificationCard extends StatelessWidget {
 
     return MCard(
       onTap: onTap,
-      backgroundColor: isRead ? null : ptitRedSoft.withValues(alpha: 0.4),
+      backgroundColor: isRead ? null : context.ptitRedSoft.withValues(alpha: 0.4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -251,23 +252,23 @@ class _NotificationCard extends StatelessWidget {
                   style: TextStyle(
                       fontSize: 13,
                       fontWeight: isRead ? FontWeight.w500 : FontWeight.w700,
-                      color: textPrimary)),
+                      color: context.textPrimary)),
             ),
             if (scope != null) ...[
               const SizedBox(width: 6),
               Pill(
                 label: scope,
-                color: textMuted,
+                color: context.textMuted,
                 bg: const Color(0xFFF3F4F6),
               ),
             ],
           ]),
           const SizedBox(height: 4),
           Text(data['message'] ?? '',
-              style: const TextStyle(fontSize: 12, color: textPrimary, height: 1.4)),
+              style: TextStyle(fontSize: 12, color: context.textPrimary, height: 1.4)),
           const SizedBox(height: 6),
           Text(fmt.format(created),
-              style: const TextStyle(fontSize: 10, color: textMuted)),
+              style: TextStyle(fontSize: 10, color: context.textMuted)),
         ],
       ),
     );

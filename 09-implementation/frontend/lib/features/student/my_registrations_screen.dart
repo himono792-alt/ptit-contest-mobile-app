@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
@@ -76,13 +77,13 @@ class _MyRegistrationsScreenState extends ConsumerState<MyRegistrationsScreen> {
                       decoration: BoxDecoration(
                         color: _filter == f ? ptitRed : Colors.white,
                         border: Border.all(
-                            color: _filter == f ? ptitRed : cardBorder),
+                            color: _filter == f ? ptitRed : context.cardBorder),
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(f,
                           style: TextStyle(
                             fontSize: 11,
-                            color: _filter == f ? Colors.white : textMuted,
+                            color: _filter == f ? Colors.white : context.textMuted,
                             fontWeight: FontWeight.w500,
                           )),
                     ),
@@ -106,7 +107,7 @@ class _MyRegistrationsScreenState extends ConsumerState<MyRegistrationsScreen> {
                   child: Padding(
                       padding: const EdgeInsets.all(24),
                       child: Text('Lỗi: $msg',
-                          style: const TextStyle(color: textMuted))));
+                          style: TextStyle(color: context.textMuted))));
             },
             data: (entries) {
               final filtered = entries.where(_matchesFilter).toList();
@@ -117,7 +118,7 @@ class _MyRegistrationsScreenState extends ConsumerState<MyRegistrationsScreen> {
                   child: ListView(children: [
                     const SizedBox(height: 60),
                     Icon(Icons.inbox_outlined,
-                        size: 64, color: textMuted.withValues(alpha: 0.6)),
+                        size: 64, color: context.textMuted.withValues(alpha: 0.6)),
                     const SizedBox(height: 12),
                     Text(
                       _filter == 'Tất cả'
@@ -125,7 +126,7 @@ class _MyRegistrationsScreenState extends ConsumerState<MyRegistrationsScreen> {
                           : 'Không có entry nào ở mục "$_filter"',
                       textAlign: TextAlign.center,
                       style:
-                          const TextStyle(color: textMuted, fontSize: 13),
+                          TextStyle(color: context.textMuted, fontSize: 13),
                     ),
                     const SizedBox(height: 60),
                   ]),
@@ -243,28 +244,28 @@ class _EntryCard extends ConsumerWidget {
                   ? 'Chờ BTC duyệt'
                   : (isApproved ? 'BTC đã duyệt' : rs),
               color: isApproved
-                  ? successGreen
-                  : (isPending ? warnOrange : ptitRed),
+                  ? context.successGreen
+                  : (isPending ? context.warnOrange : ptitRed),
               bg: isApproved
-                  ? successSoft
-                  : (isPending ? warnSoft : ptitRedSoft),
+                  ? context.successSoft
+                  : (isPending ? context.warnSoft : context.ptitRedSoft),
             ),
             const SizedBox(width: 6),
             Text('${entry['entry_type']}',
-                style: const TextStyle(fontSize: 11, color: textMuted)),
+                style: TextStyle(fontSize: 11, color: context.textMuted)),
           ]),
           if ((entry['registration_note'] ?? '').toString().isNotEmpty) ...[
             const SizedBox(height: 6),
             Text('Ghi chú: ${entry['registration_note']}',
-                style: const TextStyle(
-                    fontSize: 11, color: textMuted, fontStyle: FontStyle.italic)),
+                style: TextStyle(
+                    fontSize: 11, color: context.textMuted, fontStyle: FontStyle.italic)),
           ],
           const SizedBox(height: 8),
           Text(
             'Đăng ký ${fmt.format(DateTime.parse(entry['created_at']).toLocal())}'
             ' · Thi ${fmt.format(DateTime.parse(entry['contest_start_at']).toLocal())}'
             ' → ${fmt.format(DateTime.parse(entry['contest_end_at']).toLocal())}',
-            style: const TextStyle(fontSize: 10, color: textFaint),
+            style: TextStyle(fontSize: 10, color: context.textFaint),
           ),
           if (canCancel || canSubmit || isFinished) ...[
             const SizedBox(height: 10),
@@ -305,7 +306,7 @@ class _EntryCard extends ConsumerWidget {
                   style: OutlinedButton.styleFrom(
                       minimumSize: const Size(0, 32),
                       padding: const EdgeInsets.symmetric(horizontal: 10),
-                      side: const BorderSide(color: ptitRedSoft)),
+                      side: BorderSide(color: context.ptitRedSoft)),
                 ),
             ]),
           ],

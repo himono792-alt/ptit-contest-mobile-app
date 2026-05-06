@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/models/contest_detail.dart';
 import '../../core/theme.dart';
@@ -67,9 +68,9 @@ class _RegisterContestScreenState extends ConsumerState<RegisterContestScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('Đăng ký thành công, chờ BTC duyệt'),
-          backgroundColor: successGreen,
+          backgroundColor: context.successGreen,
         ),
       );
       context.go('/'); // back to list
@@ -93,7 +94,7 @@ class _RegisterContestScreenState extends ConsumerState<RegisterContestScreen> {
         appBar: MTopBar(
           title: 'Đăng ký tham gia',
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: textMuted),
+            icon: Icon(Icons.arrow_back, color: context.textMuted),
             onPressed: () => context.pop(),
           ),
         ),
@@ -106,21 +107,21 @@ class _RegisterContestScreenState extends ConsumerState<RegisterContestScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Cuộc thi',
-                        style: TextStyle(color: textMuted, fontSize: 11)),
+                    Text('Cuộc thi',
+                        style: TextStyle(color: context.textMuted, fontSize: 11)),
                     const SizedBox(height: 4),
                     Text(c.title,
                         style: const TextStyle(
                             fontSize: 16, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 4),
                     Text('${c.participationMode} · ${c.deliveryMode}',
-                        style: const TextStyle(color: textMuted, fontSize: 12)),
+                        style: TextStyle(color: context.textMuted, fontSize: 12)),
                   ],
                 ),
               ),
               const SizedBox(height: 16),
-              const Text('Ghi chú đăng ký (tùy chọn)',
-                  style: TextStyle(fontSize: 12, color: textMuted)),
+              Text('Ghi chú đăng ký (tùy chọn)',
+                  style: TextStyle(fontSize: 12, color: context.textMuted)),
               const SizedBox(height: 6),
               TextField(
                 controller: _noteCtrl,
@@ -133,16 +134,16 @@ class _RegisterContestScreenState extends ConsumerState<RegisterContestScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: warnSoft,
+                  color: context.warnSoft,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Row(children: [
-                  Icon(Icons.info_outline, size: 16, color: warnOrange),
+                child: Row(children: [
+                  Icon(Icons.info_outline, size: 16, color: context.warnOrange),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Đăng ký sẽ ở trạng thái PENDING chờ Ban Tổ chức phê duyệt.',
-                      style: TextStyle(fontSize: 12, color: warnOrange),
+                      style: TextStyle(fontSize: 12, color: context.warnOrange),
                     ),
                   ),
                 ]),
@@ -152,7 +153,7 @@ class _RegisterContestScreenState extends ConsumerState<RegisterContestScreen> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                      color: ptitRedSoft,
+                      color: context.ptitRedSoft,
                       borderRadius: BorderRadius.circular(8)),
                   child: Row(children: [
                     const Icon(Icons.error_outline, size: 16, color: ptitRed),

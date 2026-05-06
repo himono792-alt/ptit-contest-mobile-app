@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
@@ -40,23 +41,23 @@ class MasterDataScreen extends StatelessWidget {
         body: Column(children: [
           if (!isMobile) Container(
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: Colors.white,
-              border: Border(bottom: BorderSide(color: cardBorder)),
+              border: Border(bottom: BorderSide(color: context.cardBorder)),
             ),
-            child: const Row(children: [
+            child: Row(children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Quản trị',
-                        style: TextStyle(color: textMuted, fontSize: 11)),
+                        style: TextStyle(color: context.textMuted, fontSize: 11)),
                     SizedBox(height: 2),
                     Text('Khoa / Ngành / Lớp',
                         style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
-                            color: textPrimary)),
+                            color: context.textPrimary)),
                   ],
                 ),
               ),
@@ -64,9 +65,9 @@ class MasterDataScreen extends StatelessWidget {
           ),
           Container(
             color: Colors.white,
-            child: const TabBar(
+            child: TabBar(
               labelColor: ptitRed,
-              unselectedLabelColor: textMuted,
+              unselectedLabelColor: context.textMuted,
               indicatorColor: ptitRed,
               labelStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
               tabs: [
@@ -572,7 +573,7 @@ class _SectionScaffold extends StatelessWidget {
           const Spacer(),
           IconButton(
             tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh, color: textMuted),
+            icon: Icon(Icons.refresh, color: context.textMuted),
             onPressed: onRefresh,
           ),
         ]),
@@ -592,10 +593,10 @@ class _TableHeader extends StatelessWidget {
     for (var i = 0; i < labels.length; i++) {
       final isLast = i == labels.length - 1;
       final text = Text(labels[i],
-          style: const TextStyle(
+          style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: textMuted,
+              color: context.textMuted,
               letterSpacing: 0.5));
       widgets.add(isLast
           ? SizedBox(width: 100, child: text)
@@ -603,9 +604,9 @@ class _TableHeader extends StatelessWidget {
     }
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Color(0xFFF9FAFB),
-        border: Border(bottom: BorderSide(color: cardBorder)),
+        border: Border(bottom: BorderSide(color: context.cardBorder)),
         borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
       ),
       child: Row(children: widgets),
@@ -623,13 +624,13 @@ class _TableRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: cardBorder)),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: context.cardBorder)),
       ),
       child: Row(children: [
         ...cells.map((c) => Expanded(
               child: Text(c,
-                  style: const TextStyle(fontSize: 12, color: textPrimary),
+                  style: TextStyle(fontSize: 12, color: context.textPrimary),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis),
             )),
@@ -641,7 +642,7 @@ class _TableRow extends StatelessWidget {
               iconSize: 18,
               visualDensity: VisualDensity.compact,
               onPressed: onEdit,
-              icon: const Icon(Icons.edit_outlined, color: infoBlue),
+              icon: Icon(Icons.edit_outlined, color: context.infoBlue),
             ),
             IconButton(
               tooltip: 'Xóa',
@@ -664,13 +665,13 @@ class _Footer extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: cardBorder)),
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: context.cardBorder)),
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
         ),
         alignment: Alignment.centerLeft,
         child: Text('Tổng: $total $label',
-            style: const TextStyle(color: textMuted, fontSize: 12)),
+            style: TextStyle(color: context.textMuted, fontSize: 12)),
       );
 }
 

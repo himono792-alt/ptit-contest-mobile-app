@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
@@ -29,28 +30,28 @@ class MonitorScreen extends ConsumerWidget {
         // Top bar
         if (!isMobile) Container(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: Colors.white,
-            border: Border(bottom: BorderSide(color: cardBorder)),
+            border: Border(bottom: BorderSide(color: context.cardBorder)),
           ),
           child: Row(children: [
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('BCN', style: TextStyle(color: textMuted, fontSize: 11)),
+                  Text('BCN', style: TextStyle(color: context.textMuted, fontSize: 11)),
                   SizedBox(height: 2),
                   Text('Giám sát tiến độ',
                       style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
-                          color: textPrimary)),
+                          color: context.textPrimary)),
                 ],
               ),
             ),
             IconButton(
               tooltip: 'Refresh',
-              icon: const Icon(Icons.refresh, color: textMuted),
+              icon: Icon(Icons.refresh, color: context.textMuted),
               onPressed: () => ref.invalidate(monitorProvider),
             ),
           ]),
@@ -70,15 +71,15 @@ class MonitorScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Tổng: $total cuộc thi',
-                        style: const TextStyle(
-                            fontSize: 12, color: textMuted)),
+                        style: TextStyle(
+                            fontSize: 12, color: context.textMuted)),
                     const SizedBox(height: 12),
                     if (items.isEmpty)
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.all(40),
                         child: Center(
                           child: Text('Không có cuộc thi nào',
-                              style: TextStyle(color: textMuted)),
+                              style: TextStyle(color: context.textMuted)),
                         ),
                       )
                     else
@@ -122,13 +123,13 @@ class _MonitorCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(data['title'] ?? '',
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: textPrimary)),
+                            color: context.textPrimary)),
                     const SizedBox(height: 2),
                     Text(data['slug'] ?? '',
-                        style: const TextStyle(fontSize: 11, color: textMuted)),
+                        style: TextStyle(fontSize: 11, color: context.textMuted)),
                   ]),
             ),
             const SizedBox(width: 8),
@@ -137,14 +138,14 @@ class _MonitorCard extends StatelessWidget {
           if (dateRange.isNotEmpty) ...[
             const SizedBox(height: 6),
             Row(children: [
-              const Icon(Icons.calendar_today, size: 12, color: textMuted),
+              Icon(Icons.calendar_today, size: 12, color: context.textMuted),
               const SizedBox(width: 4),
               Text(dateRange,
-                  style: const TextStyle(fontSize: 11, color: textMuted)),
+                  style: TextStyle(fontSize: 11, color: context.textMuted)),
               const SizedBox(width: 16),
               Text(
                   '${data['total_entries']} entries · ${data['total_submissions']} submissions',
-                  style: const TextStyle(fontSize: 11, color: textMuted)),
+                  style: TextStyle(fontSize: 11, color: context.textMuted)),
             ]),
           ],
           const SizedBox(height: 14),
@@ -152,10 +153,10 @@ class _MonitorCard extends StatelessWidget {
               label: 'Đăng ký', pct: regPct, color: ptitRed),
           const SizedBox(height: 8),
           _Progress(
-              label: 'Nộp bài', pct: subPct, color: infoBlue),
+              label: 'Nộp bài', pct: subPct, color: context.infoBlue),
           const SizedBox(height: 8),
           _Progress(
-              label: 'Chấm điểm', pct: judgePct, color: successGreen),
+              label: 'Chấm điểm', pct: judgePct, color: context.successGreen),
         ],
       ),
     );
@@ -178,7 +179,7 @@ class _Progress extends StatelessWidget {
       SizedBox(
         width: 90,
         child: Text(label,
-            style: const TextStyle(fontSize: 12, color: textPrimary)),
+            style: TextStyle(fontSize: 12, color: context.textPrimary)),
       ),
       Expanded(
         child: Stack(children: [
@@ -232,7 +233,7 @@ class _ErrorView extends StatelessWidget {
           const SizedBox(height: 12),
           Text(msg,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: textMuted, fontSize: 12)),
+              style: TextStyle(color: context.textMuted, fontSize: 12)),
           const SizedBox(height: 16),
           FilledButton(onPressed: onRetry, child: const Text('Thử lại')),
         ]),

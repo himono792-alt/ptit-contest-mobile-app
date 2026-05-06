@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:intl/intl.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/auth/biometric_service.dart';
 import '../../core/theme.dart';
@@ -61,14 +62,14 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 14),
               Text(user.fullName,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
-                      color: textPrimary,
+                      color: context.textPrimary,
                       letterSpacing: -0.4)),
               const SizedBox(height: 3),
               Text(user.email,
-                  style: const TextStyle(color: textMuted, fontSize: 12, fontWeight: FontWeight.w500)),
+                  style: TextStyle(color: context.textMuted, fontSize: 12, fontWeight: FontWeight.w500)),
               const SizedBox(height: 10),
               Wrap(
                 spacing: 6,
@@ -79,7 +80,7 @@ class ProfileScreen extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                       decoration: BoxDecoration(
-                          color: ptitRedSoft,
+                          color: context.ptitRedSoft,
                           borderRadius: BorderRadius.circular(99)),
                       child: Text(r,
                           style: const TextStyle(
@@ -103,12 +104,12 @@ class ProfileScreen extends ConsumerWidget {
                     const Icon(Icons.badge_outlined,
                         size: 16, color: ptitRed),
                     const SizedBox(width: 6),
-                    const Expanded(
+                    Expanded(
                       child: Text('Thông tin cá nhân',
                           style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w800,
-                              color: textPrimary)),
+                              color: context.textPrimary)),
                     ),
                     IconButton(
                       icon: const Icon(Icons.edit_outlined,
@@ -120,7 +121,7 @@ class ProfileScreen extends ConsumerWidget {
                               builder: (_) => const EditProfileScreen())),
                     ),
                   ]),
-                  const Divider(color: cardBorder, height: 16),
+                  Divider(color: context.cardBorder, height: 16),
                   _infoRow('Ngày sinh',
                       user.dob != null
                           ? DateFormat('dd/MM/yyyy').format(user.dob!)
@@ -145,19 +146,19 @@ class ProfileScreen extends ConsumerWidget {
               _menuTile(Icons.edit_outlined, 'Cập nhật thông tin',
                   () => Navigator.of(context).push(MaterialPageRoute(
                       builder: (_) => const EditProfileScreen()))),
-              const Divider(height: 1, color: cardBorder),
+              Divider(height: 1, color: context.cardBorder),
               _menuTile(Icons.lock_outline, 'Đổi mật khẩu', () => _changePasswordDialog(context, ref)),
-              const Divider(height: 1, color: cardBorder),
+              Divider(height: 1, color: context.cardBorder),
               // Phase 2 sprint 1 step 4 (2026-05-06): biometric login toggle
               const _BiometricToggleTile(),
-              const Divider(height: 1, color: cardBorder),
+              Divider(height: 1, color: context.cardBorder),
               // Phase 2 sprint 2 step 1 (2026-05-06): theme mode (light/dark/system)
               const _ThemeModeTile(),
-              const Divider(height: 1, color: cardBorder),
+              Divider(height: 1, color: context.cardBorder),
               _menuTile(Icons.qr_code_scanner_outlined, 'Xác thực chứng nhận',
                   () => Navigator.of(context).push(MaterialPageRoute(
                       builder: (_) => const CertVerifyScreen()))),
-              const Divider(height: 1, color: cardBorder),
+              Divider(height: 1, color: context.cardBorder),
               _menuTile(Icons.info_outline, 'Về ứng dụng', () {}, subtitle: 'PTIT Contest v0.1.0'),
             ]),
           ),
@@ -187,7 +188,7 @@ class ProfileScreen extends ConsumerWidget {
           OutlinedButton.icon(
             icon: const Icon(Icons.delete_outline, size: 18, color: ptitRed),
             label: const Text('Xóa tài khoản', style: TextStyle(color: ptitRed)),
-            style: OutlinedButton.styleFrom(side: const BorderSide(color: ptitRedSoft)),
+            style: OutlinedButton.styleFrom(side: BorderSide(color: context.ptitRedSoft)),
             onPressed: () => _deleteAccountDialog(context, ref),
           ),
         ],
@@ -203,14 +204,14 @@ class ProfileScreen extends ConsumerWidget {
         SizedBox(
           width: 110,
           child: Text(k,
-              style: const TextStyle(fontSize: 11, color: textMuted)),
+              style: TextStyle(fontSize: 11, color: context.textMuted)),
         ),
         Expanded(
           child: Text(
             v,
             style: TextStyle(
               fontSize: 12.5,
-              color: isPlaceholder ? textFaint : textPrimary,
+              color: isPlaceholder ? context.textFaint : context.textPrimary,
               fontWeight: isPlaceholder ? FontWeight.w400 : FontWeight.w600,
             ),
           ),
@@ -221,10 +222,10 @@ class ProfileScreen extends ConsumerWidget {
 
   Widget _menuTile(IconData icon, String title, VoidCallback onTap, {String? subtitle}) =>
       ListTile(
-        leading: Icon(icon, color: textMuted, size: 20),
+        leading: Icon(icon, color: context.textMuted, size: 20),
         title: Text(title, style: const TextStyle(fontSize: 14)),
-        subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(fontSize: 11, color: textMuted)) : null,
-        trailing: const Icon(Icons.chevron_right, color: textMuted, size: 18),
+        subtitle: subtitle != null ? Text(subtitle, style: TextStyle(fontSize: 11, color: context.textMuted)) : null,
+        trailing: Icon(Icons.chevron_right, color: context.textMuted, size: 18),
         onTap: onTap,
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         dense: true,
@@ -280,7 +281,7 @@ class ProfileScreen extends ConsumerWidget {
               if (!ctx.mounted) return;
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Đã cập nhật'), backgroundColor: successGreen));
+                  SnackBar(content: Text('Đã cập nhật'), backgroundColor: context.successGreen));
             } on DioException catch (e) {
               if (!ctx.mounted) return;
               ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('${e.message}')));
@@ -344,7 +345,7 @@ class ProfileScreen extends ConsumerWidget {
               if (!ctx.mounted) return;
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Đổi mật khẩu OK'), backgroundColor: successGreen));
+                  SnackBar(content: Text('Đổi mật khẩu OK'), backgroundColor: context.successGreen));
             } on DioException catch (e) {
               if (!ctx.mounted) return;
               final msg = e.response?.data is Map ? '${e.response?.data['detail']}' : e.message;
@@ -364,11 +365,11 @@ class ProfileScreen extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Xóa tài khoản?', style: TextStyle(color: ptitRed)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text(
+          Text(
             'Tài khoản sẽ bị soft-delete (status = INACTIVE).\n'
             'Tất cả dữ liệu (đăng ký, kết quả, chứng nhận) vẫn giữ trong DB.\n'
             'Bạn không thể đăng nhập lại trừ khi admin reactivate.',
-            style: TextStyle(fontSize: 12, color: textMuted, height: 1.5),
+            style: TextStyle(fontSize: 12, color: context.textMuted, height: 1.5),
           ),
           const SizedBox(height: 14),
           TextField(
@@ -505,7 +506,7 @@ class _BiometricToggleTileState extends ConsumerState<_BiometricToggleTile> {
         _enabled
             ? 'Đã bật — mở khóa bằng FaceID/Vân tay'
             : 'Tắt — vẫn nhập email + mật khẩu',
-        style: const TextStyle(fontSize: 11, color: textMuted),
+        style: TextStyle(fontSize: 11, color: context.textMuted),
       ),
       value: _enabled,
       onChanged: _toggle,
@@ -526,8 +527,8 @@ class _ThemeModeTile extends ConsumerWidget {
       title: const Text('Giao diện',
           style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
       subtitle: Text(themeModeLabel(mode),
-          style: const TextStyle(fontSize: 11, color: textMuted)),
-      trailing: const Icon(Icons.chevron_right, size: 18, color: textMuted),
+          style: TextStyle(fontSize: 11, color: context.textMuted)),
+      trailing: Icon(Icons.chevron_right, size: 18, color: context.textMuted),
       onTap: () => _showPicker(context, ref, mode),
     );
   }
@@ -562,7 +563,7 @@ class _ThemeModeTile extends ConsumerWidget {
               title: Text(themeModeLabel(mode),
                   style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
               subtitle: Text(_themeDescription(mode),
-                  style: const TextStyle(fontSize: 11, color: textMuted)),
+                  style: TextStyle(fontSize: 11, color: context.textMuted)),
               onChanged: (v) {
                 if (v != null) {
                   ref.read(themeProvider.notifier).setMode(v);

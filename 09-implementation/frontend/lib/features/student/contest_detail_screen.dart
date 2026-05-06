@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/models/contest_detail.dart';
 import '../../core/theme.dart';
@@ -31,12 +32,12 @@ class ContestDetailScreen extends ConsumerWidget {
       appBar: MTopBar(
         title: 'Chi tiết',
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: textMuted),
+          icon: Icon(Icons.arrow_back, color: context.textMuted),
           onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.share_outlined, color: textMuted, size: 20),
+            icon: Icon(Icons.share_outlined, color: context.textMuted, size: 20),
             tooltip: 'Sao chép link',
             onPressed: () async {
               final url =
@@ -60,7 +61,7 @@ class ContestDetailScreen extends ConsumerWidget {
             child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text('Lỗi: $e',
-                    style: const TextStyle(color: textMuted)))),
+                    style: TextStyle(color: context.textMuted)))),
         data: (c) => _buildBody(context, c),
       ),
     );
@@ -157,7 +158,7 @@ class ContestDetailScreen extends ConsumerWidget {
                   style: GoogleFonts.plusJakartaSans(
                       fontSize: 13.5,
                       height: 1.65,
-                      color: textPrimary,
+                      color: context.textPrimary,
                       fontWeight: FontWeight.w500)),
             ),
             const SizedBox(height: 8),
@@ -207,7 +208,7 @@ class ContestDetailScreen extends ConsumerWidget {
                   style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       height: 1.65,
-                      color: textPrimary,
+                      color: context.textPrimary,
                       fontWeight: FontWeight.w500)),
             ),
             const SizedBox(height: 8),
@@ -219,12 +220,12 @@ class ContestDetailScreen extends ConsumerWidget {
                 icon: Icons.workspace_premium_outlined, title: 'Giải thưởng'),
             const SizedBox(height: 8),
             MCard(
-              backgroundColor: warnSoft.withValues(alpha: 0.4),
+              backgroundColor: context.warnSoft.withValues(alpha: 0.4),
               child: Text(c.awardText!,
                   style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       height: 1.65,
-                      color: textPrimary,
+                      color: context.textPrimary,
                       fontWeight: FontWeight.w500)),
             ),
             const SizedBox(height: 8),
@@ -254,7 +255,7 @@ class ContestDetailScreen extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           decoration: BoxDecoration(
             color: Colors.white,
-            border: const Border(top: BorderSide(color: cardBorder)),
+            border: Border(top: BorderSide(color: context.cardBorder)),
             boxShadow: shadowMd,
           ),
           child: SafeArea(
@@ -272,7 +273,7 @@ class ContestDetailScreen extends ConsumerWidget {
                     style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFFEDE7DF)),
                     child: Text('Không nhận đăng ký (${_statusVi(c.status)})',
-                        style: const TextStyle(color: textMuted)),
+                        style: TextStyle(color: context.textMuted)),
                   ),
           ),
         ),
@@ -312,7 +313,7 @@ class _SectionHeader extends StatelessWidget {
           style: GoogleFonts.plusJakartaSans(
             fontSize: 13,
             fontWeight: FontWeight.w800,
-            color: textPrimary,
+            color: context.textPrimary,
             letterSpacing: -0.2,
           )),
     ]);
@@ -329,16 +330,16 @@ class _MetaChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: cardBorder),
+        border: Border.all(color: context.cardBorder),
         borderRadius: BorderRadius.circular(99),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 12, color: textMuted),
+        Icon(icon, size: 12, color: context.textMuted),
         const SizedBox(width: 5),
         Text(label,
             style: GoogleFonts.plusJakartaSans(
                 fontSize: 11.5,
-                color: textPrimary,
+                color: context.textPrimary,
                 fontWeight: FontWeight.w600)),
       ]),
     );
@@ -348,7 +349,7 @@ class _MetaChip extends StatelessWidget {
 class _Divider extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
-      const Divider(color: cardBorder, height: 16, thickness: 1);
+      Divider(color: context.cardBorder, height: 16, thickness: 1);
 }
 
 Widget _kvRow({required String label, required String value, bool accent = false}) {
@@ -357,14 +358,14 @@ Widget _kvRow({required String label, required String value, bool accent = false
       child: Text(label,
           style: GoogleFonts.plusJakartaSans(
               fontSize: 12,
-              color: textMuted,
+              color: context.textMuted,
               fontWeight: FontWeight.w500)),
     ),
     Text(value,
         style: GoogleFonts.plusJakartaSans(
           fontSize: 12.5,
           fontWeight: FontWeight.w700,
-          color: accent ? ptitRed : textPrimary,
+          color: accent ? ptitRed : context.textPrimary,
         )),
   ]);
 }

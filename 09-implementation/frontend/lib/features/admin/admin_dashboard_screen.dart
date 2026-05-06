@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
@@ -38,27 +39,27 @@ class AdminDashboardScreen extends ConsumerWidget {
         if (!isMobile)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: Colors.white,
-              border: Border(bottom: BorderSide(color: cardBorder)),
+              border: Border(bottom: BorderSide(color: context.cardBorder)),
             ),
             child: Row(children: [
-              const Expanded(
+              Expanded(
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Trang chủ',
-                          style: TextStyle(color: textMuted, fontSize: 11)),
+                          style: TextStyle(color: context.textMuted, fontSize: 11)),
                       SizedBox(height: 2),
                       Text('Dashboard',
                           style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.w700,
-                              color: textPrimary)),
+                              color: context.textPrimary)),
                     ]),
               ),
               Text('${user.fullName} · ${user.roles.join(",")}',
-                  style: const TextStyle(color: textMuted, fontSize: 12)),
+                  style: TextStyle(color: context.textMuted, fontSize: 12)),
             ]),
           ),
         Expanded(
@@ -84,11 +85,11 @@ class AdminDashboardScreen extends ConsumerWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('Chào mừng, ${user.fullName} 👋', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 6),
-                  Text('Roles: ${user.roles.join(", ")}', style: const TextStyle(color: textMuted, fontSize: 13)),
+                  Text('Roles: ${user.roles.join(", ")}', style: TextStyle(color: context.textMuted, fontSize: 13)),
                   const SizedBox(height: 12),
-                  const Text(
+                  Text(
                     'Bạn đã đăng nhập với quyền admin. Sidebar bên trái hiển thị các module bạn có quyền truy cập theo role.',
-                    style: TextStyle(fontSize: 13, color: textPrimary, height: 1.6),
+                    style: TextStyle(fontSize: 13, color: context.textPrimary, height: 1.6),
                   ),
                 ]),
               ),
@@ -130,7 +131,7 @@ class _AdminStatsRow extends StatelessWidget {
         _StatCard(
             label: 'Bài nộp',
             value: '${data['total_submissions'] ?? 0}',
-            color: infoBlue),
+            color: context.infoBlue),
         _StatCard(
             label: 'Chứng nhận đã cấp',
             value: '${data['total_certificates_issued'] ?? 0}',
@@ -180,14 +181,14 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) => MCard(
         margin: EdgeInsets.zero,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: const TextStyle(fontSize: 11, color: textMuted, letterSpacing: 0.5)),
+          Text(label, style: TextStyle(fontSize: 11, color: context.textMuted, letterSpacing: 0.5)),
           const SizedBox(height: 6),
-          Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: color ?? textPrimary)),
+          Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: color ?? context.textPrimary)),
           if (delta != null) ...[
             const SizedBox(height: 4),
             Flexible(
               child: Text(delta!,
-                  style: const TextStyle(fontSize: 10, color: textMuted),
+                  style: TextStyle(fontSize: 10, color: context.textMuted),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis),
             ),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/models/contest.dart';
 import '../../core/theme.dart';
@@ -57,23 +58,23 @@ class _AdminContestsScreenState extends ConsumerState<AdminContestsScreen> {
         // Top bar
         if (!isMobile) Container(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: Colors.white,
-            border: Border(bottom: BorderSide(color: cardBorder)),
+            border: Border(bottom: BorderSide(color: context.cardBorder)),
           ),
           child: Row(children: [
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Quản lý',
-                      style: TextStyle(color: textMuted, fontSize: 11)),
+                      style: TextStyle(color: context.textMuted, fontSize: 11)),
                   SizedBox(height: 2),
                   Text('Cuộc thi',
                       style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
-                          color: textPrimary)),
+                          color: context.textPrimary)),
                 ],
               ),
             ),
@@ -148,7 +149,7 @@ class _AdminContestsScreenState extends ConsumerState<AdminContestsScreen> {
             const SizedBox(width: 8),
             IconButton(
               tooltip: 'Refresh',
-              icon: const Icon(Icons.refresh, color: textMuted),
+              icon: Icon(Icons.refresh, color: context.textMuted),
               onPressed: () => ref.invalidate(adminContestsProvider),
             ),
           ]),
@@ -164,9 +165,9 @@ class _AdminContestsScreenState extends ConsumerState<AdminContestsScreen> {
             data: (data) => Padding(
               padding: EdgeInsets.all(isMobile ? 14 : 24),
               child: data.items.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Text('Không có cuộc thi nào',
-                          style: TextStyle(color: textMuted)))
+                          style: TextStyle(color: context.textMuted)))
                   : MCard(
                       padding: EdgeInsets.zero,
                       margin: EdgeInsets.zero,
@@ -203,9 +204,9 @@ class _ContestsTable extends StatelessWidget {
       // Header
       Container(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: Color(0xFFF9FAFB),
-          border: Border(bottom: BorderSide(color: cardBorder)),
+          border: Border(bottom: BorderSide(color: context.cardBorder)),
           borderRadius:
               BorderRadius.vertical(top: Radius.circular(10)),
         ),
@@ -224,13 +225,13 @@ class _ContestsTable extends StatelessWidget {
       // Footer
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: cardBorder)),
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: context.cardBorder)),
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
         ),
         alignment: Alignment.centerLeft,
         child: Text('Tổng: $total cuộc thi',
-            style: const TextStyle(color: textMuted, fontSize: 12)),
+            style: TextStyle(color: context.textMuted, fontSize: 12)),
       ),
     ]);
   }
@@ -242,10 +243,10 @@ class _Th extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w700,
-            color: textMuted,
+            color: context.textMuted,
             letterSpacing: 0.5),
       );
 }
@@ -292,29 +293,29 @@ class _ContestRowState extends ConsumerState<_ContestRow> {
       onTap: () => context.push('/admin/contests/${c.contestId}/manage'),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: cardBorder)),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: context.cardBorder)),
         ),
         child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
           SizedBox(
               width: 50,
               child: Text('#${c.contestId}',
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 12,
-                      color: textMuted,
+                      color: context.textMuted,
                       fontWeight: FontWeight.w500))),
           Expanded(
             flex: 4,
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(c.title,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: textPrimary),
+                      color: context.textPrimary),
                   maxLines: 1, overflow: TextOverflow.ellipsis),
               const SizedBox(height: 2),
               Text(c.slug,
-                  style: const TextStyle(fontSize: 11, color: textMuted),
+                  style: TextStyle(fontSize: 11, color: context.textMuted),
                   maxLines: 1, overflow: TextOverflow.ellipsis),
             ]),
           ),
@@ -322,13 +323,13 @@ class _ContestRowState extends ConsumerState<_ContestRow> {
           Expanded(
             flex: 2,
             child: Text('${fmt.format(c.startAt)} → ${fmt.format(c.endAt)}',
-                style: const TextStyle(fontSize: 12, color: textMuted)),
+                style: TextStyle(fontSize: 12, color: context.textMuted)),
           ),
           Expanded(
             flex: 2,
             child: Text(
               '${c.deliveryMode} · ${c.participationMode == "TEAM" ? "Đội" : "Cá nhân"}',
-              style: const TextStyle(fontSize: 12, color: textMuted),
+              style: TextStyle(fontSize: 12, color: context.textMuted),
               maxLines: 1, overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -336,7 +337,7 @@ class _ContestRowState extends ConsumerState<_ContestRow> {
             width: 80,
             child: Text(
               c.maxEntries != null ? 'max ${c.maxEntries}' : '—',
-              style: const TextStyle(fontSize: 12, color: textMuted),
+              style: TextStyle(fontSize: 12, color: context.textMuted),
             ),
           ),
           // Action: Submit cho BCN duyệt (chỉ nếu DRAFT/REVISION_REQUESTED)
@@ -386,7 +387,7 @@ class _ErrorView extends StatelessWidget {
           const SizedBox(height: 12),
           Text(msg,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: textMuted, fontSize: 12)),
+              style: TextStyle(color: context.textMuted, fontSize: 12)),
           const SizedBox(height: 16),
           FilledButton(onPressed: onRetry, child: const Text('Thử lại')),
         ]),
