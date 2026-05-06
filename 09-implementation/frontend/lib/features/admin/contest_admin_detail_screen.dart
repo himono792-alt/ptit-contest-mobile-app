@@ -10,6 +10,8 @@
 //   5. Kết quả            — compute → list with award editor → submit QĐ2 → publish
 //   6. Chứng nhận         — templates + issue certs
 
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,6 +20,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/auth/auth_provider.dart';
+import '../../core/download_helper.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/pill.dart';
@@ -1459,6 +1462,57 @@ class _ResultsTabState extends ConsumerState<_ResultsTab> {
     }
   }
 
+  /// Phase 2 sprint 1 step 3 (2026-05-06): download Excel kết quả contest.
+  /// 4 sheets (Tổng quan / Vòng / Submissions / Metadata).
+  Future<void> _exportXlsx() async {
+    final api = ref.read(apiClientProvider);
+    try {
+      // Show snack báo đang chuẩn bị file (UX: large contests có thể mất 3-5s)
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Đang chuẩn bị file Excel...'),
+        duration: Duration(seconds: 1),
+      ));
+
+      final res = await api.dio.get<List<int>>(
+        '/contests/${widget.contestId}/results/export.xlsx',
+        options: Options(responseType: ResponseType.bytes),
+      );
+      if (!mounted) return;
+      final bytes = Uint8List.fromList(res.data!);
+
+      // Lấy filename từ Content-Disposition header (BE đã set chuẩn)
+      String filename = 'ket-qua-contest-${widget.contestId}.xlsx';
+      final cd = res.headers.value('content-disposition');
+      if (cd != null) {
+        final match = RegExp(r'filename="?([^"]+)"?').firstMatch(cd);
+        if (match != null) filename = match.group(1)!;
+      }
+
+      try {
+        downloadBytesAsFile(
+          bytes,
+          filename,
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Đã tải về: $filename'),
+          backgroundColor: successGreen,
+        ));
+      } on UnsupportedError catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message ?? 'Không hỗ trợ trên platform này')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi xuất Excel: ${_msgOf(e)}')),
+      );
+    }
+  }
+
   Future<void> _editAward(int crId, String currentAward) async {
     final ctrl = TextEditingController(text: currentAward);
     final result = await showDialog<String>(
@@ -1522,6 +1576,13 @@ class _ResultsTabState extends ConsumerState<_ResultsTab> {
               bg: successGreen,
               fg: Colors.white,
               onTap: _publish),
+          // Phase 2 sprint 1 step 3 (2026-05-06): Excel export
+          _ActionBtn(
+              label: '4. Xuất Excel (4 sheets)',
+              icon: Icons.download,
+              bg: const Color(0xFF1E3A8A),
+              fg: Colors.white,
+              onTap: _exportXlsx),
         ]),
         const SizedBox(height: 6),
         Text('Status hiện tại: $st',

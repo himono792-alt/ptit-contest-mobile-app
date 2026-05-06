@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -73,3 +74,37 @@ async def system_summary(
 ) -> SystemSummaryOut:
     """AD-05 — Báo cáo toàn hệ thống."""
     return SystemSummaryOut(**await report_service.system_summary(db, user, year))
+
+
+# ---------- Phase 2 sprint 1 step 3 (2026-05-06): Excel export ----------
+
+_XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+@contests_stats_router.get("/{contest_id}/results/export.xlsx")
+async def export_contest_results_xlsx(
+    contest_id: int,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> StreamingResponse:
+    """Phase 2 sprint 1 step 3: download xlsx kết quả contest (4 sheets).
+
+    Sheet: Tổng quan / Vòng - kết quả / Submissions / Metadata
+    Auth: BTC contest hoặc Admin (qua _ensure_organizer_or_admin trong service).
+    """
+    data, filename = await report_service.export_contest_results_xlsx(db, user, contest_id)
+    # Wrap bytes vào generator để StreamingResponse stream từng chunk
+    def _iter():
+        # 64 KB chunks — đủ nhỏ để first byte sớm, đủ lớn không tốn nhiều syscall
+        chunk_size = 64 * 1024
+        for i in range(0, len(data), chunk_size):
+            yield data[i:i + chunk_size]
+
+    return StreamingResponse(
+        _iter(),
+        media_type=_XLSX_MIME,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Length": str(len(data)),
+        },
+    )

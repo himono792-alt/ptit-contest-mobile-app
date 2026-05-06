@@ -31,6 +31,9 @@ dependencies = [
     # jinja2: render template HTML email (password reset, welcome, OTP, notification)
     "httpx>=0.28.0",
     "jinja2>=3.1.0",
+    # Phase 2 sprint 1 step 3 (2026-05-06): Excel export contest results
+    # openpyxl: write .xlsx files in-memory (lighter than pandas, không cần numpy)
+    "openpyxl>=3.1.0",
 ]
 
 [project.optional-dependencies]
