@@ -63,16 +63,20 @@ class Settings(BaseSettings):
     rate_limit_enabled: bool = True
 
     # Email service — Phase 1 step 4 (2026-05-06)
-    # mail_transport: "smtp" (production qua Brevo/Gmail) | "console" (dev: log ra stdout)
-    # Nếu mail_transport=smtp mà SMTP_HOST rỗng → fallback console + warning.
+    # Migrate 2026-05-06 evening: SMTP -> Brevo HTTP API (Railway block port 587).
+    # mail_transport: "brevo" (production qua HTTP API) | "console" (dev: log stdout)
+    # Nếu mail_transport=brevo mà BREVO_API_KEY rỗng → fallback console + warning.
     mail_transport: str = "console"
+    brevo_api_key: str = ""  # Generate ở https://app.brevo.com/settings/keys/api
+    smtp_from: str = ""  # Email sender (đã verify trên Brevo, vd himono792@gmail.com)
+    smtp_from_name: str = "PTIT Contest"
+    # Legacy SMTP fields — giữ tạm cho backward-compat env, không dùng nữa.
+    # Có thể xóa sau khi cleanup Railway env.
     smtp_host: str = ""
-    smtp_port: int = 587  # Brevo + Gmail dùng port 587 STARTTLS
+    smtp_port: int = 587
     smtp_user: str = ""
     smtp_password: str = ""
-    smtp_from: str = ""
-    smtp_from_name: str = "PTIT Contest"
-    smtp_use_tls: bool = True  # STARTTLS (port 587). Set False nếu dùng SSL port 465.
+    smtp_use_tls: bool = True
     # FE base URL — dùng cho link reset password trong email
     frontend_base_url: str = "https://luxury-crostata-3c5c69.netlify.app"
 

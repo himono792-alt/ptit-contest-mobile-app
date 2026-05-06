@@ -1,15 +1,19 @@
 """Email service — Phase 1 step 4 (2026-05-06).
 
+Migrate 2026-05-06 evening: SMTP (port 587 aiosmtplib) -> Brevo HTTP API (port 443 httpx).
+Lý do: Railway hobby plan + nhiều free hosting (Heroku/Render/Vercel) block outbound TCP
+port 25/465/587 chống spam abuse → SMTP timeout. HTTPS port 443 không bị block.
+
 Dual-mode transport:
-- "console" (dev): log email content ra stdout/Railway log để debug nhanh không
-  cần SMTP credentials. Set MAIL_TRANSPORT=console.
-- "smtp" (production): gửi qua Brevo (smtp-relay.brevo.com:587) hoặc Gmail
-  (smtp.gmail.com:587) với STARTTLS. Set MAIL_TRANSPORT=smtp + 5 env SMTP_*.
+- "console" (dev): log email content ra stdout/Railway log, KHÔNG gửi thật.
+  Set MAIL_TRANSPORT=console (default).
+- "brevo" (production): POST tới https://api.brevo.com/v3/smtp/email (HTTPS).
+  Set MAIL_TRANSPORT=brevo + BREVO_API_KEY env var.
 
 Pattern KHÔNG block request:
 - Mọi caller dùng FastAPI BackgroundTasks: bg.add_task(email_service.send_email, ...)
-- Nếu SMTP fail/timeout, log warning + capture Sentry, KHÔNG raise (request đã xong).
-- Tránh dùng async với await trực tiếp trong endpoint vì sẽ block response 1-3s.
+- Nếu HTTP fail/timeout, log warning + Sentry tự capture, KHÔNG raise.
+- httpx timeout 15s tổng (Brevo thường <2s).
 
 4 use case email:
 - send_password_reset(email, full_name, reset_link) — link reset có TTL 15p
@@ -22,13 +26,17 @@ import logging
 from pathlib import Path
 from typing import Any
 
-import aiosmtplib
-from email.message import EmailMessage
+import httpx
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from app.config import settings
 
 log = logging.getLogger("email")
+
+# Brevo Transactional Email API endpoint (HTTP, port 443)
+# Docs: https://developers.brevo.com/reference/sendtransacemail
+_BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
+_BREVO_TIMEOUT_SECONDS = 15  # Brevo thường <2s, buffer cho slow network
 
 # Jinja2 env load template từ app/templates/emails/
 _TEMPLATE_DIR = Path(__file__).parent.parent / "templates" / "emails"
@@ -48,7 +56,7 @@ async def send_email(
 ) -> bool:
     """Gửi 1 email với template Jinja2.
 
-    Trả True nếu gửi thành công (hoặc console mode), False nếu SMTP fail.
+    Trả True nếu gửi thành công (hoặc console mode), False nếu HTTP fail.
     KHÔNG raise exception — caller dùng BackgroundTask sẽ không catch được.
 
     Args:
@@ -60,8 +68,7 @@ async def send_email(
     # Debug print — luôn xuất stdout Railway log (log.warning có thể bị drop)
     print(
         f"[EMAIL_DEBUG] send_email called: to={to_email} subject={subject!r} "
-        f"transport={settings.mail_transport!r} host={settings.smtp_host!r} "
-        f"user={settings.smtp_user!r} from={settings.smtp_from!r}",
+        f"transport={settings.mail_transport!r} from={settings.smtp_from!r}",
         flush=True,
     )
     # Render template HTML + plain text fallback
@@ -81,50 +88,80 @@ async def send_email(
 
     full_subject = f"[{settings.smtp_from_name}] {subject}"
 
-    # Console transport (dev mode hoặc fallback nếu SMTP_HOST rỗng)
-    if settings.mail_transport != "smtp" or not settings.smtp_host:
-        if settings.mail_transport == "smtp" and not settings.smtp_host:
-            log.warning("MAIL_TRANSPORT=smtp nhung SMTP_HOST rong -> fallback console")
+    # Console transport (dev mode hoặc fallback nếu BREVO_API_KEY rỗng)
+    if settings.mail_transport != "brevo" or not settings.brevo_api_key:
+        if settings.mail_transport == "brevo" and not settings.brevo_api_key:
+            log.warning("MAIL_TRANSPORT=brevo nhung BREVO_API_KEY rong -> fallback console")
         log.warning(
             "[EMAIL CONSOLE]\n"
             "  To: %s\n"
             "  Subject: %s\n"
             "  Template: %s\n"
-            "  Context: %s\n"
-            "  ---HTML---\n%s\n  ---END---",
-            to_email, full_subject, template_name, context, html_body,
+            "  Context: %s",
+            to_email, full_subject, template_name, context,
         )
         return True
 
-    # SMTP transport — Brevo/Gmail/etc
-    msg = EmailMessage()
-    msg["From"] = f"{settings.smtp_from_name} <{settings.smtp_from}>"
-    msg["To"] = to_email
-    msg["Subject"] = full_subject
-    msg.set_content(text_body)
-    msg.add_alternative(html_body, subtype="html")
+    # Brevo HTTP API transport — POST https://api.brevo.com/v3/smtp/email
+    payload = {
+        "sender": {
+            "name": settings.smtp_from_name,
+            "email": settings.smtp_from,
+        },
+        "to": [{"email": to_email}],
+        "subject": full_subject,
+        "htmlContent": html_body,
+        "textContent": text_body,
+    }
+    headers = {
+        "api-key": settings.brevo_api_key,
+        "accept": "application/json",
+        "content-type": "application/json",
+    }
 
     try:
-        # STARTTLS port 587 (Brevo, Gmail). Nếu SSL port 465 thì dùng use_tls=True + start_tls=False
-        print(f"[EMAIL_DEBUG] About to call aiosmtplib.send to {to_email}", flush=True)
-        await aiosmtplib.send(
-            msg,
-            hostname=settings.smtp_host,
-            port=settings.smtp_port,
-            username=settings.smtp_user or None,
-            password=settings.smtp_password or None,
-            start_tls=settings.smtp_use_tls,
-            timeout=15,  # Tổng timeout 15s (Brevo thường <2s, để buffer cho slow network)
+        print(f"[EMAIL_DEBUG] About to POST Brevo API for {to_email}", flush=True)
+        async with httpx.AsyncClient(timeout=_BREVO_TIMEOUT_SECONDS) as client:
+            response = await client.post(_BREVO_API_URL, headers=headers, json=payload)
+
+        if response.status_code in (200, 201):
+            # Brevo trả 201 + body { "messageId": "<...@smtp-relay.mailin.fr>" }
+            try:
+                msg_id = response.json().get("messageId", "?")
+            except Exception:
+                msg_id = "?"
+            print(
+                f"[EMAIL_DEBUG] Brevo API OK: to={to_email} status={response.status_code} "
+                f"messageId={msg_id}",
+                flush=True,
+            )
+            log.warning(
+                "Email sent: to=%s subject=%s template=%s messageId=%s",
+                to_email, full_subject, template_name, msg_id,
+            )
+            return True
+
+        # Brevo lỗi — log body để debug (vd 401 invalid api key, 400 sender not verified)
+        print(
+            f"[EMAIL_DEBUG] Brevo API ERROR: to={to_email} status={response.status_code} "
+            f"body={response.text[:500]}",
+            flush=True,
         )
-        print(f"[EMAIL_DEBUG] aiosmtplib.send OK: to={to_email}", flush=True)
-        log.warning("Email sent: to=%s subject=%s template=%s", to_email, full_subject, template_name)
-        return True
+        log.warning(
+            "Email Brevo API fail: to=%s subject=%s status=%d body=%s",
+            to_email, full_subject, response.status_code, response.text[:500],
+        )
+        return False
+
     except Exception as e:
         # KHÔNG raise — fail-open, log warning + Sentry sẽ tự capture qua attach_stacktrace
-        print(f"[EMAIL_DEBUG] aiosmtplib.send FAIL: to={to_email} err={type(e).__name__}: {e}", flush=True)
+        print(
+            f"[EMAIL_DEBUG] Brevo API EXCEPTION: to={to_email} err={type(e).__name__}: {e}",
+            flush=True,
+        )
         log.warning(
-            "Email SMTP fail: to=%s subject=%s err=%s (transport=%s host=%s)",
-            to_email, full_subject, e, settings.mail_transport, settings.smtp_host,
+            "Email Brevo API exception: to=%s subject=%s err=%s",
+            to_email, full_subject, e,
         )
         return False
 
