@@ -86,8 +86,35 @@ async def list_contests(
     )
     rows = (await db.execute(rows_stmt)).scalars().all()
 
+    # Sprint 4 fix M10 (2026-05-07): inject entries_count count(APPROVED+PENDING)
+    # cho mỗi contest để admin/SV thấy "X/max" pattern thay vì chỉ "max N".
+    # 1 query bulk thay vì n+1.
+    from app.models.entry import ContestEntry
+    from app.models.enums import RegistrationStatus
+    contest_ids = [c.contest_id for c in rows]
+    entries_count_map: dict[int, int] = {}
+    if contest_ids:
+        count_stmt = (
+            select(ContestEntry.contest_id, func.count())
+            .where(
+                ContestEntry.contest_id.in_(contest_ids),
+                ContestEntry.registration_status.in_(
+                    [RegistrationStatus.APPROVED, RegistrationStatus.PENDING]
+                ),
+            )
+            .group_by(ContestEntry.contest_id)
+        )
+        for cid, cnt in (await db.execute(count_stmt)).all():
+            entries_count_map[cid] = cnt
+
+    items = []
+    for c in rows:
+        item = ContestSummary.model_validate(c)
+        item.entries_count = entries_count_map.get(c.contest_id, 0)
+        items.append(item)
+
     return ContestListOut(
-        items=[ContestSummary.model_validate(c) for c in rows],
+        items=items,
         total=total,
         page=pagination.page,
         size=pagination.size,

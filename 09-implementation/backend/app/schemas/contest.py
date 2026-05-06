@@ -33,6 +33,10 @@ class ContestSummary(BaseModel):
     max_entries: int | None = None
     host_faculty_id: int | None = None
     is_public: bool
+    # Sprint 4 fix M10 (2026-05-07): count entries APPROVED + PENDING để admin
+    # thấy "12/100" thay vì chỉ "max 100" (mix max setting với actual count).
+    # Default 0 nếu schema cũ không inject (backward-compat).
+    entries_count: int = 0
 
 
 class ContestDetail(ContestSummary):
