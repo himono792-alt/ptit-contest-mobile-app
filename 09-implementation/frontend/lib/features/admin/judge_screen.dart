@@ -266,12 +266,12 @@ class _ScoreDialogState extends ConsumerState<_ScoreDialog> {
                         ? const CircularProgressIndicator(color: ptitRed)
                         : Text('Lỗi load criteria: $_loadError',
                             style: const TextStyle(color: ptitRed))))
-            : _buildContent(),
+            : _buildContent(context),
       ),
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(BuildContext context) {
     final a = widget.assignment;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Container(
@@ -320,7 +320,7 @@ class _ScoreDialogState extends ConsumerState<_ScoreDialog> {
                             color: context.textMuted,
                             letterSpacing: 0.5)),
                     const SizedBox(height: 10),
-                    ..._criteria!.map((c) => _buildCriterion(c)),
+                    ..._criteria!.map((c) => _buildCriterion(context, c)),
                   ],
                 ),
         ),
@@ -350,7 +350,7 @@ class _ScoreDialogState extends ConsumerState<_ScoreDialog> {
     ]);
   }
 
-  Widget _buildCriterion(Map<String, dynamic> c) {
+  Widget _buildCriterion(BuildContext context, Map<String, dynamic> c) {
     final id = c['criterion_id'] as int;
     final maxScore = c['max_score'].toString();
     final weight = c['weight_percent'];

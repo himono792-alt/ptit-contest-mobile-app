@@ -160,14 +160,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Info read-only (email + role)
-                    _section('Thông tin hệ thống (không sửa được)'),
-                    _readonlyRow('Email PTIT', u.email),
-                    _readonlyRow('User ID', '#${u.userId}'),
-                    _readonlyRow('Vai trò', u.roles.join(', ')),
-                    _readonlyRow('Trạng thái', u.status),
+                    _section(context, 'Thông tin hệ thống (không sửa được)'),
+                    _readonlyRow(context, 'Email PTIT', u.email),
+                    _readonlyRow(context, 'User ID', '#${u.userId}'),
+                    _readonlyRow(context, 'Vai trò', u.roles.join(', ')),
+                    _readonlyRow(context, 'Trạng thái', u.status),
 
                     const SizedBox(height: 18),
-                    _section('Thông tin cá nhân'),
+                    _section(context, 'Thông tin cá nhân'),
                     TextFormField(
                       controller: _nameCtrl,
                       textInputAction: TextInputAction.next,
@@ -247,7 +247,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     ),
 
                     const SizedBox(height: 18),
-                    _section('Liên hệ'),
+                    _section(context, 'Liên hệ'),
                     TextFormField(
                       controller: _phoneCtrl,
                       keyboardType: TextInputType.phone,
@@ -295,7 +295,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     ),
 
                     const SizedBox(height: 18),
-                    _section('Quốc tịch · Dân tộc · Tôn giáo'),
+                    _section(context, 'Quốc tịch · Dân tộc · Tôn giáo'),
                     Row(children: [
                       Expanded(
                         child: TextFormField(
@@ -349,7 +349,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     );
   }
 
-  Widget _section(String label) => Padding(
+  Widget _section(BuildContext context, String label) => Padding(
         padding: const EdgeInsets.only(bottom: 8, top: 4),
         child: Text(label,
             style: TextStyle(
@@ -359,7 +359,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 letterSpacing: 0.6)),
       );
 
-  Widget _readonlyRow(String k, String v) => Padding(
+  Widget _readonlyRow(BuildContext context, String k, String v) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           SizedBox(

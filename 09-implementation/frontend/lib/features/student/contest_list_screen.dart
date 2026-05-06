@@ -219,15 +219,15 @@ class _ContestCard extends StatelessWidget {
   const _ContestCard({required this.contest});
 
   /// Gradient stripe theo status — visual marker để scan list nhanh.
-  LinearGradient _stripeFor(String status) {
+  LinearGradient _stripeFor(BuildContext context, String status) {
     switch (status) {
       case 'REG_OPEN':
       case 'PUBLISHED':
         return const LinearGradient(colors: [ptitRed, Color(0xFFFF6B7E)]);
       case 'ONGOING':
-        return LinearGradient(colors: [context.warnOrange, Color(0xFFFBBF24)]);
+        return LinearGradient(colors: [context.warnOrange, const Color(0xFFFBBF24)]);
       case 'FINISHED':
-        return LinearGradient(colors: [context.infoBlue, Color(0xFF60A5FA)]);
+        return LinearGradient(colors: [context.infoBlue, const Color(0xFF60A5FA)]);
       case 'CANCELLED':
         return const LinearGradient(
             colors: [Color(0xFF94A3B8), Color(0xFFCBD5E1)]);
@@ -250,7 +250,7 @@ class _ContestCard extends StatelessWidget {
             height: 6,
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
-              gradient: _stripeFor(contest.status),
+              gradient: _stripeFor(context, contest.status),
               borderRadius: BorderRadius.circular(3),
             ),
           ),

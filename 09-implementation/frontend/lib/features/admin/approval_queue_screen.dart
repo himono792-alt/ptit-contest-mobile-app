@@ -281,12 +281,12 @@ class _ApprovalDetailDialogState
                           style: const TextStyle(color: ptitRed)),
                 ),
               )
-            : _buildContent(),
+            : _buildContent(context),
       ),
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(BuildContext context) {
     final d = _detail!;
     final fmt = DateFormat('dd/MM/yy HH:mm');
     final isQd1 = d['target_type'] == 'CONTEST_PROPOSAL';
@@ -334,14 +334,14 @@ class _ApprovalDetailDialogState
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            _kv('Submitted by', 'User #${d['submitted_by']}'),
-            _kv('Submitted at', fmt.format(DateTime.parse(d['submitted_at']))),
+            _kv(context, 'Submitted by', 'User #${d['submitted_by']}'),
+            _kv(context, 'Submitted at', fmt.format(DateTime.parse(d['submitted_at']))),
             if ((d['submission_note'] ?? '').toString().isNotEmpty)
-              _kv('BTC note', d['submission_note']),
+              _kv(context, 'BTC note', d['submission_note']),
             if (d['reviewed_by'] != null)
-              _kv('Last reviewed by', 'User #${d['reviewed_by']}'),
+              _kv(context, 'Last reviewed by', 'User #${d['reviewed_by']}'),
             if (d['bcn_comment'] != null)
-              _kv('Last BCN comment', d['bcn_comment']),
+              _kv(context, 'Last BCN comment', d['bcn_comment']),
             const SizedBox(height: 12),
             Text('Snapshot dữ liệu đã submit',
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 0.5)),
@@ -416,7 +416,7 @@ class _ApprovalDetailDialogState
     ]);
   }
 
-  Widget _kv(String k, dynamic v) => Padding(
+  Widget _kv(BuildContext context, String k, dynamic v) => Padding(
         padding: const EdgeInsets.only(bottom: 6),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           SizedBox(

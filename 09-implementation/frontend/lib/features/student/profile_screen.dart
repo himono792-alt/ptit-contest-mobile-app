@@ -122,19 +122,19 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                   ]),
                   Divider(color: context.cardBorder, height: 16),
-                  _infoRow('Ngày sinh',
+                  _infoRow(context, 'Ngày sinh',
                       user.dob != null
                           ? DateFormat('dd/MM/yyyy').format(user.dob!)
                           : '—'),
-                  _infoRow('Giới tính', user.gender ?? '—'),
-                  _infoRow('Số CMND/CCCD', user.citizenId ?? '—'),
-                  _infoRow('Nơi sinh', user.placeOfBirth ?? '—'),
-                  _infoRow('Quốc tịch', user.nationality ?? '—'),
-                  _infoRow('Dân tộc', user.ethnicity ?? '—'),
-                  _infoRow('Tôn giáo', user.religion ?? '—'),
-                  _infoRow('SĐT', user.phone ?? '—'),
-                  _infoRow('Email cá nhân', user.secondaryEmail ?? '—'),
-                  _infoRow('Địa chỉ', user.address ?? '—'),
+                  _infoRow(context, 'Giới tính', user.gender ?? '—'),
+                  _infoRow(context, 'Số CMND/CCCD', user.citizenId ?? '—'),
+                  _infoRow(context, 'Nơi sinh', user.placeOfBirth ?? '—'),
+                  _infoRow(context, 'Quốc tịch', user.nationality ?? '—'),
+                  _infoRow(context, 'Dân tộc', user.ethnicity ?? '—'),
+                  _infoRow(context, 'Tôn giáo', user.religion ?? '—'),
+                  _infoRow(context, 'SĐT', user.phone ?? '—'),
+                  _infoRow(context, 'Email cá nhân', user.secondaryEmail ?? '—'),
+                  _infoRow(context, 'Địa chỉ', user.address ?? '—'),
                 ]),
           ),
           const SizedBox(height: 8),
@@ -143,11 +143,11 @@ class ProfileScreen extends ConsumerWidget {
           MCard(
             padding: EdgeInsets.zero,
             child: Column(children: [
-              _menuTile(Icons.edit_outlined, 'Cập nhật thông tin',
+              _menuTile(context, Icons.edit_outlined, 'Cập nhật thông tin',
                   () => Navigator.of(context).push(MaterialPageRoute(
                       builder: (_) => const EditProfileScreen()))),
               Divider(height: 1, color: context.cardBorder),
-              _menuTile(Icons.lock_outline, 'Đổi mật khẩu', () => _changePasswordDialog(context, ref)),
+              _menuTile(context, Icons.lock_outline, 'Đổi mật khẩu', () => _changePasswordDialog(context, ref)),
               Divider(height: 1, color: context.cardBorder),
               // Phase 2 sprint 1 step 4 (2026-05-06): biometric login toggle
               const _BiometricToggleTile(),
@@ -155,11 +155,11 @@ class ProfileScreen extends ConsumerWidget {
               // Phase 2 sprint 2 step 1 (2026-05-06): theme mode (light/dark/system)
               const _ThemeModeTile(),
               Divider(height: 1, color: context.cardBorder),
-              _menuTile(Icons.qr_code_scanner_outlined, 'Xác thực chứng nhận',
+              _menuTile(context, Icons.qr_code_scanner_outlined, 'Xác thực chứng nhận',
                   () => Navigator.of(context).push(MaterialPageRoute(
                       builder: (_) => const CertVerifyScreen()))),
               Divider(height: 1, color: context.cardBorder),
-              _menuTile(Icons.info_outline, 'Về ứng dụng', () {}, subtitle: 'PTIT Contest v0.1.0'),
+              _menuTile(context, Icons.info_outline, 'Về ứng dụng', () {}, subtitle: 'PTIT Contest v0.1.0'),
             ]),
           ),
 
@@ -196,7 +196,7 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _infoRow(String k, String v) {
+  Widget _infoRow(BuildContext context, String k, String v) {
     final isPlaceholder = v == '—';
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -220,7 +220,7 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _menuTile(IconData icon, String title, VoidCallback onTap, {String? subtitle}) =>
+  Widget _menuTile(BuildContext context, IconData icon, String title, VoidCallback onTap, {String? subtitle}) =>
       ListTile(
         leading: Icon(icon, color: context.textMuted, size: 20),
         title: Text(title, style: const TextStyle(fontSize: 14)),

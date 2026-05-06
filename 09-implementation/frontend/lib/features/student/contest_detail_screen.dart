@@ -169,29 +169,29 @@ class ContestDetailScreen extends ConsumerWidget {
           const SizedBox(height: 8),
           MCard(
             child: Column(children: [
-              _kvRow(label: 'Bắt đầu', value: fmt.format(c.startAt)),
+              _kvRow(context, label: 'Bắt đầu', value: fmt.format(c.startAt)),
               _Divider(),
-              _kvRow(label: 'Kết thúc', value: fmt.format(c.endAt)),
+              _kvRow(context, label: 'Kết thúc', value: fmt.format(c.endAt)),
               if (c.registrationOpenAt != null) ...[
                 _Divider(),
-                _kvRow(
+                _kvRow(context,
                     label: 'Mở đăng ký',
                     value: fmt.format(c.registrationOpenAt!),
                     accent: true),
               ],
               if (c.registrationCloseAt != null) ...[
                 _Divider(),
-                _kvRow(
+                _kvRow(context,
                     label: 'Đóng đăng ký',
                     value: fmt.format(c.registrationCloseAt!)),
               ],
               if (c.maxEntries != null) ...[
                 _Divider(),
-                _kvRow(label: 'Số lượng', value: '${c.maxEntries} thí sinh'),
+                _kvRow(context, label: 'Số lượng', value: '${c.maxEntries} thí sinh'),
               ],
               if (c.isTeam) ...[
                 _Divider(),
-                _kvRow(
+                _kvRow(context,
                     label: 'Quy mô đội',
                     value: '${c.teamMinMembers}–${c.teamMaxMembers} thành viên'),
               ],
@@ -352,7 +352,7 @@ class _Divider extends StatelessWidget {
       Divider(color: context.cardBorder, height: 16, thickness: 1);
 }
 
-Widget _kvRow({required String label, required String value, bool accent = false}) {
+Widget _kvRow(BuildContext context, {required String label, required String value, bool accent = false}) {
   return Row(children: [
     Expanded(
       child: Text(label,

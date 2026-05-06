@@ -249,7 +249,7 @@ class _AuditRow extends StatelessWidget {
   final Map<String, dynamic> data;
   const _AuditRow({required this.data});
 
-  Color _actionColor(String? action) {
+  Color _actionColor(BuildContext context, String? action) {
     switch (action) {
       case 'CREATE':
       case 'INSERT':
@@ -299,8 +299,8 @@ class _AuditRow extends StatelessWidget {
                   style: TextStyle(fontSize: 11, color: context.textMuted))
               : Pill(
                   label: action,
-                  color: _actionColor(action),
-                  bg: _actionColor(action).withValues(alpha: 0.15),
+                  color: _actionColor(context, action),
+                  bg: _actionColor(context, action).withValues(alpha: 0.15),
                 ),
         ),
         SizedBox(

@@ -88,14 +88,14 @@ class _ForgotPasswordResetScreenState
         body: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: _done ? _buildSuccess() : _buildForm(),
+            child: _done ? _buildSuccess(context) : _buildForm(context),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildForm() {
+  Widget _buildForm(BuildContext context) {
     return Form(
       key: _formKey,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -197,7 +197,7 @@ class _ForgotPasswordResetScreenState
     );
   }
 
-  Widget _buildSuccess() {
+  Widget _buildSuccess(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 60),
       child: Column(children: [

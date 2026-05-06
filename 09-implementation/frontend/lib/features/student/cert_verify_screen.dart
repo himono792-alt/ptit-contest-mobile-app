@@ -210,15 +210,15 @@ class _ResultCard extends StatelessWidget {
             ],
             if (valid) ...[
               const SizedBox(height: 12),
-              _kv('Sinh viên', data['student_name']),
-              _kv('Mã SV', data['student_code']),
-              _kv('Cuộc thi', data['contest_title']),
+              _kv(context, 'Sinh viên', data['student_name']),
+              _kv(context, 'Mã SV', data['student_code']),
+              _kv(context, 'Cuộc thi', data['contest_title']),
               if (data['award_title'] != null)
-                _kv('Giải thưởng', data['award_title']),
+                _kv(context, 'Giải thưởng', data['award_title']),
               if (data['issued_at'] != null)
-                _kv('Ngày cấp',
+                _kv(context, 'Ngày cấp',
                     fmt.format(DateTime.parse(data['issued_at']))),
-              _kv('Mã QR',
+              _kv(context, 'Mã QR',
                   data['qr_code'] ?? '', mono: true),
               const SizedBox(height: 12),
               SizedBox(
@@ -237,7 +237,7 @@ class _ResultCard extends StatelessWidget {
     );
   }
 
-  Widget _kv(String k, dynamic v, {bool mono = false}) => Padding(
+  Widget _kv(BuildContext context, String k, dynamic v, {bool mono = false}) => Padding(
         padding: const EdgeInsets.only(bottom: 6),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           SizedBox(
