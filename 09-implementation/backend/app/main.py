@@ -106,13 +106,13 @@ _PROFILE_MIGRATION_STATEMENTS = [
     "ALTER TABLE ptit_contest.submission_files ADD COLUMN IF NOT EXISTS file_data BYTEA",
     # Phase 2 sprint 1 step 1 (2026-05-06): deep-link route cho notification onTap navigate
     "ALTER TABLE ptit_contest.notifications ADD COLUMN IF NOT EXISTS target_route VARCHAR(255)",
-    # Migrate 2026-05-06: cập nhật seed qr_verify_url_base từ Netlify → Cloudflare Pages.
-    # idempotent UPDATE — chỉ update nếu vẫn đang trỏ Netlify (không ghi đè custom).
-    # config_value là TEXT (không phải JSONB).
+    # Migrate 2026-05-06: cập nhật seed qr_verify_url_base sang Cloudflare Pages.
+    # idempotent UPDATE — chỉ update nếu chưa trỏ pages.dev (catch all old values:
+    # localhost từ v3 seed cũ, netlify từ Sprint 0 P2-2 fix). config_value là TEXT.
     """UPDATE ptit_contest.system_configs
        SET config_value = 'https://ptit-contest-app.pages.dev/verify/'
        WHERE config_key = 'certificate.qr_verify_url_base'
-         AND config_value LIKE '%netlify%'""",
+         AND config_value NOT LIKE '%pages.dev%'""",
 ]
 
 
