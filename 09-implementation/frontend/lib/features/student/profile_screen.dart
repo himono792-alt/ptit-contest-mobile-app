@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/auth/biometric_service.dart';
 import '../../core/theme.dart';
+import '../../core/theme_provider.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_top_bar.dart';
 import 'cert_verify_screen.dart';
@@ -149,6 +150,9 @@ class ProfileScreen extends ConsumerWidget {
               const Divider(height: 1, color: cardBorder),
               // Phase 2 sprint 1 step 4 (2026-05-06): biometric login toggle
               const _BiometricToggleTile(),
+              const Divider(height: 1, color: cardBorder),
+              // Phase 2 sprint 2 step 1 (2026-05-06): theme mode (light/dark/system)
+              const _ThemeModeTile(),
               const Divider(height: 1, color: cardBorder),
               _menuTile(Icons.qr_code_scanner_outlined, 'Xác thực chứng nhận',
                   () => Navigator.of(context).push(MaterialPageRoute(
@@ -506,5 +510,77 @@ class _BiometricToggleTileState extends ConsumerState<_BiometricToggleTile> {
       value: _enabled,
       onChanged: _toggle,
     );
+  }
+}
+
+/// Phase 2 sprint 2 step 1 (2026-05-06): tile chọn theme mode (Sáng/Tối/Theo hệ thống).
+/// Hiện modal bottom sheet với 3 radio option. Switch live qua themeProvider.
+class _ThemeModeTile extends ConsumerWidget {
+  const _ThemeModeTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(themeProvider);
+    return ListTile(
+      leading: const Icon(Icons.brightness_6_outlined, color: ptitRed, size: 20),
+      title: const Text('Giao diện',
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+      subtitle: Text(themeModeLabel(mode),
+          style: const TextStyle(fontSize: 11, color: textMuted)),
+      trailing: const Icon(Icons.chevron_right, size: 18, color: textMuted),
+      onTap: () => _showPicker(context, ref, mode),
+    );
+  }
+
+  Future<void> _showPicker(BuildContext context, WidgetRef ref, ThemeMode current) async {
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 8),
+          Container(
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text('Chọn giao diện',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 12),
+          for (final mode in ThemeMode.values)
+            RadioListTile<ThemeMode>(
+              value: mode,
+              groupValue: current,
+              activeColor: ptitRed,
+              title: Text(themeModeLabel(mode),
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+              subtitle: Text(_themeDescription(mode),
+                  style: const TextStyle(fontSize: 11, color: textMuted)),
+              onChanged: (v) {
+                if (v != null) {
+                  ref.read(themeProvider.notifier).setMode(v);
+                  Navigator.pop(ctx);
+                }
+              },
+            ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+  }
+
+  String _themeDescription(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.system: return 'Tự động theo cài đặt máy';
+      case ThemeMode.light: return 'Sáng — phù hợp ban ngày';
+      case ThemeMode.dark: return 'Tối — bảo vệ mắt buổi đêm';
+    }
   }
 }
