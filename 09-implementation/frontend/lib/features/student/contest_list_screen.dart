@@ -98,7 +98,7 @@ class _ContestListScreenState extends ConsumerState<ContestListScreen> {
                       ),
                 hintText: 'Tìm theo tên cuộc thi...',
                 isDense: true,
-                fillColor: Colors.white,
+                fillColor: context.cardBg,
                 filled: true,
               ),
               onChanged: (_) => setState(() {}),
@@ -169,7 +169,7 @@ class _StatusChip extends ConsumerWidget {
               _ListParams(q: cur.q, status: value);
         },
         selectedColor: ptitRed,
-        backgroundColor: Colors.white,
+        backgroundColor: context.cardBg,
         side: BorderSide(color: selected ? ptitRed : context.cardBorder),
         showCheckmark: false,
         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,

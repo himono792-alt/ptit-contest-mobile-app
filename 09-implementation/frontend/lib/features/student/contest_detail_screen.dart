@@ -254,7 +254,7 @@ class ContestDetailScreen extends ConsumerWidget {
         child: Container(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: context.cardBg,
             border: Border(top: BorderSide(color: context.cardBorder)),
             boxShadow: shadowMd,
           ),
@@ -329,7 +329,7 @@ class _MetaChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardBg,
         border: Border.all(color: context.cardBorder),
         borderRadius: BorderRadius.circular(99),
       ),

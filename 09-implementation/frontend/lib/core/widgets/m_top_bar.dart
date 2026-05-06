@@ -17,7 +17,9 @@ class MTopBar extends StatelessWidget implements PreferredSizeWidget {
     return Container(
       height: 56,
       decoration: BoxDecoration(
-        color: Colors.white,
+        // Phase 2 Sprint 2 Step 1d (2026-05-06): theme-aware bg
+        // → dark mode dùng cardBgDark (#25211D) thay vì Colors.white.
+        color: context.cardBg,
         border: Border(bottom: BorderSide(color: context.cardBorder)),
       ),
       child: SafeArea(

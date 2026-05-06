@@ -163,7 +163,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.mail_outline, size: 18),
                     hintText: 'b22dccn001@ptit.edu.vn',
-                    fillColor: Colors.white,
+                    fillColor: context.cardBg,
                     filled: true,
                   ),
                   keyboardType: TextInputType.emailAddress,
@@ -188,7 +188,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       onPressed: () => setState(() => _showPwd = !_showPwd),
                     ),
                     hintText: '••••••••',
-                    fillColor: Colors.white,
+                    fillColor: context.cardBg,
                     filled: true,
                   ),
                   validator: (v) =>

@@ -104,7 +104,7 @@ class HomeScreen extends ConsumerWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: context.cardBg,
                   border: Border.all(color: context.cardBorder),
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -435,7 +435,7 @@ class _BellButton extends ConsumerWidget {
     return Stack(clipBehavior: Clip.none, children: [
       Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.cardBg,
           border: Border.all(color: context.cardBorder),
           borderRadius: BorderRadius.circular(99),
         ),

@@ -300,12 +300,13 @@ class _MobileAdminLayoutState extends State<_MobileAdminLayout> {
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: const Color(0xFFFAFAFA),
+      // Phase 2 Sprint 2 Step 1d: bỏ FAFAFA hardcoded → để Theme tự apply
+      // → dark mode sẽ dùng appBgDark (#1C1815)
       appBar: AppBar(
         title: Text(widget.activeLabel,
             style: TextStyle(
                 fontSize: 15, fontWeight: FontWeight.w800, color: context.textPrimary)),
-        backgroundColor: Colors.white,
+        backgroundColor: context.cardBg,
         foregroundColor: context.textPrimary,
         elevation: 0,
         iconTheme: IconThemeData(color: context.textMuted),
@@ -329,7 +330,7 @@ class _MobileAdminLayoutState extends State<_MobileAdminLayout> {
         currentIndex: widget.activeIdx < bottomItems.length ? widget.activeIdx : 0,
         selectedItemColor: ptitRed,
         unselectedItemColor: context.textMuted,
-        backgroundColor: Colors.white,
+        backgroundColor: context.cardBg,
         showUnselectedLabels: true,
         selectedFontSize: 10.5,
         unselectedFontSize: 10.5,

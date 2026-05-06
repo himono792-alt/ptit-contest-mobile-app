@@ -87,7 +87,7 @@ class _ResultCard extends StatelessWidget {
     final hasAward = result.awardTitle != null && result.awardTitle!.isNotEmpty;
 
     return MCard(
-      backgroundColor: hasAward ? context.ptitRedSoft : Colors.white,
+      backgroundColor: hasAward ? context.ptitRedSoft : context.cardBg,
       borderColor: hasAward ? ptitRed : context.cardBorder,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,

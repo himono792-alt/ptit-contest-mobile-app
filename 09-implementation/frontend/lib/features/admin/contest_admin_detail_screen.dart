@@ -191,7 +191,7 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 18, 24, 18),
-      color: Colors.white,
+      color: context.cardBg,
       child: Row(children: [
         IconButton(
           icon: Icon(Icons.arrow_back, size: 20, color: context.textPrimary),
@@ -446,7 +446,7 @@ class _ActionBtn extends StatelessWidget {
       icon: Icon(icon, size: 16),
       label: Text(label),
       style: FilledButton.styleFrom(
-        backgroundColor: bg ?? Colors.white,
+        backgroundColor: bg ?? context.cardBg,
         foregroundColor: fg ?? context.textPrimary,
         side: BorderSide(color: context.cardBorder),
         elevation: 0,

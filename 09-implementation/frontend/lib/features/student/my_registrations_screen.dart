@@ -75,7 +75,7 @@ class _MyRegistrationsScreenState extends ConsumerState<MyRegistrationsScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: _filter == f ? ptitRed : Colors.white,
+                        color: _filter == f ? ptitRed : context.cardBg,
                         border: Border.all(
                             color: _filter == f ? ptitRed : context.cardBorder),
                         borderRadius: BorderRadius.circular(999),
