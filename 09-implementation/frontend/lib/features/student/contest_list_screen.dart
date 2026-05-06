@@ -22,6 +22,18 @@ class _ListParams {
 
 final contestListParamsProvider = StateProvider<_ListParams>((_) => const _ListParams());
 
+// Sprint 2 fix C1 (2026-05-06): sort theo status priority để REG_OPEN/ONGOING
+// luôn xuất hiện trước. Đợt 1 audit phát hiện Olympic 2026 (REG_OPEN) chìm xuống
+// vị trí #3 sau 2 contest FINISHED — vi phạm hierarchy "active priority".
+const _statusOrder = {
+  'REG_OPEN': 0,
+  'ONGOING': 1,
+  'PUBLISHED': 2,
+  'REG_CLOSED': 3,
+  'FINISHED': 4,
+  'CANCELLED': 5,
+};
+
 final contestListProvider = FutureProvider.autoDispose<ContestListResponse>((ref) async {
   final params = ref.watch(contestListParamsProvider);
   final api = ref.watch(apiClientProvider);
@@ -30,7 +42,21 @@ final contestListProvider = FutureProvider.autoDispose<ContestListResponse>((ref
     if (params.q != null && params.q!.isNotEmpty) 'q': params.q,
     if (params.status != null) 'status': params.status,
   });
-  return ContestListResponse.fromJson(res.data);
+  final response = ContestListResponse.fromJson(res.data);
+  // Sort: status priority asc, tie-break startAt desc (newest first)
+  final sortedItems = List<ContestSummary>.from(response.items)
+    ..sort((a, b) {
+      final orderA = _statusOrder[a.status] ?? 99;
+      final orderB = _statusOrder[b.status] ?? 99;
+      if (orderA != orderB) return orderA.compareTo(orderB);
+      return b.startAt.compareTo(a.startAt);
+    });
+  return ContestListResponse(
+    items: sortedItems,
+    total: response.total,
+    page: response.page,
+    size: response.size,
+  );
 });
 
 class ContestListScreen extends ConsumerStatefulWidget {
@@ -320,6 +346,11 @@ class _ContestCard extends StatelessWidget {
 }
 
 /// Inline pill nhỏ với icon + label, dùng làm meta tag trong card.
+///
+/// Sprint 2 fix C2 (2026-05-06): bg dùng theme-aware Theme.colorScheme.surfaceVariant
+/// thay vì hardcoded `Color(0xFFF7F2EC)` cream. Lý do: trong dark mode, text dùng
+/// `context.textPrimary` (light color) trên bg cream cứng → contrast quá thấp,
+/// label gần như invisible (audit đợt 1 C2 misdiagnosed thành "schema thiếu fields").
 class _MetaChip extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -330,7 +361,10 @@ class _MetaChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F2EC),
+        // Theme-aware bg: light mode → cream-ish, dark mode → dark-soft
+        color: Theme.of(context).brightness == Brightness.dark
+            ? context.cardBorder.withValues(alpha: 0.5)
+            : const Color(0xFFF7F2EC),
         borderRadius: BorderRadius.circular(99),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
