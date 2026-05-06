@@ -34,6 +34,11 @@ dependencies:
   # Phase 2 sprint 1 step 5 (2026-05-06): loading skeleton shimmer animation
   # Wrap content placeholder với gradient animation, perceived load 2x faster.
   shimmer: ^3.0.0
+  # Sprint 3 (2026-05-07): Sentry frontend error tracking — capture JS error
+  # Flutter Web + dart unhandled exceptions + zone errors. Backend đã có Sentry
+  # Phase 1 step 1, frontend bổ sung để có full-stack visibility.
+  # Dùng dart-define SENTRY_DSN_FRONTEND để inject DSN ở build time.
+  sentry_flutter: ^8.10.0
 
 dev_dependencies:
   flutter_test:

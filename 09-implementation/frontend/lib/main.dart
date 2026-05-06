@@ -1,15 +1,57 @@
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'core/router.dart';
 import 'core/theme.dart';
 import 'core/theme_dark.dart';
 import 'core/theme_provider.dart';
 
-void main() {
+/// DSN frontend Sentry — inject qua dart-define ở build time.
+/// `flutter build web --dart-define=SENTRY_DSN_FRONTEND=https://xxx@sentry.io/yyy`.
+/// Skip init nếu rỗng (dev mode hoặc local) — giống pattern backend Phase 1 step 1.
+const _sentryDsnFrontend = String.fromEnvironment('SENTRY_DSN_FRONTEND');
+
+Future<void> main() async {
   usePathUrlStrategy();
-  runApp(const ProviderScope(child: PtitContestApp()));
+
+  // Sprint 3 (2026-05-07): Sentry frontend wrap runApp.
+  // Backend đã có Sentry từ Phase 1 step 1, frontend bổ sung để full-stack
+  // visibility — JS error Flutter Web + dart unhandled exceptions + zone errors.
+  if (_sentryDsnFrontend.isNotEmpty) {
+    await SentryFlutter.init(
+      (options) {
+        options.dsn = _sentryDsnFrontend;
+        // Release tag — sau có thể inject git SHA qua dart-define
+        // (`--dart-define=APP_RELEASE=$(git rev-parse --short HEAD)`).
+        options.release = const String.fromEnvironment(
+            'APP_RELEASE', defaultValue: 'dev');
+        options.environment =
+            kReleaseMode ? 'production' : 'development';
+        // Performance tracing — sample 10% transactions để tránh tốn quota free
+        // (Sentry free 5K events/mo + 10K transactions/mo).
+        options.tracesSampleRate = kReleaseMode ? 0.1 : 1.0;
+        // PII safer — không gửi email/IP/user data theo default (GDPR).
+        options.sendDefaultPii = false;
+        // Attach stacktrace cho mọi log warning+ giúp debug Future errors.
+        options.attachStacktrace = true;
+      },
+      appRunner: () {
+        // Tag global platform cho mọi event để separate FE vs BE trong Sentry dashboard.
+        Sentry.configureScope((scope) {
+          scope.setTag('app.platform', 'flutter-web');
+        });
+        runApp(const ProviderScope(child: PtitContestApp()));
+      },
+    );
+  } else {
+    // Dev mode hoặc thiếu DSN — chạy app bình thường, log warning.
+    debugPrint(
+        'Sentry frontend skipped — SENTRY_DSN_FRONTEND rỗng (dev mode hoặc thiếu --dart-define).');
+    runApp(const ProviderScope(child: PtitContestApp()));
+  }
 }
 
 class PtitContestApp extends ConsumerWidget {
