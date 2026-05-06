@@ -43,3 +43,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Cloudflare wrangler cache (deploy state, không cần track)
+.wrangler/
+
+# Local test data (Phase A audit 2026-05-06)
+ket-qua-test.xlsx
