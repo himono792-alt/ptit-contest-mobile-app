@@ -494,7 +494,7 @@ class _BiometricToggleTileState extends ConsumerState<_BiometricToggleTile> {
 
     return SwitchListTile(
       secondary: const Icon(Icons.fingerprint, color: ptitRed, size: 20),
-      activeThumbColor: ptitRed,
+      activeColor: ptitRed,
       title: const Text('Đăng nhập sinh trắc',
           style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
       subtitle: Text(
