@@ -104,7 +104,7 @@ class TeamManagementScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                       color: context.infoSoft,
-                      borderRadius: BorderRadius.circular(8)),
+                      borderRadius: BorderRadius.circular(AppRadius.sm)),
                   child: Row(children: [
                     Icon(Icons.info_outline, size: 16, color: context.infoBlue),
                     SizedBox(width: 8),
@@ -173,7 +173,7 @@ class _EmptyTeamView extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           'Tạo team mới và mời các bạn cùng tham gia',
-          style: TextStyle(fontSize: 12, color: context.textMuted),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.textMuted),
         ),
       ]),
     );
@@ -191,7 +191,7 @@ class _ContestHeader extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: context.ptitRedSoft,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Row(children: [
         const Icon(Icons.emoji_events, size: 18, color: ptitRed),
@@ -200,9 +200,9 @@ class _ContestHeader extends StatelessWidget {
           child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Cuộc thi đang đăng ký',
+                Text('Cuộc thi đang đăng ký',
                     style:
-                        TextStyle(fontSize: 10, color: ptitRed)),
+                        Theme.of(context).textTheme.labelSmall?.copyWith(color: ptitRed)),
                 Text(title,
                     style: const TextStyle(
                         fontSize: 13,
@@ -244,7 +244,7 @@ class _TeamCardState extends ConsumerState<_TeamCard> {
           content: Column(mainAxisSize: MainAxisSize.min, children: [
             Text(
                 'Nhập MSSV của bạn muốn thêm. SV đó phải đã có tài khoản hệ thống.',
-                style: TextStyle(fontSize: 12, color: context.textMuted)),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.textMuted)),
             const SizedBox(height: 12),
             TextField(
               controller: ctrl,
@@ -346,7 +346,7 @@ class _TeamCardState extends ConsumerState<_TeamCard> {
             const SizedBox(height: 6),
             Text(
                 'Contest #${t['contest_id']} · Leader student #${t['leader_student_id']} · ${fmt.format(DateTime.parse(t['created_at']))}',
-                style: TextStyle(fontSize: 11, color: context.textMuted)),
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(color: context.textMuted)),
             Divider(height: 18, color: context.cardBorder),
             Text('Thành viên (${members.length})',
                 style: TextStyle(
@@ -389,7 +389,7 @@ class _TeamCardState extends ConsumerState<_TeamCard> {
                     ),
                     Text(
                       DateFormat('dd/MM/yy').format(DateTime.parse(m['joined_at'])),
-                      style: TextStyle(fontSize: 10, color: context.textMuted),
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(color: context.textMuted),
                     ),
                   ]),
                 )),
@@ -398,8 +398,8 @@ class _TeamCardState extends ConsumerState<_TeamCard> {
               Expanded(
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.person_add, size: 14),
-                  label: const Text('Thêm thành viên',
-                      style: TextStyle(fontSize: 11)),
+                  label: Text('Thêm thành viên',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(color: context.textPrimary)),
                   onPressed: _busy ? null : _addMember,
                   style: OutlinedButton.styleFrom(
                       minimumSize: const Size(0, 32),
@@ -411,8 +411,8 @@ class _TeamCardState extends ConsumerState<_TeamCard> {
                 Expanded(
                   child: FilledButton.icon(
                     icon: const Icon(Icons.app_registration, size: 14),
-                    label: const Text('Đăng ký bằng team này',
-                        style: TextStyle(fontSize: 11)),
+                    label: Text('Đăng ký bằng team này',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(color: context.textPrimary)),
                     onPressed: _busy ? null : _registerWithThisTeam,
                     style: FilledButton.styleFrom(
                         minimumSize: const Size(0, 32),
@@ -506,7 +506,7 @@ class _CreateTeamSheetState extends ConsumerState<_CreateTeamSheet> {
             height: 4,
             margin: const EdgeInsets.only(bottom: 14),
             decoration: BoxDecoration(
-                color: context.cardBorder, borderRadius: BorderRadius.circular(2)),
+                color: context.cardBorder, borderRadius: BorderRadius.circular(AppRadius.tight)),
           ),
           Text('Tạo team mới',
               style: TextStyle(
@@ -514,7 +514,7 @@ class _CreateTeamSheetState extends ConsumerState<_CreateTeamSheet> {
           const SizedBox(height: 4),
           if (widget.defaultContestTitle != null)
             Text('Cho cuộc thi: ${widget.defaultContestTitle}',
-                style: TextStyle(fontSize: 12, color: context.textMuted)),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.textMuted)),
           const SizedBox(height: 16),
           TextField(
             controller: _nameCtrl,
@@ -529,7 +529,7 @@ class _CreateTeamSheetState extends ConsumerState<_CreateTeamSheet> {
           const SizedBox(height: 6),
           Text(
             'Bạn sẽ là leader. Sau khi tạo team có thể thêm thành viên bằng MSSV.',
-            style: TextStyle(fontSize: 11, color: context.textMuted, height: 1.5),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: context.textMuted, height: 1.5),
           ),
           const SizedBox(height: 16),
           SizedBox(

@@ -165,7 +165,7 @@ class _SVWideLayout extends ConsumerWidget {
                   height: 36,
                   decoration: BoxDecoration(
                     color: ptitRed,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                   child: const Center(
                     child: Text('P',

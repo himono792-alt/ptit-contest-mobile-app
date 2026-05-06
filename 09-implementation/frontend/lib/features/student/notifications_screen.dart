@@ -56,7 +56,7 @@ class NotificationBadge extends ConsumerWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
             decoration: BoxDecoration(
-                color: ptitRed, borderRadius: BorderRadius.circular(8)),
+                color: ptitRed, borderRadius: BorderRadius.circular(AppRadius.sm)),
             constraints: const BoxConstraints(minWidth: 16, minHeight: 14),
             child: Text(
               unread > 99 ? '99+' : '$unread',

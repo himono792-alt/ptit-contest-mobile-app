@@ -223,7 +223,7 @@ class _SubmissionScreenState extends ConsumerState<SubmissionScreen> {
                   border: Border.all(
                       color: _pendingFile != null ? context.successGreen : context.cardBorder,
                       width: 1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
                 child: _pendingFile == null
                     ? InkWell(
@@ -309,7 +309,7 @@ class _SubmissionScreenState extends ConsumerState<SubmissionScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                    color: context.infoSoft, borderRadius: BorderRadius.circular(8)),
+                    color: context.infoSoft, borderRadius: BorderRadius.circular(AppRadius.sm)),
                 child: Row(children: [
                   Icon(Icons.info_outline, size: 16, color: context.infoBlue),
                   SizedBox(width: 8),

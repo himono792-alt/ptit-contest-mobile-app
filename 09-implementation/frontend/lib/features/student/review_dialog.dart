@@ -134,7 +134,7 @@ class _ReviewDialogState extends ConsumerState<ReviewDialog> {
                             : () => setState(() => _rating = star),
                         icon: Icon(on ? Icons.star : Icons.star_border,
                             size: 36,
-                            color: on ? Colors.amber.shade600 : context.textMuted),
+                            color: on ? context.warnOrange : context.textMuted),
                       );
                     })),
                 Center(

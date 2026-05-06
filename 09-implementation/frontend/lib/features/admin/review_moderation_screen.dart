@@ -97,7 +97,7 @@ class ReviewModerationScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Quản trị', style: TextStyle(color: context.textMuted, fontSize: 11)),
+                  Text('Quản trị', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: context.textMuted)),
                   SizedBox(height: 2),
                   Text('Đánh giá / bình luận',
                       style: TextStyle(

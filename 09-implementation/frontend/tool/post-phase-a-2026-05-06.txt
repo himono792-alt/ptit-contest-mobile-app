@@ -1,0 +1,81 @@
+DESIGN LINT — POST PHASE A (CNPM Flutter App)
+==============================================
+Date:   2026-05-06
+Scope:  lib/features/**/*.dart
+Method: grep equivalent của 5 pattern trong design_lint.ps1
+
+DELTA vs BASELINE
+=================
+
+CATEGORY                                                  BASELINE  POST   DELTA    %
+-------------------------------------------------------------------------------------
+1. Raw hex Color(0xFF...)                                       51    45      -6  -12%
+2. Off-scale EdgeInsets                                         95    95       0    0%
+3. Off-system BorderRadius (excl pill 99/999)                   33     0     -33 -100%
+4. Hard-coded TextStyle(fontSize:)                             154   129     -25  -16%
+5. Material Colors.X.shadeNNN / withOpacity                      1     0      -1 -100%
+-------------------------------------------------------------------------------------
+TOTAL                                                          334   269     -65  -19%
+
+PHASE A ATTRIBUTION
+===================
+
+A.2 (Gradient hero tokenized)         → Cat 1: -6  (6 instances 0xFFFF6B7E)
+A.3 (BorderRadius normalize)          → Cat 3: -33 (38 token usages, 7 pill kept)
+A.4 (Amber → warnOrange)              → Cat 5: -1  (1 instance review_dialog)
+A.5 (Loading color audit case-by-case) → 0 changes (all 9 white inside filled-red buttons — intent đúng)
+A.6 (TextStyle migration 5 file)      → Cat 4: -25 (1 monospace OTP justified skip)
+
+REMAINING DEBT (defer to future sprint per plan)
+=================================================
+
+- Cat 1 (45): admin_shell sidebar dark grays + various status pill hex.
+  Xử lý sau: gọi sprint refactor riêng cho admin_shell + introduce semantic
+  contestType/sidebar tokens.
+
+- Cat 2 (95): off-scale EdgeInsets — m1 trong audit Minor.
+  Strategy: opportunistic fix (sửa khi đụng vào file đó cho task khác).
+
+- Cat 4 (129): TextStyle hard-code ở 23 file lẻ — M2 partial defer.
+  Strategy: opportunistic same as Cat 2.
+
+ON-SYSTEM TARGETS DONE
+======================
+
+- 38 BorderRadius.circular(AppRadius.xx) — chỉ dùng 4 token (tight/sm/md/lg).
+- 6 ptitGradientHero (3 diagonal const + 3 colors-only).
+- 19/20 TextStyle migrate trong 5 file dày → textTheme.copyWith pattern.
+- 1 monospace OTP justified skip (forgot_password_reset:139).
+- 0 raw on-system literals (10/12/20) trong features/ — đã normalize hết.
+
+FILES TOUCHED IN PHASE A
+========================
+
+Token foundation (4 new):
+  lib/core/spacing.dart
+  lib/core/radius.dart
+  lib/core/durations.dart
+  lib/core/breakpoints.dart
+
+Theme update:
+  lib/core/theme.dart (added export 'radius.dart', ptitGradientHero, AppRadius usage)
+
+Lint tool:
+  tool/design_lint.ps1 (whitelist 4/10/12/20/99/999)
+
+Features modified (~22 files):
+  auth/login_screen.dart
+  auth/forgot_password_request_screen.dart
+  auth/forgot_password_reset_screen.dart
+  student/contest_detail_screen.dart, contest_list_screen.dart
+  student/profile_screen.dart, home_screen.dart
+  student/submission_screen.dart, register_screen.dart
+  student/notifications_screen.dart, student_shell.dart
+  student/team_management_screen.dart, my_registrations_screen.dart
+  student/review_dialog.dart, edit_profile_screen.dart
+  admin/admin_shell.dart, admin_users_screen.dart
+  admin/approval_queue_screen.dart, monitor_screen.dart
+  admin/judge_screen.dart, contest_admin_detail_screen.dart
+  admin/create_contest_dialog.dart, review_moderation_screen.dart
+
+VERIFY: flutter analyze lib/features/ → 0 error mới (9 issues toàn pre-existing tech debt).

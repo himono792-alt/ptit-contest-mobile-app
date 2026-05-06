@@ -39,7 +39,7 @@ class MonitorScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('BCN', style: TextStyle(color: context.textMuted, fontSize: 11)),
+                  Text('BCN', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: context.textMuted)),
                   SizedBox(height: 2),
                   Text('Giám sát tiến độ',
                       style: TextStyle(
@@ -129,7 +129,7 @@ class _MonitorCard extends StatelessWidget {
                             color: context.textPrimary)),
                     const SizedBox(height: 2),
                     Text(data['slug'] ?? '',
-                        style: TextStyle(fontSize: 11, color: context.textMuted)),
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(color: context.textMuted)),
                   ]),
             ),
             const SizedBox(width: 8),
@@ -141,11 +141,11 @@ class _MonitorCard extends StatelessWidget {
               Icon(Icons.calendar_today, size: 12, color: context.textMuted),
               const SizedBox(width: 4),
               Text(dateRange,
-                  style: TextStyle(fontSize: 11, color: context.textMuted)),
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(color: context.textMuted)),
               const SizedBox(width: 16),
               Text(
                   '${data['total_entries']} entries · ${data['total_submissions']} submissions',
-                  style: TextStyle(fontSize: 11, color: context.textMuted)),
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(color: context.textMuted)),
             ]),
           ],
           const SizedBox(height: 14),
@@ -179,7 +179,7 @@ class _Progress extends StatelessWidget {
       SizedBox(
         width: 90,
         child: Text(label,
-            style: TextStyle(fontSize: 12, color: context.textPrimary)),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.textPrimary)),
       ),
       Expanded(
         child: Stack(children: [
@@ -187,7 +187,7 @@ class _Progress extends StatelessWidget {
             height: 10,
             decoration: BoxDecoration(
               color: const Color(0xFFF3F4F6),
-              borderRadius: BorderRadius.circular(5),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
           ),
           FractionallySizedBox(
@@ -196,7 +196,7 @@ class _Progress extends StatelessWidget {
               height: 10,
               decoration: BoxDecoration(
                 color: color,
-                borderRadius: BorderRadius.circular(5),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
             ),
           ),
@@ -233,7 +233,7 @@ class _ErrorView extends StatelessWidget {
           const SizedBox(height: 12),
           Text(msg,
               textAlign: TextAlign.center,
-              style: TextStyle(color: context.textMuted, fontSize: 12)),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.textMuted)),
           const SizedBox(height: 16),
           FilledButton(onPressed: onRetry, child: const Text('Thử lại')),
         ]),

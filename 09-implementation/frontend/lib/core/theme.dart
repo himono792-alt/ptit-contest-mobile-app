@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'radius.dart';
+export 'radius.dart'; // Re-export để files import theme.dart có sẵn AppRadius.
+
 /// Color palette matching 05-mockups tokens.css (PTIT brand).
 /// Anchor: PTIT red #C8102E ≈ oklch(0.547 0.207 19).
 const Color ptitRed = Color(0xFFC8102E);
@@ -17,6 +20,19 @@ const Color warnOrange = Color(0xFFD97706);
 const Color warnSoft = Color(0xFFFEF3C7);
 const Color infoBlue = Color(0xFF2563EB);
 const Color infoSoft = Color(0xFFDBEAFE);
+
+// Brand hero gradient — design audit M1 (2026-05-06).
+// Trước đó copy-paste 6 chỗ; gom về 1 nguồn để khi rebrand chỉ sửa 1 list.
+//
+// Dùng `ptitGradientHero` cho hero card diagonal (topLeft → bottomRight).
+// Dùng `LinearGradient(colors: ptitGradientHeroColors)` khi cần alignment khác
+// (vd: horizontal default hoặc top → bottom).
+const List<Color> ptitGradientHeroColors = [ptitRed, Color(0xFFFF6B7E)];
+const LinearGradient ptitGradientHero = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: ptitGradientHeroColors,
+);
 
 // Soft layered shadow — phong cách Linear/Notion (mockup tokens.css)
 final List<BoxShadow> shadowSm = [
@@ -72,7 +88,7 @@ final ThemeData ptitLightTheme = ThemeData(
       backgroundColor: ptitRed,
       foregroundColor: Colors.white,
       minimumSize: const Size(double.infinity, 48),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
       textStyle: _jakarta(14, FontWeight.w700, color: Colors.white),
       elevation: 0,
     ),
@@ -82,7 +98,7 @@ final ThemeData ptitLightTheme = ThemeData(
       foregroundColor: textPrimary,
       side: const BorderSide(color: cardBorder),
       minimumSize: const Size(double.infinity, 44),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
       textStyle: _jakarta(13, FontWeight.w600),
     ),
   ),
@@ -94,15 +110,15 @@ final ThemeData ptitLightTheme = ThemeData(
   ),
   inputDecorationTheme: InputDecorationTheme(
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppRadius.md),
       borderSide: const BorderSide(color: cardBorder),
     ),
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppRadius.md),
       borderSide: const BorderSide(color: cardBorder),
     ),
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppRadius.md),
       borderSide: const BorderSide(color: ptitRed, width: 1.5),
     ),
     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
@@ -121,13 +137,13 @@ final ThemeData ptitLightTheme = ThemeData(
   ),
   dialogTheme: DialogThemeData(
     backgroundColor: Colors.white,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
     titleTextStyle: _jakarta(16, FontWeight.w800, letterSpacing: -0.32),
   ),
   snackBarTheme: SnackBarThemeData(
     backgroundColor: textPrimary,
     contentTextStyle: _jakarta(13, FontWeight.w500, color: Colors.white),
     behavior: SnackBarBehavior.floating,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
   ),
 );

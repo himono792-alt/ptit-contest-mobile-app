@@ -454,7 +454,7 @@ class _ActionBtn extends StatelessWidget {
             GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         minimumSize: const Size(0, 36),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
       ),
     );
   }
@@ -1173,7 +1173,7 @@ class _EntriesTabState extends ConsumerState<_EntriesTab> {
                     horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   boxShadow: [
                     BoxShadow(
                         color: Colors.black.withValues(alpha: 0.15),

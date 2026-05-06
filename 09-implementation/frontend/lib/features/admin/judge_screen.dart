@@ -131,7 +131,7 @@ class _AssignmentCard extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: context.ptitRedSoft,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(AppRadius.tight),
             ),
             child: const Text('Tap để nhập điểm',
                 style: TextStyle(
@@ -361,7 +361,7 @@ class _ScoreDialogState extends ConsumerState<_ScoreDialog> {
         decoration: BoxDecoration(
           color: const Color(0xFFFAFAFA),
           border: Border.all(color: context.cardBorder),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -41,7 +41,7 @@ class HomeScreen extends ConsumerWidget {
               // Avatar + greeting đều click được → switch sang tab Tôi (index 5)
               Expanded(
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
                   onTap: () => onSwitchTab?.call(5),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
@@ -106,7 +106,7 @@ class HomeScreen extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: context.cardBg,
                   border: Border.all(color: context.cardBorder),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
                 child: Row(children: [
                   Icon(Icons.search, size: 17, color: context.textFaint),
@@ -230,12 +230,12 @@ class _StatCard extends StatelessWidget {
     };
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(AppRadius.md),
       child: Container(
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
         decoration: BoxDecoration(
           color: colors.bg,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -377,10 +377,8 @@ class _FeaturedCard extends StatelessWidget {
             height: 6,
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [ptitRed, Color(0xFFFF6B7E)],
-              ),
-              borderRadius: BorderRadius.circular(3),
+              gradient: const LinearGradient(colors: ptitGradientHeroColors),
+              borderRadius: BorderRadius.circular(AppRadius.tight),
             ),
           ),
           Row(children: [

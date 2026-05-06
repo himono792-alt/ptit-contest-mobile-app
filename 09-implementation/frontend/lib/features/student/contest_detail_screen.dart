@@ -77,12 +77,8 @@ class ContestDetailScreen extends ConsumerWidget {
           Container(
             height: 140,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [ptitRed, Color(0xFFFF6B7E)],
-              ),
-              borderRadius: BorderRadius.circular(16),
+              gradient: ptitGradientHero,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
               boxShadow: shadowMd,
             ),
             padding: const EdgeInsets.all(18),

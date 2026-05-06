@@ -1,0 +1,32 @@
+DESIGN LINT BASELINE — CNPM Flutter App
+========================================
+Date:   2026-05-06
+Scope:  lib/features/**/*.dart (~30 files)
+Method: ripgrep equivalent của 5 pattern trong design_lint.ps1
+
+CATEGORY                                            VIOLATIONS  FILES
+--------------------------------------------------------------------
+1. Raw hex Color(0xFF...)                                   51    20
+2. Off-scale EdgeInsets (3/5/6/7/9-11/13/14/17-19/21-23/26/30)   95    28
+3. Off-system BorderRadius (not 10/12/20, pill 99/999 OK)   33    ~15
+4. Hard-coded TextStyle(fontSize:)                         154    28
+5. Material Colors.X.shadeNNN / withOpacity drift            1     1
+--------------------------------------------------------------------
+TOTAL                                                       334
+
+NOTES
+-----
+- Pill radius 99/999 đã được whitelist (Flutter convention cho avatar/chip).
+- Off-spacing 95 cao hơn audit gốc (~40) vì pattern hiện rộng hơn:
+  audit gốc chỉ flag 10/14/18, lint flag thêm 3/5/6/7/9/11/13/17/19/21/22/23/26/30.
+- Category 4 (TextStyle hard-code) cao nhất — audit gốc đã warn 30+ instances,
+  thực tế 154 vì pattern bắt cả TextStyle có size literal trong widget body.
+
+Ngày tới sau Phase A: re-run `tool/design_lint.ps1`, expect:
+- Category 1: 0 (sau khi C1+C3 đã fix trong Sprint Dark Mode)
+- Category 3: 0 (A.3)
+- Category 4: ~120 (sau A.6 — chỉ migrate 5 file dày nhất, còn ~30 file lẻ)
+- Category 5: 0 (A.4)
+- Category 2: vẫn ~95 (m1 trong audit minor — defer)
+
+Target sau Phase A: ~125 violations (giảm ~63%).

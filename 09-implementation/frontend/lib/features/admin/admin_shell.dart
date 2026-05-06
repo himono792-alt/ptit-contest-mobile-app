@@ -139,7 +139,7 @@ class _WideAdminLayout extends StatelessWidget {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                      color: ptitRed, borderRadius: BorderRadius.circular(7)),
+                      color: ptitRed, borderRadius: BorderRadius.circular(AppRadius.sm)),
                   child: const Center(
                     child: Text('P',
                         style: TextStyle(
@@ -383,7 +383,7 @@ class _AdminDrawer extends StatelessWidget {
               height: 36,
               decoration: BoxDecoration(
                 color: ptitRed,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: const Center(
                 child: Text('P',

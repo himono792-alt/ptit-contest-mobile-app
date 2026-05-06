@@ -113,12 +113,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [ptitRed, Color(0xFFFF6B7E)],
-                      ),
-                      borderRadius: BorderRadius.circular(14),
+                      gradient: ptitGradientHero,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
                       boxShadow: [
                         BoxShadow(
                             color: ptitRed.withValues(alpha: 0.35),
@@ -223,7 +219,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
                       color: context.ptitRedSoft,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
                       border: Border.all(color: ptitRed.withValues(alpha: 0.3)),
                     ),
                     child: Row(children: [
@@ -310,7 +306,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF1ECE5),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -385,7 +381,7 @@ class _DemoAccountRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
           decoration: BoxDecoration(
             color: ptitRed,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(AppRadius.tight),
           ),
           child: Text(role,
               style: GoogleFonts.plusJakartaSans(

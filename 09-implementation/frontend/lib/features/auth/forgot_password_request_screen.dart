@@ -92,7 +92,7 @@ class _ForgotPasswordRequestScreenState
                         height: 64,
                         decoration: BoxDecoration(
                           color: context.ptitRedSoft,
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
                         ),
                         child: const Icon(Icons.lock_reset,
                             color: ptitRed, size: 32),
@@ -112,7 +112,7 @@ class _ForgotPasswordRequestScreenState
                     Text(
                       'Nhập email PTIT để nhận link reset mật khẩu.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 13, color: context.textMuted),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.textMuted),
                     ),
                     const SizedBox(height: 28),
                     TextFormField(
@@ -138,7 +138,7 @@ class _ForgotPasswordRequestScreenState
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
                             color: context.ptitRedSoft,
-                            borderRadius: BorderRadius.circular(8)),
+                            borderRadius: BorderRadius.circular(AppRadius.sm)),
                         child: Row(children: [
                           const Icon(Icons.error_outline,
                               size: 16, color: ptitRed),

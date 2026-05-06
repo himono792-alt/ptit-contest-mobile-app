@@ -37,11 +37,7 @@ class ProfileScreen extends ConsumerWidget {
                 width: 76,
                 height: 76,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [ptitRed, Color(0xFFFF6B7E)],
-                  ),
+                  gradient: ptitGradientHero,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
@@ -548,7 +544,7 @@ class _ThemeModeTile extends ConsumerWidget {
             height: 4,
             decoration: BoxDecoration(
               color: Colors.grey.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(AppRadius.tight),
             ),
           ),
           const SizedBox(height: 12),

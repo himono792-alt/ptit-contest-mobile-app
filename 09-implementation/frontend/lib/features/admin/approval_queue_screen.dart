@@ -166,7 +166,7 @@ class _ApprovalCard extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFFFAFAFA),
                 border: Border.all(color: context.cardBorder),
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: Text('“${data['submission_note']}”',
                   style: TextStyle(fontSize: 12, color: context.textPrimary)),
@@ -352,7 +352,7 @@ class _ApprovalDetailDialogState
               decoration: BoxDecoration(
                 color: const Color(0xFFF9FAFB),
                 border: Border.all(color: context.cardBorder),
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: SelectableText(
                 snapshotPretty,

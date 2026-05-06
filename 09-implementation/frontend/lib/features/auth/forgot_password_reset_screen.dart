@@ -106,7 +106,7 @@ class _ForgotPasswordResetScreenState
             height: 64,
             decoration: BoxDecoration(
               color: context.warnSoft,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
             ),
             child: Icon(Icons.vpn_key, color: context.warnOrange, size: 32),
           ),
@@ -170,13 +170,13 @@ class _ForgotPasswordResetScreenState
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-                color: context.ptitRedSoft, borderRadius: BorderRadius.circular(8)),
+                color: context.ptitRedSoft, borderRadius: BorderRadius.circular(AppRadius.sm)),
             child: Row(children: [
               const Icon(Icons.error_outline, size: 16, color: ptitRed),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(_error!,
-                    style: const TextStyle(fontSize: 12, color: ptitRed)),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: ptitRed)),
               ),
             ]),
           ),
@@ -218,7 +218,7 @@ class _ForgotPasswordResetScreenState
         Text(
           'Email: ${widget.email}\nĐăng nhập lại bằng mật khẩu mới.',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 13, color: context.textMuted, height: 1.5),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.textMuted, height: 1.5),
         ),
         const SizedBox(height: 28),
         FilledButton.icon(

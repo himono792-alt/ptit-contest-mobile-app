@@ -223,7 +223,7 @@ class _ContestCard extends StatelessWidget {
     switch (status) {
       case 'REG_OPEN':
       case 'PUBLISHED':
-        return const LinearGradient(colors: [ptitRed, Color(0xFFFF6B7E)]);
+        return const LinearGradient(colors: ptitGradientHeroColors);
       case 'ONGOING':
         return LinearGradient(colors: [context.warnOrange, const Color(0xFFFBBF24)]);
       case 'FINISHED':
@@ -251,7 +251,7 @@ class _ContestCard extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
               gradient: _stripeFor(context, contest.status),
-              borderRadius: BorderRadius.circular(3),
+              borderRadius: BorderRadius.circular(AppRadius.tight),
             ),
           ),
           Row(children: [

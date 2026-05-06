@@ -126,7 +126,7 @@ class _MyRegistrationsScreenState extends ConsumerState<MyRegistrationsScreen> {
                           : 'Không có entry nào ở mục "$_filter"',
                       textAlign: TextAlign.center,
                       style:
-                          TextStyle(color: context.textMuted, fontSize: 13),
+                          Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.textMuted),
                     ),
                     const SizedBox(height: 60),
                   ]),
@@ -252,7 +252,7 @@ class _EntryCard extends ConsumerWidget {
             ),
             const SizedBox(width: 6),
             Text('${entry['entry_type']}',
-                style: TextStyle(fontSize: 11, color: context.textMuted)),
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(color: context.textMuted)),
           ]),
           if ((entry['registration_note'] ?? '').toString().isNotEmpty) ...[
             const SizedBox(height: 6),
@@ -265,7 +265,7 @@ class _EntryCard extends ConsumerWidget {
             'Đăng ký ${fmt.format(DateTime.parse(entry['created_at']).toLocal())}'
             ' · Thi ${fmt.format(DateTime.parse(entry['contest_start_at']).toLocal())}'
             ' → ${fmt.format(DateTime.parse(entry['contest_end_at']).toLocal())}',
-            style: TextStyle(fontSize: 10, color: context.textFaint),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: context.textFaint),
           ),
           if (canCancel || canSubmit || isFinished) ...[
             const SizedBox(height: 10),
@@ -274,8 +274,8 @@ class _EntryCard extends ConsumerWidget {
                 Expanded(
                   child: FilledButton.icon(
                     icon: const Icon(Icons.upload_file, size: 14),
-                    label: const Text('Nộp bài',
-                        style: TextStyle(fontSize: 12)),
+                    label: Text('Nộp bài',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.textPrimary)),
                     onPressed: () => _navSubmit(context, ref),
                     style: FilledButton.styleFrom(
                         minimumSize: const Size(0, 32),
@@ -286,8 +286,8 @@ class _EntryCard extends ConsumerWidget {
                 Expanded(
                   child: OutlinedButton.icon(
                     icon: const Icon(Icons.emoji_events_outlined, size: 14),
-                    label: const Text('Xem kết quả',
-                        style: TextStyle(fontSize: 12)),
+                    label: Text('Xem kết quả',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.textPrimary)),
                     onPressed: () =>
                         context.push('/contests/${entry['contest_slug']}'),
                     style: OutlinedButton.styleFrom(
@@ -300,8 +300,8 @@ class _EntryCard extends ConsumerWidget {
                 OutlinedButton.icon(
                   icon: const Icon(Icons.cancel_outlined,
                       size: 14, color: ptitRed),
-                  label: const Text('Hủy',
-                      style: TextStyle(fontSize: 11, color: ptitRed)),
+                  label: Text('Hủy',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(color: ptitRed)),
                   onPressed: () => _cancel(context, ref),
                   style: OutlinedButton.styleFrom(
                       minimumSize: const Size(0, 32),

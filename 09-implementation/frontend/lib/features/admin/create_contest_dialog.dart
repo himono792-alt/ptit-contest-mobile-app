@@ -219,10 +219,8 @@ class _CreateContestDialogState extends ConsumerState<CreateContestDialog> {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [ptitRed, Color(0xFFFF6B7E)],
-                    ),
-                    borderRadius: BorderRadius.circular(10),
+                    gradient: const LinearGradient(colors: ptitGradientHeroColors),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                   child: const Icon(Icons.add, color: Colors.white, size: 20),
                 ),
@@ -527,7 +525,7 @@ class _DateTimeField extends StatelessWidget {
     final fmt = DateFormat('dd/MM/yyyy · HH:mm');
     return InkWell(
       onTap: onPick,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppRadius.md),
       child: InputDecorator(
         decoration: InputDecoration(
           labelText: label,

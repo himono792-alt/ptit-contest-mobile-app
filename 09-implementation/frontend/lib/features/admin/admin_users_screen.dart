@@ -353,7 +353,7 @@ class _BulkImportDialogState extends ConsumerState<_BulkImportDialog> {
                 decoration: BoxDecoration(
                   color: const Color(0xFFF9FAFB),
                   border: Border.all(color: context.cardBorder),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
                 child: Text(_resultMsg!,
                     style: TextStyle(

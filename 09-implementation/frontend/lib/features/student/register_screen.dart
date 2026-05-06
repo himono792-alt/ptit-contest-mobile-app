@@ -135,7 +135,7 @@ class _RegisterContestScreenState extends ConsumerState<RegisterContestScreen> {
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: context.warnSoft,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
                 child: Row(children: [
                   Icon(Icons.info_outline, size: 16, color: context.warnOrange),
@@ -154,7 +154,7 @@ class _RegisterContestScreenState extends ConsumerState<RegisterContestScreen> {
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                       color: context.ptitRedSoft,
-                      borderRadius: BorderRadius.circular(8)),
+                      borderRadius: BorderRadius.circular(AppRadius.sm)),
                   child: Row(children: [
                     const Icon(Icons.error_outline, size: 16, color: ptitRed),
                     const SizedBox(width: 8),
