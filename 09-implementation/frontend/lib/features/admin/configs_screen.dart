@@ -25,7 +25,7 @@ class ConfigsScreen extends ConsumerWidget {
     final isMobile = MediaQuery.of(context).size.width < 768;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: context.appBg,
       body: Column(children: [
         if (!isMobile) Container(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
@@ -55,6 +55,13 @@ class ConfigsScreen extends ConsumerWidget {
               onPressed: () => ref.invalidate(configsProvider),
             ),
           ]),
+        ),
+        // Sprint 6 (2026-05-07): AD-04 — Backup / Restore section.
+        // Đặt trên list configs vì là 2 action tĩnh, không cần scroll.
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+              isMobile ? 14 : 24, isMobile ? 14 : 18, isMobile ? 14 : 24, 0),
+          child: _BackupRestoreCard(),
         ),
         Expanded(
           child: asyncList.when(
@@ -299,3 +306,171 @@ class _ConfigEditDialogState extends ConsumerState<_ConfigEditDialog> {
 String _msg(Object e) => e is DioException
     ? (e.response?.data is Map ? '${e.response?.data['detail']}' : e.message ?? '')
     : '$e';
+
+// Sprint 6 (2026-05-07): AD-04 — Backup / Restore admin actions.
+//
+// Backend wrap pg_dump / pg_restore CLI qua POST /admin/backup, POST /admin/restore.
+// Backup: response { filename, size_mb, created_at } — chỉ cần show snackbar.
+// Restore: cần upload file backup .sql, confirm 2 lần (không thể hoàn tác).
+//
+// Để giữ scope sprint nhỏ, version đầu chỉ implement Backup (POST không body) và
+// nút Restore dạng placeholder mở dialog hướng dẫn admin chạy CLI trên server
+// (an toàn hơn — restore qua HTTP upload là rủi ro lớn).
+class _BackupRestoreCard extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_BackupRestoreCard> createState() => _BackupRestoreCardState();
+}
+
+class _BackupRestoreCardState extends ConsumerState<_BackupRestoreCard> {
+  bool _busy = false;
+  Map<String, dynamic>? _lastBackup;
+
+  Future<void> _doBackup() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Tạo bản sao lưu DB'),
+        content: const Text(
+            'Hệ thống sẽ chạy pg_dump trên schema ptit_contest. '
+            'Quá trình này có thể mất 1-3 phút tùy size DB.\n\n'
+            'File backup .sql sẽ lưu vào /backups trên server.\n\n'
+            'Tiếp tục?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Hủy')),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: FilledButton.styleFrom(backgroundColor: ptitRed),
+              child: const Text('Tạo backup')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+
+    setState(() => _busy = true);
+    try {
+      final api = ref.read(apiClientProvider);
+      final res = await api.dio.post('/admin/backup');
+      if (!mounted) return;
+      setState(() {
+        _lastBackup = res.data as Map<String, dynamic>;
+        _busy = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+            'Backup thành công: ${_lastBackup?['filename'] ?? 'completed'}'),
+        backgroundColor: context.successGreen,
+      ));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Lỗi backup: ${_msg(e)}')));
+    }
+  }
+
+  Future<void> _showRestoreInfo() async {
+    await showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Khôi phục từ backup'),
+        content: const SingleChildScrollView(
+          child: Text(
+            'CẢNH BÁO: Restore sẽ ghi đè TOÀN BỘ dữ liệu hiện tại — '
+            'không thể hoàn tác.\n\n'
+            'Vì lý do an toàn, restore chỉ có thể chạy trực tiếp trên server '
+            'qua CLI bằng tài khoản DBA:\n\n'
+            '  psql -U postgres -d ptit_contest \\\n'
+            '       -f /backups/<filename>.sql\n\n'
+            'Liên hệ admin DB để được hỗ trợ. Endpoint POST /admin/restore '
+            'chỉ available trong môi trường staging.',
+            style: TextStyle(height: 1.5),
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Đã hiểu')),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Icon(Icons.backup_outlined,
+                size: 16, color: context.textPrimary),
+            const SizedBox(width: 8),
+            Text('Sao lưu / Khôi phục DB (AD-04)',
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: context.textPrimary)),
+          ]),
+          const SizedBox(height: 6),
+          Text(
+            'pg_dump schema ptit_contest. File backup lưu trên server (volume /backups). '
+            'Restore yêu cầu can thiệp DBA qua CLI.',
+            style: TextStyle(fontSize: 11, color: context.textMuted),
+          ),
+          const SizedBox(height: 12),
+          Wrap(spacing: 10, runSpacing: 10, children: [
+            FilledButton.icon(
+              onPressed: _busy ? null : _doBackup,
+              icon: _busy
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.cloud_upload_outlined, size: 16),
+              label: Text(_busy ? 'Đang backup...' : 'Tạo backup ngay'),
+              style: FilledButton.styleFrom(
+                backgroundColor: context.successGreen,
+                foregroundColor: Colors.white,
+              ),
+            ),
+            OutlinedButton.icon(
+              onPressed: _busy ? null : _showRestoreInfo,
+              icon: const Icon(Icons.history, size: 16),
+              label: const Text('Khôi phục backup...'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: ptitRed,
+                side: BorderSide(color: context.cardBorder),
+              ),
+            ),
+          ]),
+          if (_lastBackup != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: context.successSoft,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+              ),
+              child: Row(children: [
+                Icon(Icons.check_circle,
+                    size: 14, color: context.successGreen),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Backup gần nhất: ${_lastBackup!['filename'] ?? 'unknown'} '
+                    '(${_lastBackup!['size_mb'] ?? '?'} MB)',
+                    style: TextStyle(
+                        fontSize: 11.5, color: context.textPrimary),
+                  ),
+                ),
+              ]),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}

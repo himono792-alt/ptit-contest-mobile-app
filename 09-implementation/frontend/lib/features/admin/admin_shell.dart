@@ -18,6 +18,7 @@ import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import 'admin_contests_screen.dart';
 import 'admin_dashboard_screen.dart';
+import 'anomaly_reports_screen.dart';
 import 'approval_queue_screen.dart';
 import 'admin_users_screen.dart';
 import 'audit_log_screen.dart';
@@ -71,6 +72,9 @@ class _AdminShellState extends ConsumerState<AdminShell> {
       items.add(
           _NavItem('Cấu hình', Icons.settings_outlined, const ConfigsScreen()));
       items.add(_NavItem('Audit log', Icons.history, const AuditLogScreen()));
+      // Sprint 6 (2026-05-07): AD-06 anomaly reports.
+      items.add(_NavItem('Bất thường', Icons.warning_amber_outlined,
+          const AnomalyReportsScreen()));
     }
 
     final activeIdx = _idx.clamp(0, items.length - 1);

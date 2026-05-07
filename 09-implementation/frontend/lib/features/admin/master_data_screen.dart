@@ -37,7 +37,7 @@ class MasterDataScreen extends StatelessWidget {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-        backgroundColor: const Color(0xFFFAFAFA),
+        backgroundColor: context.appBg,
         body: Column(children: [
           if (!isMobile) Container(
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),

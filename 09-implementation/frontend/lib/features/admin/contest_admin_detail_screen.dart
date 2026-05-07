@@ -25,6 +25,7 @@ import '../../core/download_helper.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/pill.dart';
+import '../../core/xlsx_export_helper.dart';
 
 // ---------- Providers ----------
 
@@ -126,7 +127,7 @@ class _ContestAdminDetailScreenState
     final asyncDetail = ref.watch(contestDetailAdminProvider(widget.contestId));
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: context.appBg,
       body: asyncDetail.when(
         loading: () => const Center(child: CircularProgressIndicator(color: ptitRed)),
         error: (e, _) => _ErrorView(
@@ -379,6 +380,21 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
                       () => _patchStatus('FINISHED'),
                       successMsg: 'Contest = FINISHED, qua tab Kết quả để compute'),
                 ),
+              // Sprint 6 (2026-05-07): GV-07 — xuất báo cáo tổng hợp cuộc thi.
+              _ActionBtn(
+                label: 'Xuất báo cáo Excel (GV-07)',
+                icon: Icons.assessment_outlined,
+                bg: const Color(0xFF1E3A8A),
+                fg: Colors.white,
+                busy: _busy,
+                onTap: () => exportXlsxFromEndpoint(
+                  context: context,
+                  dio: ref.read(apiClientProvider).dio,
+                  path: '/contests/${widget.contestId}/report.xlsx',
+                  fallbackFilename:
+                      'bao-cao-contest-${widget.contestId}.xlsx',
+                ),
+              ),
               _ActionBtn(
                 label: 'Xóa cuộc thi',
                 icon: Icons.delete_outline,
@@ -1954,21 +1970,28 @@ class _Empty extends StatelessWidget {
 
 class _ErrorView extends StatelessWidget {
   final Object error;
-  final VoidCallback onBack;
-  const _ErrorView({required this.error, required this.onBack});
+  final VoidCallback onRetry;
+  const _ErrorView({required this.error, required this.onRetry});
   @override
-  Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.error_outline, size: 48, color: ptitRed),
-            const SizedBox(height: 12),
-            Text('Lỗi: ${_msgOf(error)}',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: context.textMuted, fontSize: 12)),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: onBack, child: const Text('Quay lại')),
-          ]),
-        ),
-      );
+  Widget build(BuildContext context) {
+    final msg = error is DioException
+        ? ((error as DioException).response?.data is Map
+            ? '${(error as DioException).response?.data['detail']}'
+            : (error as DioException).message ?? '')
+        : '$error';
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.error_outline, size: 48, color: ptitRed),
+          const SizedBox(height: 12),
+          Text(msg,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: context.textMuted, fontSize: 12)),
+          const SizedBox(height: 16),
+          FilledButton(onPressed: onRetry, child: const Text('Thử lại')),
+        ]),
+      ),
+    );
+  }
 }

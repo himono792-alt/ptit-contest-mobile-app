@@ -8,6 +8,7 @@ import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/pill.dart';
+import '../../core/xlsx_export_helper.dart';
 
 final monitorProvider =
     FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
@@ -25,7 +26,7 @@ class MonitorScreen extends ConsumerWidget {
     final isMobile = MediaQuery.of(context).size.width < 768;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: context.appBg,
       body: Column(children: [
         // Top bar
         if (!isMobile) Container(
@@ -49,6 +50,25 @@ class MonitorScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            // Sprint 6 (2026-05-07): BCN-05 — xuất báo cáo tổng hợp khoa.
+            FilledButton.icon(
+              icon: const Icon(Icons.download, size: 16),
+              label: const Text('Xuất Excel (BCN-05)'),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF1E3A8A),
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              ),
+              onPressed: () => exportXlsxFromEndpoint(
+                context: context,
+                dio: ref.read(apiClientProvider).dio,
+                path: '/reports/faculty-summary.xlsx',
+                fallbackFilename: 'bao-cao-khoa-${DateTime.now().year}.xlsx',
+                queryParameters: {'year': DateTime.now().year},
+              ),
+            ),
+            const SizedBox(width: 8),
             IconButton(
               tooltip: 'Refresh',
               icon: Icon(Icons.refresh, color: context.textMuted),

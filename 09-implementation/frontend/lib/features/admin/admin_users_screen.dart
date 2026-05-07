@@ -70,7 +70,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     final isMobile = MediaQuery.of(context).size.width < 768;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: context.appBg,
       body: Column(children: [
         // Top bar
         if (!isMobile) Container(

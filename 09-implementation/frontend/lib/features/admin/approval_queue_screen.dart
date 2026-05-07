@@ -32,7 +32,7 @@ class ApprovalQueueScreen extends ConsumerWidget {
     final isMobile = MediaQuery.of(context).size.width < 768;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: context.appBg,
       body: Column(children: [
         // Top bar
         if (!isMobile) Container(
@@ -164,7 +164,7 @@ class _ApprovalCard extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: const Color(0xFFFAFAFA),
+                color: context.appBg,
                 border: Border.all(color: context.cardBorder),
                 borderRadius: BorderRadius.circular(AppRadius.sm),
               ),

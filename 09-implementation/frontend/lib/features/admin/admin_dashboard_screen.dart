@@ -6,6 +6,7 @@ import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
+import '../../core/xlsx_export_helper.dart';
 
 final systemSummaryProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
   final user = ref.read(authProvider).value;
@@ -48,7 +49,7 @@ class AdminDashboardScreen extends ConsumerWidget {
 
     final isMobile = MediaQuery.of(context).size.width < 768;
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: context.appBg,
       body: Column(children: [
         // Top bar — ẩn user info + chỉ "Dashboard" trên mobile (đã có AppBar shell)
         if (!isMobile)
@@ -73,6 +74,28 @@ class AdminDashboardScreen extends ConsumerWidget {
                               color: context.textPrimary)),
                     ]),
               ),
+              // Sprint 6 (2026-05-07): AD-05 — xuất báo cáo toàn hệ thống.
+              // Chỉ ADMIN thấy. BCN có nút riêng trong MonitorScreen.
+              if (user.isAdmin) ...[
+                FilledButton.icon(
+                  icon: const Icon(Icons.download, size: 16),
+                  label: const Text('Xuất Excel (AD-05)'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF1E3A8A),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                  ),
+                  onPressed: () => exportXlsxFromEndpoint(
+                    context: context,
+                    dio: ref.read(apiClientProvider).dio,
+                    path: '/admin/reports/system-summary.xlsx',
+                    fallbackFilename:
+                        'bao-cao-he-thong-${DateTime.now().toIso8601String().substring(0, 10)}.xlsx',
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
               Text('${user.fullName} · ${user.roles.join(",")}',
                   style: TextStyle(color: context.textMuted, fontSize: 12)),
             ]),
