@@ -1,9 +1,11 @@
 """Seed thêm test users để test E2E workflow QĐ1.
 
 Tạo:
-  - 1 ORGANIZER (GV. Nguyen Van A)  email gv@ptit.edu.vn  password abc123
-  - 1 HOD       (BCN. Tran Van B)   email bcn@ptit.edu.vn password abc123
+  - 1 ORGANIZER (GV. Nguyen Van A)  email gv@ptit.edu.vn    password abc123
+  - 1 HOD       (BCN. Tran Van B)   email bcn@ptit.edu.vn   password abc123
                 → gắn faculty_id của khoa CNTT (đã seed trong setup-dev.sh)
+  - 1 ADMIN     (Quản trị hệ thống) email admin@ptit.edu.vn password abc123
+                → chỉ assign role ADMIN, không cần profile riêng (Sprint 7 2026-05-07)
 
 Cách chạy:
     cd 09-implementation/backend
@@ -57,7 +59,7 @@ async def main():
         print(f"Khoa CNTT id={faculty.faculty_id}")
 
         # 1. Organizer
-        print("\n[1/2] Organizer (GV)")
+        print("\n[1/3] Organizer (GV)")
         gv, created = await get_or_create_user(db, "gv@ptit.edu.vn", "GV. Nguyen Van A", "abc123")
         await assign_role(db, gv.user_id, RoleCode.ORGANIZER)
         if created:
@@ -65,7 +67,7 @@ async def main():
             print(f"    → tạo organizer profile")
 
         # 2. HOD (BCN)
-        print("\n[2/2] HOD (BCN)")
+        print("\n[2/3] HOD (BCN)")
         bcn, created = await get_or_create_user(db, "bcn@ptit.edu.vn", "BCN. Tran Van B", "abc123")
         await assign_role(db, bcn.user_id, RoleCode.HOD)
         if created:
@@ -77,14 +79,21 @@ async def main():
             ))
             print(f"    → tạo department_head profile (Trưởng khoa CNTT)")
 
+        # 3. ADMIN (Sprint 7 2026-05-07): để test toggle dark mode trên admin shell.
+        # Admin không cần profile riêng — chỉ AppUser + UserRole(ADMIN).
+        print("\n[3/3] ADMIN (Quản trị hệ thống)")
+        admin, _ = await get_or_create_user(db, "admin@ptit.edu.vn", "Quản trị hệ thống", "abc123")
+        await assign_role(db, admin.user_id, RoleCode.ADMIN)
+
         await db.commit()
 
     await engine.dispose()
     print("\n✅ Seed test users OK")
     print("\nLogin credentials:")
-    print("  GV  → gv@ptit.edu.vn  / abc123")
-    print("  BCN → bcn@ptit.edu.vn / abc123")
-    print("  SV  → b22dccn001@ptit.edu.vn / abc123 (cần register trước qua /api/auth/register)")
+    print("  GV    → gv@ptit.edu.vn    / abc123")
+    print("  BCN   → bcn@ptit.edu.vn   / abc123")
+    print("  ADMIN → admin@ptit.edu.vn / abc123")
+    print("  SV    → b22dccn001@ptit.edu.vn / abc123 (cần register trước qua /api/auth/register)")
 
 
 if __name__ == "__main__":
