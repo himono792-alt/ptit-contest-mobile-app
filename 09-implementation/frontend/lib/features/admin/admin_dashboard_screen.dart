@@ -48,15 +48,21 @@ class AdminDashboardScreen extends ConsumerWidget {
     final asyncCount = ref.watch(myStatsProvider);
 
     final isMobile = MediaQuery.of(context).size.width < 768;
-    return Scaffold(
-      backgroundColor: context.appBg,
-      body: Column(children: [
+    // Sprint 4 fix: bỏ nested Scaffold — AdminDashboardScreen đã nằm trong shell's Scaffold.
+    // Nested Scaffold → Scaffold truyền loose constraints cho body Column → Expanded trong Row = 0px.
+    // Fix: return ColoredBox + Column trực tiếp để nhận tight constraints từ shell's Expanded.
+    return ColoredBox(
+      color: context.appBg,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         // Top bar — ẩn user info + chỉ "Dashboard" trên mobile (đã có AppBar shell)
         if (!isMobile)
           Container(
+            width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
+            // 2026-05-07: theme-aware top bar — Colors.white hardcode khiến
+            // text 'Dashboard' (textPrimary=trắng trong dark) trắng-trên-trắng = invisible.
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.cardBg,
               border: Border(bottom: BorderSide(color: context.cardBorder)),
             ),
             child: Row(children: [
