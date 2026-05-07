@@ -42,7 +42,7 @@ class MasterDataScreen extends StatelessWidget {
           if (!isMobile) Container(
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.cardBg,
               border: Border(bottom: BorderSide(color: context.cardBorder)),
             ),
             child: Row(children: [
@@ -64,7 +64,7 @@ class MasterDataScreen extends StatelessWidget {
             ]),
           ),
           Container(
-            color: Colors.white,
+            color: context.cardBg,
             child: TabBar(
               labelColor: ptitRed,
               unselectedLabelColor: context.textMuted,

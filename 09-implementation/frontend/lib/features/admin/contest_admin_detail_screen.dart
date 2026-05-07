@@ -139,7 +139,7 @@ class _ContestAdminDetailScreenState
             ref.invalidate(contestDetailAdminProvider(widget.contestId));
           }),
           Container(
-            color: Colors.white,
+            color: context.cardBg,
             child: TabBar(
               controller: _tab,
               isScrollable: true,
@@ -1189,7 +1189,7 @@ class _EntriesTabState extends ConsumerState<_EntriesTab> {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: context.cardBg,
                   borderRadius: BorderRadius.circular(AppRadius.md),
                   boxShadow: [
                     BoxShadow(

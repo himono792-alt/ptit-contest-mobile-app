@@ -87,7 +87,7 @@ class _AdminContestsScreenState extends ConsumerState<AdminContestsScreen> {
         if (!isMobile) Container(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: context.cardBg,
             border: Border(bottom: BorderSide(color: context.cardBorder)),
           ),
           child: Row(children: [

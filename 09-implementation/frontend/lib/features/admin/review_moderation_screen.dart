@@ -91,7 +91,7 @@ class ReviewModerationScreen extends ConsumerWidget {
       body: Column(children: [
         if (!isMobile) Container(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-          color: Colors.white,
+          color: context.cardBg,
           child: Row(children: [
             Expanded(
               child: Column(
