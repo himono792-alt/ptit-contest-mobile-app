@@ -7,3 +7,13 @@ __pycache__
 *.log
 .env
 .env.local
+
+# Sprint 7 (2026-05-07): loại file dev/docs (không runtime) khỏi build context.
+# KHÔNG ignore scripts/ vì docker-entrypoint reference scripts/seed-users.sh.
+tests/
+docs/
+*.md
+README*
+LICENSE*
+.dart_tool/
+build/
