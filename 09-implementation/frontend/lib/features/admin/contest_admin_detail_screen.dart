@@ -1970,8 +1970,8 @@ class _Empty extends StatelessWidget {
 
 class _ErrorView extends StatelessWidget {
   final Object error;
-  final VoidCallback onRetry;
-  const _ErrorView({required this.error, required this.onRetry});
+  final VoidCallback onBack;
+  const _ErrorView({required this.error, required this.onBack});
   @override
   Widget build(BuildContext context) {
     final msg = error is DioException
@@ -1989,7 +1989,7 @@ class _ErrorView extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(color: context.textMuted, fontSize: 12)),
           const SizedBox(height: 16),
-          FilledButton(onPressed: onRetry, child: const Text('Thử lại')),
+          FilledButton(onPressed: onBack, child: const Text('Quay lại')),
         ]),
       ),
     );
