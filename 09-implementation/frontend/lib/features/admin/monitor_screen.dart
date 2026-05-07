@@ -99,6 +99,9 @@ class _MonitorCard extends StatelessWidget {
   final Map<String, dynamic> data;
   const _MonitorCard({required this.data});
 
+  String _pctText(double? pct) =>
+      pct == null ? 'chưa có' : '${pct.toStringAsFixed(0)}%';
+
   @override
   Widget build(BuildContext context) {
     final fmt = DateFormat('dd/MM/yy');
@@ -113,8 +116,21 @@ class _MonitorCard extends StatelessWidget {
       dateRange = '${fmt.format(s)} → ${fmt.format(e)}';
     }
 
-    return MCard(
-      child: Column(
+    // Sprint 5 Semantics: tổng hợp summary cho screen reader
+    final title = data['title'] ?? '';
+    final status = data['status'] ?? '';
+    final entries = data['total_entries'] ?? 0;
+    final subs = data['total_submissions'] ?? 0;
+    final summary =
+        '$title, trạng thái $status. $entries đề xuất, $subs bài nộp. '
+        'Đăng ký ${_pctText(regPct)}, Nộp bài ${_pctText(subPct)}, '
+        'Chấm điểm ${_pctText(judgePct)}.';
+
+    return Semantics(
+      container: true,
+      label: summary,
+      child: MCard(
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
@@ -158,6 +174,7 @@ class _MonitorCard extends StatelessWidget {
           _Progress(
               label: 'Chấm điểm', pct: judgePct, color: context.successGreen),
         ],
+        ),
       ),
     );
   }
@@ -175,7 +192,11 @@ class _Progress extends StatelessWidget {
     // Backend returns 0-100 (already a percentage), not 0-1 ratio.
     final ratio = ((pct ?? 0) / 100).clamp(0.0, 1.0);
     final pctText = pct == null ? '—' : '${pct!.toStringAsFixed(0)}%';
-    return Row(children: [
+    final semanticValue = pct == null ? 'chưa có dữ liệu' : '${pct!.toStringAsFixed(0)} phần trăm';
+    return Semantics(
+      label: label,
+      value: semanticValue,
+      child: ExcludeSemantics(child: Row(children: [
       SizedBox(
         width: 90,
         child: Text(label,
@@ -210,7 +231,8 @@ class _Progress extends StatelessWidget {
             style: TextStyle(
                 fontSize: 12, fontWeight: FontWeight.w600, color: color)),
       ),
-    ]);
+    ])),
+    );
   }
 }
 

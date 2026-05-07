@@ -186,35 +186,58 @@ class _SubmissionScreenState extends ConsumerState<SubmissionScreen> {
               const Text('Nộp version mới',
                   style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
               const SizedBox(height: 12),
-              TextField(
-                controller: _titleCtrl,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(labelText: 'Tiêu đề bài làm'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _linkCtrl,
-                keyboardType: TextInputType.url,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: 'External link (Drive/GitHub)',
-                  hintText: 'https://github.com/...',
-                  prefixIcon: Icon(Icons.link, size: 18),
+              // Sprint 5 a11y: explicit Semantics cho mỗi TextField để screen reader
+              // nghe rõ "Tiêu đề bài làm input" + hint context.
+              Semantics(
+                label: 'Tiêu đề bài làm',
+                hint: 'Đặt tên ngắn gọn cho version này',
+                textField: true,
+                child: TextField(
+                  controller: _titleCtrl,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(labelText: 'Tiêu đề bài làm'),
                 ),
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: _textCtrl,
-                maxLines: 5,
-                textInputAction: TextInputAction.newline,
-                decoration: const InputDecoration(labelText: 'Nội dung text (tùy chọn)'),
+              Semantics(
+                label: 'External link Drive hoặc GitHub',
+                hint: 'Dán URL bài làm online',
+                textField: true,
+                child: TextField(
+                  controller: _linkCtrl,
+                  keyboardType: TextInputType.url,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'External link (Drive/GitHub)',
+                    hintText: 'https://github.com/...',
+                    prefixIcon: Icon(Icons.link, size: 18),
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: _noteCtrl,
-                textInputAction: TextInputAction.done,
-                decoration: const InputDecoration(
-                    labelText: 'Ghi chú (vd: lần 2 đã sửa)'),
+              Semantics(
+                label: 'Nội dung text bài làm',
+                hint: 'Tuỳ chọn — nhập text trực tiếp thay link',
+                textField: true,
+                multiline: true,
+                child: TextField(
+                  controller: _textCtrl,
+                  maxLines: 5,
+                  textInputAction: TextInputAction.newline,
+                  decoration: const InputDecoration(labelText: 'Nội dung text (tùy chọn)'),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Semantics(
+                label: 'Ghi chú',
+                hint: 'Vd lần 2 đã sửa lỗi compile',
+                textField: true,
+                child: TextField(
+                  controller: _noteCtrl,
+                  textInputAction: TextInputAction.done,
+                  decoration: const InputDecoration(
+                      labelText: 'Ghi chú (vd: lần 2 đã sửa)'),
+                ),
               ),
               const SizedBox(height: 12),
               // ============== File picker ==============
@@ -228,8 +251,13 @@ class _SubmissionScreenState extends ConsumerState<SubmissionScreen> {
                   borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
                 child: _pendingFile == null
-                    ? InkWell(
+                    ? Semantics(
+                        label: 'Đính kèm file bài làm',
+                        button: true,
+                        hint: 'Mở dialog chọn PDF, Word, Excel, ZIP — tối đa 10MB',
+                        child: InkWell(
                         onTap: _pickFile,
+                        excludeFromSemantics: true,
                         child: Row(children: [
                           Icon(Icons.attach_file, color: context.textMuted, size: 20),
                           SizedBox(width: 10),
@@ -252,6 +280,7 @@ class _SubmissionScreenState extends ConsumerState<SubmissionScreen> {
                           ),
                           Icon(Icons.add, color: ptitRed, size: 20),
                         ]),
+                        ),
                       )
                     : Row(children: [
                         Icon(Icons.insert_drive_file,
@@ -296,16 +325,24 @@ class _SubmissionScreenState extends ConsumerState<SubmissionScreen> {
                     style: TextStyle(fontSize: 11, color: context.textMuted)),
               ],
               const SizedBox(height: 16),
-              FilledButton.icon(
-                icon: const Icon(Icons.send, size: 16),
-                label: Text(_loading
-                    ? (_uploadProgress != null
-                        ? 'Đang upload...'
-                        : 'Đang gửi...')
-                    : (_pendingFile != null
-                        ? 'Nộp bài + Upload file'
-                        : 'Nộp bài')),
-                onPressed: _loading ? null : _submit,
+              Semantics(
+                label: _pendingFile != null ? 'Nộp bài + Upload file' : 'Nộp bài',
+                button: true,
+                enabled: !_loading,
+                hint: _loading
+                    ? 'Đang xử lý, vui lòng chờ'
+                    : 'Submit version mới của bài làm',
+                child: FilledButton.icon(
+                  icon: const Icon(Icons.send, size: 16),
+                  label: Text(_loading
+                      ? (_uploadProgress != null
+                          ? 'Đang upload...'
+                          : 'Đang gửi...')
+                      : (_pendingFile != null
+                          ? 'Nộp bài + Upload file'
+                          : 'Nộp bài')),
+                  onPressed: _loading ? null : _submit,
+                ),
               ),
               const SizedBox(height: 12),
               Container(

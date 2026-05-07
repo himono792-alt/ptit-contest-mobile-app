@@ -177,7 +177,17 @@ class _WideAdminLayout extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 children: List.generate(items.length, (i) {
                   final isActive = i == activeIdx;
-                  return InkWell(
+                  // Sprint 5 a11y: wrap admin sidebar item Semantics — pattern giống
+                  // Sprint 3 student_shell sidebar.
+                  return Semantics(
+                    label: items[i].label,
+                    button: true,
+                    selected: isActive,
+                    hint: isActive
+                        ? 'Đang ở mục này'
+                        : 'Chuyển sang mục ${items[i].label}',
+                    child: InkWell(
+                    excludeFromSemantics: true,
                     onTap: () => onSwitchTab(i),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -208,6 +218,7 @@ class _WideAdminLayout extends StatelessWidget {
                                   isActive ? FontWeight.w600 : FontWeight.normal,
                             )),
                       ]),
+                    ),
                     ),
                   );
                 }),
@@ -423,17 +434,24 @@ class _AdminDrawer extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 8),
             children: List.generate(items.length, (i) {
               final isActive = i == activeIdx;
-              return ListTile(
-                leading: Icon(items[i].icon,
-                    color: isActive ? ptitRed : context.textMuted, size: 20),
-                title: Text(items[i].label,
-                    style: TextStyle(
-                        fontSize: 14,
-                        color: isActive ? ptitRed : context.textPrimary,
-                        fontWeight:
-                            isActive ? FontWeight.w700 : FontWeight.w500)),
-                tileColor: isActive ? context.ptitRedSoft : null,
-                onTap: () => onSwitchTab(i),
+              // Sprint 5 a11y: drawer item Semantics same pattern sidebar wide
+              return Semantics(
+                label: items[i].label,
+                button: true,
+                selected: isActive,
+                hint: isActive ? 'Đang ở mục này' : 'Chuyển sang mục ${items[i].label}',
+                child: ListTile(
+                  leading: Icon(items[i].icon,
+                      color: isActive ? ptitRed : context.textMuted, size: 20),
+                  title: Text(items[i].label,
+                      style: TextStyle(
+                          fontSize: 14,
+                          color: isActive ? ptitRed : context.textPrimary,
+                          fontWeight:
+                              isActive ? FontWeight.w700 : FontWeight.w500)),
+                  tileColor: isActive ? context.ptitRedSoft : null,
+                  onTap: () => onSwitchTab(i),
+                ),
               );
             }),
           ),

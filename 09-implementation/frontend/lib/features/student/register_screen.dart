@@ -125,12 +125,18 @@ class _RegisterContestScreenState extends ConsumerState<RegisterContestScreen> {
               Text('Ghi chú đăng ký (tùy chọn)',
                   style: TextStyle(fontSize: 12, color: context.textMuted)),
               const SizedBox(height: 6),
-              TextField(
-                controller: _noteCtrl,
-                maxLines: 3,
-                textInputAction: TextInputAction.done,
-                decoration: const InputDecoration(
-                    hintText: 'VD: Lý do tham gia, kinh nghiệm...'),
+              Semantics(
+                label: 'Ghi chú đăng ký',
+                hint: 'Tùy chọn — lý do tham gia hoặc kinh nghiệm',
+                textField: true,
+                multiline: true,
+                child: TextField(
+                  controller: _noteCtrl,
+                  maxLines: 3,
+                  textInputAction: TextInputAction.done,
+                  decoration: const InputDecoration(
+                      hintText: 'VD: Lý do tham gia, kinh nghiệm...'),
+                ),
               ),
               const SizedBox(height: 12),
               Container(
@@ -169,18 +175,28 @@ class _RegisterContestScreenState extends ConsumerState<RegisterContestScreen> {
                 ),
               ],
               const SizedBox(height: 20),
-              FilledButton.icon(
-                onPressed: _loading ? null : _submit,
-                icon: _loading
-                    ? const SizedBox(
-                        height: 16,
-                        width: 16,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
-                    : Icon(c.isTeam ? Icons.groups : Icons.send, size: 16),
-                label: Text(c.isTeam
-                    ? 'Tiếp tục — Chọn / Tạo team'
-                    : (_loading ? 'Đang gửi...' : 'Gửi đăng ký')),
+              Semantics(
+                label: c.isTeam
+                    ? 'Tiếp tục chọn hoặc tạo team'
+                    : 'Gửi đăng ký tham gia cuộc thi',
+                button: true,
+                enabled: !_loading,
+                hint: c.isTeam
+                    ? 'Mở màn hình quản lý team'
+                    : 'Đăng ký sẽ ở trạng thái chờ Ban Tổ chức phê duyệt',
+                child: FilledButton.icon(
+                  onPressed: _loading ? null : _submit,
+                  icon: _loading
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : Icon(c.isTeam ? Icons.groups : Icons.send, size: 16),
+                  label: Text(c.isTeam
+                      ? 'Tiếp tục — Chọn / Tạo team'
+                      : (_loading ? 'Đang gửi...' : 'Gửi đăng ký')),
+                ),
               ),
             ],
           ),

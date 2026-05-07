@@ -381,34 +381,53 @@ class _ApprovalDetailDialogState
           border: Border(top: BorderSide(color: context.cardBorder)),
         ),
         child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-          OutlinedButton.icon(
-            onPressed: _busy ? null : () => _decide('reject'),
-            icon: const Icon(Icons.close, size: 16, color: ptitRed),
-            label: const Text('Reject', style: TextStyle(color: ptitRed)),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(120, 38),
-              side: const BorderSide(color: ptitRed),
+          // Sprint 5 a11y: 3 BCN action buttons với label rõ ràng cho screen reader
+          Semantics(
+            label: 'Reject — từ chối đề xuất',
+            button: true,
+            enabled: !_busy,
+            hint: 'Cần nhập comment lý do từ chối',
+            child: OutlinedButton.icon(
+              onPressed: _busy ? null : () => _decide('reject'),
+              icon: const Icon(Icons.close, size: 16, color: ptitRed),
+              label: const Text('Reject', style: TextStyle(color: ptitRed)),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(120, 38),
+                side: const BorderSide(color: ptitRed),
+              ),
             ),
           ),
           const SizedBox(width: 10),
-          OutlinedButton.icon(
-            onPressed: _busy ? null : () => _decide('request_revision'),
-            icon: Icon(Icons.history, size: 16, color: context.warnOrange),
-            label: Text('Request revision',
-                style: TextStyle(color: context.warnOrange)),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(160, 38),
-              side: BorderSide(color: context.warnOrange),
+          Semantics(
+            label: 'Request revision — yêu cầu chỉnh sửa',
+            button: true,
+            enabled: !_busy,
+            hint: 'Trả về cho BTC sửa, cần nhập comment hướng dẫn',
+            child: OutlinedButton.icon(
+              onPressed: _busy ? null : () => _decide('request_revision'),
+              icon: Icon(Icons.history, size: 16, color: context.warnOrange),
+              label: Text('Request revision',
+                  style: TextStyle(color: context.warnOrange)),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(160, 38),
+                side: BorderSide(color: context.warnOrange),
+              ),
             ),
           ),
           const SizedBox(width: 10),
-          FilledButton.icon(
-            onPressed: _busy ? null : () => _decide('approve'),
-            icon: const Icon(Icons.check, size: 16),
-            label: const Text('Approve'),
-            style: FilledButton.styleFrom(
-              minimumSize: const Size(120, 38),
-              backgroundColor: context.successGreen,
+          Semantics(
+            label: 'Approve — phê duyệt đề xuất',
+            button: true,
+            enabled: !_busy,
+            hint: 'Chấp nhận đề xuất, contest được publish',
+            child: FilledButton.icon(
+              onPressed: _busy ? null : () => _decide('approve'),
+              icon: const Icon(Icons.check, size: 16),
+              label: const Text('Approve'),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(120, 38),
+                backgroundColor: context.successGreen,
+              ),
             ),
           ),
         ]),

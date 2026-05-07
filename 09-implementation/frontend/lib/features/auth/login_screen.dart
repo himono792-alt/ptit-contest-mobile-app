@@ -160,7 +160,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // ============ Email field ============
                 _Label(text: 'Email PTIT'),
                 const SizedBox(height: 6),
-                TextFormField(
+                // Sprint 5 a11y (2026-05-07): explicit Semantics label + hint
+                // cho screen reader. Material TextFormField đã có built-in semantics
+                // nhưng wrap thêm Semantics outer để add `hint` mô tả format expected.
+                Semantics(
+                  label: 'Email PTIT',
+                  hint: 'Nhập email kết thúc bằng @ptit.edu.vn',
+                  textField: true,
+                  child: TextFormField(
                   controller: _emailCtrl,
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.mail_outline, size: 18),
@@ -171,18 +178,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   keyboardType: TextInputType.emailAddress,
                   validator: (v) =>
                       (v == null || !v.contains('@')) ? 'Email không hợp lệ' : null,
+                  ),
                 ),
                 const SizedBox(height: 14),
 
                 // ============ Password field ============
                 _Label(text: 'Mật khẩu'),
                 const SizedBox(height: 6),
-                TextFormField(
+                // Sprint 5 a11y: obscured field cho screen reader đọc "Password input,
+                // hidden, X characters typed" thay vì echo full password.
+                Semantics(
+                  label: 'Mật khẩu',
+                  hint: 'Tối thiểu 6 ký tự',
+                  textField: true,
+                  obscured: true,
+                  child: TextFormField(
                   controller: _pwdCtrl,
                   obscureText: !_showPwd,
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.lock_outline, size: 18),
                     suffixIcon: IconButton(
+                      tooltip: _showPwd ? 'Ẩn mật khẩu' : 'Hiện mật khẩu',
                       icon: Icon(
                           _showPwd ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                           size: 18,
@@ -195,13 +211,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   validator: (v) =>
                       (v == null || v.length < 6) ? 'Tối thiểu 6 ký tự' : null,
+                  ),
                 ),
 
                 // ============ Forgot password link ============
                 const SizedBox(height: 8),
                 Align(
                   alignment: Alignment.centerRight,
-                  child: TextButton(
+                  child: Semantics(
+                    label: 'Quên mật khẩu',
+                    button: true,
+                    hint: 'Nhấn để mở form gửi yêu cầu reset qua email',
+                    child: TextButton(
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute(
                           builder: (_) => const ForgotPasswordRequestScreen()),
@@ -216,6 +237,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           fontSize: 12.5,
                           fontWeight: FontWeight.w700,
                         )),
+                    ),
                   ),
                 ),
 
@@ -246,7 +268,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // ============ Biometric button (Phase 2 step 4) ============
                 // Hiện nếu user đã enable trong Profile + có refresh token + device support.
                 if (_biometricVisible) ...[
-                  FilledButton.icon(
+                  Semantics(
+                    label: 'Đăng nhập bằng sinh trắc',
+                    button: true,
+                    hint: 'Sử dụng FaceID hoặc vân tay',
+                    enabled: !_loading,
+                    child: FilledButton.icon(
                     icon: const Icon(Icons.fingerprint, size: 22),
                     style: FilledButton.styleFrom(
                       backgroundColor: ptitRed,
@@ -256,12 +283,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     onPressed: _loading ? null : _biometricLogin,
                     label: const Text('Đăng nhập bằng sinh trắc',
                         style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                    ),
                   ),
                   const SizedBox(height: 10),
                 ],
 
                 // ============ Login button ============
-                FilledButton(
+                Semantics(
+                  label: 'Đăng nhập',
+                  button: true,
+                  hint: 'Đăng nhập với email và mật khẩu',
+                  enabled: !_loading,
+                  child: FilledButton(
                   onPressed: _loading ? null : _submit,
                   style: FilledButton.styleFrom(
                     backgroundColor: _biometricVisible ? Colors.white : ptitRed,
@@ -281,6 +314,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       : Text(_biometricVisible
                           ? 'Đăng nhập bằng email'
                           : 'Đăng nhập'),
+                  ),
                 ),
 
                 const SizedBox(height: 18),
@@ -299,11 +333,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Expanded(child: Container(height: 1, color: context.cardBorder)),
                 ]),
                 const SizedBox(height: 18),
-                OutlinedButton.icon(
+                Semantics(
+                  label: 'Đăng nhập bằng OTP',
+                  button: true,
+                  hint: 'Nhận mã xác thực 6 chữ số qua email',
+                  child: OutlinedButton.icon(
                   icon: const Icon(Icons.message_outlined, size: 18),
                   label: const Text('Đăng nhập bằng OTP'),
                   onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('OTP login — chưa wire UI'))),
+                  ),
                 ),
 
                 const SizedBox(height: 28),

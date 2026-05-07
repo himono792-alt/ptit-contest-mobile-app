@@ -217,14 +217,20 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   Widget _menuTile(BuildContext context, IconData icon, String title, VoidCallback onTap, {String? subtitle}) =>
-      ListTile(
-        leading: Icon(icon, color: context.textMuted, size: 20),
-        title: Text(title, style: const TextStyle(fontSize: 14)),
-        subtitle: subtitle != null ? Text(subtitle, style: TextStyle(fontSize: 11, color: context.textMuted)) : null,
-        trailing: Icon(Icons.chevron_right, color: context.textMuted, size: 18),
-        onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-        dense: true,
+      // Sprint 5 a11y: explicit button semantic + label + hint mở dialog/screen.
+      Semantics(
+        label: subtitle != null ? '$title, $subtitle' : title,
+        button: true,
+        hint: 'Mở dialog hoặc màn hình $title',
+        child: ListTile(
+          leading: Icon(icon, color: context.textMuted, size: 20),
+          title: Text(title, style: const TextStyle(fontSize: 14)),
+          subtitle: subtitle != null ? Text(subtitle, style: TextStyle(fontSize: 11, color: context.textMuted)) : null,
+          trailing: Icon(Icons.chevron_right, color: context.textMuted, size: 18),
+          onTap: onTap,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          dense: true,
+        ),
       );
 
   void _editProfileDialog(BuildContext context, WidgetRef ref) {

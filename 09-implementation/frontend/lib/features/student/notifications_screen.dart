@@ -43,11 +43,21 @@ class NotificationBadge extends ConsumerWidget {
       data: (d) => d['unread_count'] as int? ?? 0,
       orElse: () => 0,
     );
+    // Sprint 5 Semantics: chuông thông báo có announce số lượng chưa đọc
+    final badgeLabel = unread == 0
+        ? 'Thông báo, không có thông báo mới'
+        : 'Thông báo, $unread chưa đọc';
     return Stack(clipBehavior: Clip.none, children: [
-      IconButton(
-        onPressed: onTap,
-        icon: Icon(Icons.notifications_outlined, color: context.textMuted),
-        visualDensity: VisualDensity.compact,
+      Semantics(
+        label: badgeLabel,
+        button: true,
+        hint: 'Mở danh sách thông báo',
+        child: IconButton(
+          tooltip: 'Thông báo',
+          onPressed: onTap,
+          icon: Icon(Icons.notifications_outlined, color: context.textMuted),
+          visualDensity: VisualDensity.compact,
+        ),
       ),
       if (unread > 0)
         Positioned(
@@ -97,10 +107,15 @@ class NotificationsScreen extends ConsumerWidget {
             data: (data) {
               final unread = data['unread_count'] as int? ?? 0;
               if (unread == 0) return const SizedBox.shrink();
-              return TextButton(
-                onPressed: () => _markAllRead(context, ref),
-                child: const Text('Đọc tất',
-                    style: TextStyle(color: ptitRed, fontSize: 12)),
+              return Semantics(
+                label: 'Đọc tất cả — đánh dấu $unread thông báo đã đọc',
+                button: true,
+                hint: 'Xóa badge chưa đọc cho toàn bộ list',
+                child: TextButton(
+                  onPressed: () => _markAllRead(context, ref),
+                  child: const Text('Đọc tất',
+                      style: TextStyle(color: ptitRed, fontSize: 12)),
+                ),
               );
             },
           ),
@@ -234,7 +249,23 @@ class _NotificationCard extends StatelessWidget {
     final isRead = data['is_read'] == true;
     final scope = data['scope'] as String?;
 
-    return MCard(
+    // Sprint 5 Semantics: tổng hợp title + scope + read-state + message + thời gian
+    final title = data['title'] ?? '';
+    final message = data['message'] ?? '';
+    final readPrefix = isRead ? 'Đã đọc' : 'Chưa đọc';
+    final scopePrefix = scope == null ? '' : '[$scope] ';
+    final timeText = fmt.format(created);
+    final notifLabel =
+        '$readPrefix. $scopePrefix$title. $message. Lúc $timeText';
+
+    return Semantics(
+      label: notifLabel,
+      button: true,
+      onTap: onTap,
+      hint: isRead
+          ? 'Mở chi tiết'
+          : 'Mở chi tiết và đánh dấu đã đọc',
+      child: ExcludeSemantics(child: MCard(
       onTap: onTap,
       backgroundColor: isRead ? null : context.ptitRedSoft.withValues(alpha: 0.4),
       child: Column(
@@ -273,6 +304,7 @@ class _NotificationCard extends StatelessWidget {
               style: TextStyle(fontSize: 10, color: context.textMuted)),
         ],
       ),
+    )),
     );
   }
 }

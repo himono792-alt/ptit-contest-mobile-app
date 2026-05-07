@@ -259,19 +259,29 @@ class ContestDetailScreen extends ConsumerWidget {
           child: SafeArea(
             top: false,
             child: c.isRegOpen
-                ? FilledButton.icon(
-                    icon: const Icon(Icons.app_registration, size: 18),
-                    label: const Text('Đăng ký tham gia'),
-                    onPressed: () => context.push(
-                        '/contests/${c.slug}/register',
-                        extra: c),
+                ? Semantics(
+                    label: 'Đăng ký tham gia cuộc thi',
+                    button: true,
+                    hint: 'Mở form đăng ký với thông tin và ghi chú',
+                    child: FilledButton.icon(
+                      icon: const Icon(Icons.app_registration, size: 18),
+                      label: const Text('Đăng ký tham gia'),
+                      onPressed: () => context.push(
+                          '/contests/${c.slug}/register',
+                          extra: c),
+                    ),
                   )
-                : FilledButton(
-                    onPressed: null,
-                    style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFFEDE7DF)),
-                    child: Text('Không nhận đăng ký (${_statusVi(c.status)})',
-                        style: TextStyle(color: context.textMuted)),
+                : Semantics(
+                    label: 'Không nhận đăng ký, ${_statusVi(c.status)}',
+                    button: true,
+                    enabled: false,
+                    child: FilledButton(
+                      onPressed: null,
+                      style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFEDE7DF)),
+                      child: Text('Không nhận đăng ký (${_statusVi(c.status)})',
+                          style: TextStyle(color: context.textMuted)),
+                    ),
                   ),
           ),
         ),

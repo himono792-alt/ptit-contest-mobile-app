@@ -107,18 +107,23 @@ class _AdminContestsScreenState extends ConsumerState<AdminContestsScreen> {
               ),
             ),
             if (user.isOrganizer || user.isAdmin)
-              FilledButton.icon(
-                onPressed: () async {
-                  final created = await showCreateContestDialog(context);
-                  if (created == true) {
-                    ref.invalidate(adminContestsProvider);
-                  }
-                },
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Tạo cuộc thi'),
-                style: FilledButton.styleFrom(
-                    minimumSize: const Size(140, 38),
-                    backgroundColor: ptitRed),
+              Semantics(
+                label: 'Tạo cuộc thi mới',
+                button: true,
+                hint: 'Mở dialog điền thông tin contest mới',
+                child: FilledButton.icon(
+                  onPressed: () async {
+                    final created = await showCreateContestDialog(context);
+                    if (created == true) {
+                      ref.invalidate(adminContestsProvider);
+                    }
+                  },
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Tạo cuộc thi'),
+                  style: FilledButton.styleFrom(
+                      minimumSize: const Size(140, 38),
+                      backgroundColor: ptitRed),
+                ),
               ),
           ]),
         ),
@@ -317,7 +322,12 @@ class _ContestRowState extends ConsumerState<_ContestRow> {
     final c = widget.c;
     final fmt = DateFormat('dd/MM/yy');
     final canSubmit = c.status == 'DRAFT' || c.status == 'REVISION_REQUESTED';
-    return InkWell(
+    return Semantics(
+      label: '${c.title}, ${c.status}, ${c.entriesCount} đăng ký',
+      button: true,
+      hint: 'Mở trang quản lý chi tiết cuộc thi #${c.contestId}',
+      child: InkWell(
+      excludeFromSemantics: true,
       onTap: () => context.push('/admin/contests/${c.contestId}/manage'),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -397,6 +407,7 @@ class _ContestRowState extends ConsumerState<_ContestRow> {
                 : const SizedBox.shrink(),
           ),
         ]),
+      ),
       ),
     );
   }
