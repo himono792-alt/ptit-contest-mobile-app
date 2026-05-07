@@ -55,6 +55,10 @@ class MonitorScreen extends ConsumerWidget {
               icon: const Icon(Icons.download, size: 16),
               label: const Text('Xuất Excel (BCN-05)'),
               style: FilledButton.styleFrom(
+                // 2026-05-07: minimumSize bắt buộc — thiếu khiến intrinsic
+                // computation lỗi → Expanded(Column) shrink width=12px
+                // → text 'Giám sát tiến độ' wrap dọc mỗi ký tự.
+                minimumSize: const Size(180, 40),
                 backgroundColor: const Color(0xFF1E3A8A),
                 foregroundColor: Colors.white,
                 padding:

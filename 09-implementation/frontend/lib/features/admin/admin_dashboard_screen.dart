@@ -87,6 +87,9 @@ class AdminDashboardScreen extends ConsumerWidget {
                   icon: const Icon(Icons.download, size: 16),
                   label: const Text('Xuất Excel (AD-05)'),
                   style: FilledButton.styleFrom(
+                    // 2026-05-07: minimumSize bắt buộc — tránh bug
+                    // text wrap dọc mỗi ký tự khi intrinsic missing.
+                    minimumSize: const Size(180, 40),
                     backgroundColor: const Color(0xFF1E3A8A),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
