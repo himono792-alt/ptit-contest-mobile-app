@@ -17,12 +17,20 @@ import 'theme.dart' show ptitRed;
 const Color ptitRedDarkSoft = Color(0xFF4A1822); // ≈ ptitRedSoft inverted (dark variant)
 
 /// Background warm dark — không đen tuyền để dễ đọc + match brand warm-leaning.
+///
+/// Sprint 7 dark mode contrast fix (2026-05-07): user feedback "widget tương phản
+/// quá khi chuyển sang dark mode". Lift card surface từ delta luminance ~5 → ~8
+/// để card tách khỏi bg rõ hơn, đồng thời soften border để không "outline" mạnh.
 const Color appBgDark = Color(0xFF1C1815); // ink-900 inverted thành bg
-const Color cardBgDark = Color(0xFF25211D); // ink-850 — surface card nổi nhẹ
-const Color cardBorderDark = Color(0xFF2D2A26); // ink-800 — border subtle
+const Color cardBgDark = Color(0xFF2A2622); // ink-850 — surface card lift +5 L*
+const Color cardBorderDark = Color(0xFF363230); // ink-800 — border subtle, vẫn nổi nhẹ trên cardBg mới
 
-/// Text scale — dark theme dùng warm white tones, giữ contrast > 4.5:1
-const Color textPrimaryDark = Color(0xFFFAF8F5); // ≈ appBg light inverted
+/// Text scale — dark theme dùng warm white tones, giữ contrast >= 4.5:1.
+///
+/// Sprint 7 dark mode contrast fix (2026-05-07): textPrimaryDark cũ #FAF8F5 cho
+/// contrast ~17:1 trên appBgDark — vượt xa AAA (7:1) → mắt bị chói. Soften
+/// xuống warm off-white #E5DFD7 (contrast ~12:1) — vẫn đáp ứng AAA, dịu hơn.
+const Color textPrimaryDark = Color(0xFFE5DFD7); // warm off-white (was #FAF8F5)
 const Color textMutedDark = Color(0xFFA39B92); // ink-500 (giữ giống light — middle gray)
 const Color textFaintDark = Color(0xFF6B6357); // ink-700 dark variant
 

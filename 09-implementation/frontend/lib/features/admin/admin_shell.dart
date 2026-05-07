@@ -16,6 +16,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
+import '../../core/theme_provider.dart';
 import 'admin_contests_screen.dart';
 import 'admin_dashboard_screen.dart';
 import 'anomaly_reports_screen.dart';
@@ -111,7 +112,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
 
 // ============== Wide layout (desktop) — sidebar 240px ==============
 
-class _WideAdminLayout extends StatelessWidget {
+class _WideAdminLayout extends ConsumerWidget {
   final List<_NavItem> items;
   final int activeIdx;
   final Widget activeScreen;
@@ -129,7 +130,16 @@ class _WideAdminLayout extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Sprint 7 (2026-05-07): theme toggle cho GV/BCN/Admin — trước đây chỉ SV
+    // có (profile_screen). Resolve effective brightness: nếu mode = system thì
+    // đọc từ MediaQuery platform brightness.
+    final mode = ref.watch(themeProvider);
+    final platformDark = MediaQuery.platformBrightnessOf(context) == Brightness.dark;
+    final isDark = mode == ThemeMode.dark || (mode == ThemeMode.system && platformDark);
+    void onToggleTheme() {
+      ref.read(themeProvider.notifier).setMode(isDark ? ThemeMode.light : ThemeMode.dark);
+    }
     return Scaffold(
       body: Row(children: [
         Container(
@@ -266,6 +276,18 @@ class _WideAdminLayout extends StatelessWidget {
                             overflow: TextOverflow.ellipsis),
                       ]),
                 ),
+                // Sprint 7 (2026-05-07): theme toggle nằm cạnh logout. Sidebar
+                // wide hardcode dark slate-800 nên icon dùng màu sáng cố định
+                // (không theo context.textPrimary) cho consistent.
+                IconButton(
+                  icon: Icon(
+                    isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                    size: 16,
+                    color: const Color(0xFFD1D5DB),
+                  ),
+                  tooltip: isDark ? 'Chuyển sang chế độ sáng' : 'Chuyển sang chế độ tối',
+                  onPressed: onToggleTheme,
+                ),
                 IconButton(
                   icon: const Icon(Icons.logout,
                       size: 16, color: Color(0xFFD1D5DB)),
@@ -284,7 +306,7 @@ class _WideAdminLayout extends StatelessWidget {
 
 // ============== Mobile layout — Drawer + bottom nav 5 items ==============
 
-class _MobileAdminLayout extends StatefulWidget {
+class _MobileAdminLayout extends ConsumerStatefulWidget {
   final List<_NavItem> items;
   final int activeIdx;
   final Widget activeScreen;
@@ -304,14 +326,21 @@ class _MobileAdminLayout extends StatefulWidget {
   });
 
   @override
-  State<_MobileAdminLayout> createState() => _MobileAdminLayoutState();
+  ConsumerState<_MobileAdminLayout> createState() => _MobileAdminLayoutState();
 }
 
-class _MobileAdminLayoutState extends State<_MobileAdminLayout> {
+class _MobileAdminLayoutState extends ConsumerState<_MobileAdminLayout> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   Widget build(BuildContext context) {
+    // Sprint 7 (2026-05-07): theme toggle cho GV/BCN/Admin trên mobile/APK.
+    final mode = ref.watch(themeProvider);
+    final platformDark = MediaQuery.platformBrightnessOf(context) == Brightness.dark;
+    final isDark = mode == ThemeMode.dark || (mode == ThemeMode.system && platformDark);
+    void onToggleTheme() {
+      ref.read(themeProvider.notifier).setMode(isDark ? ThemeMode.light : ThemeMode.dark);
+    }
     // Bottom nav lấy 4 items đầu (Dashboard + role-specific) + nút "Thêm" mở drawer
     final bottomItems = widget.items.length <= 5
         ? widget.items
@@ -332,6 +361,18 @@ class _MobileAdminLayoutState extends State<_MobileAdminLayout> {
         foregroundColor: context.textPrimary,
         elevation: 0,
         iconTheme: IconThemeData(color: context.textMuted),
+        // Sprint 7 (2026-05-07): theme toggle ở góc phải AppBar (mobile/APK).
+        actions: [
+          IconButton(
+            icon: Icon(
+              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+              size: 20,
+            ),
+            color: context.textMuted,
+            tooltip: isDark ? 'Chuyển sang chế độ sáng' : 'Chuyển sang chế độ tối',
+            onPressed: onToggleTheme,
+          ),
+        ],
       ),
       drawer: _AdminDrawer(
         items: widget.items,
