@@ -68,6 +68,7 @@ else:
     logging.getLogger("sentry").info("Sentry skipped — SENTRY_DSN rỗng")
 from app.routers import (
     admin,
+    anomaly,
     approvals,
     auth,
     certificates,
@@ -271,6 +272,7 @@ app.include_router(certificates.verify_router, prefix=P)  # /api/verify/{qr_code
 
 # Admin
 app.include_router(admin.router, prefix=P)
+app.include_router(anomaly.router, prefix=P)  # AD-06 anomaly reports — fix 2026-05-07
 
 # Reports (GV-07, BCN-03, BCN-05, AD-05)
 app.include_router(reports.contests_stats_router, prefix=P)
