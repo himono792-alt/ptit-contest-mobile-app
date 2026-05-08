@@ -252,11 +252,15 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Sprint 18 fix dark mode (2026-05-08): _StatTone.neutral trước đây hard-code
+    // `Color(0xFFF1ECE5)` cream sáng → dark mode render trắng quá, text muted
+    // không đọc được. Đổi sang `cardBg` (theme-aware Material surface) — auto
+    // switch sang dark surface trong dark mode.
     final colors = switch (tone) {
       _StatTone.brand => (bg: context.ptitRedSoft, fg: ptitRed),
       _StatTone.warn => (bg: context.warnSoft, fg: context.warnOrange),
       _StatTone.gold => (bg: context.achievementGoldSoft, fg: context.achievementGold),
-      _StatTone.neutral => (bg: const Color(0xFFF1ECE5), fg: context.textPrimary),
+      _StatTone.neutral => (bg: context.cardBg, fg: context.textPrimary),
     };
     return InkWell(
       onTap: onTap,
