@@ -251,10 +251,12 @@ class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
   // Sprint 19 hotfix #10 (2026-05-08): debounce timer cho onExit.
   Timer? _exitTimer;
   // Sprint 19 hotfix #11 (2026-05-08): track timestamp toggle gần nhất.
-  // Sau click toggle, user có xu hướng di chuột về trái (tìm button vừa biến
-  // mất) → enter hot zone → peek mở lại = "sidebar di lại giữ nguyên".
-  // Cooldown 600ms disable hover-peek sau toggle manual.
   DateTime? _lastToggleAt;
+  // Sprint 19 hotfix #12 (2026-05-08): "armed" flag yêu cầu user PHẢI rời
+  // khỏi hot zone trước khi peek có thể trigger. Tránh oscillation khi user
+  // giữ chuột sát mép trái: hot zone mount dưới mouse → onEnter fires →
+  // peek mở. Flag false cho đến khi onExit fires (mouse thực sự rời).
+  bool _hoverArmed = true;
 
   @override
   void initState() {
@@ -276,7 +278,8 @@ class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
 
   void _toggleCollapsed() {
     _exitTimer?.cancel();
-    _lastToggleAt = DateTime.now(); // Sprint 19 hotfix #11: cooldown anchor
+    _lastToggleAt = DateTime.now();
+    _hoverArmed = false; // Sprint 19 hotfix #12: disarm peek đến khi mouse exit
     setState(() {
       _collapsed = !_collapsed;
       _hovering = false;
@@ -298,9 +301,11 @@ class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
   /// Sprint 19 hotfix #10: hover enter handler — cancel pending exit timer
   /// để traverse giữa sidebar↔toggle button không trigger collapse.
   /// hotfix #11: bỏ qua nếu đang trong cooldown sau toggle.
+  /// hotfix #12: bỏ qua nếu chưa "armed" (chưa có mouse exit thực sự).
   void _onSidebarHoverEnter() {
     _exitTimer?.cancel();
     if (_inToggleCooldown) return;
+    if (!_hoverArmed) return; // Yêu cầu explicit exit trước khi peek
     if (_collapsed && !_hovering) {
       setState(() => _hovering = true);
     }
@@ -308,7 +313,9 @@ class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
 
   /// Hover exit với 150ms grace period — đủ time cho onEnter của widget kế
   /// trong Stack fire trước khi sidebar collapse.
+  /// hotfix #12: re-arm peek khi mouse thực sự rời.
   void _onSidebarHoverExit() {
+    _hoverArmed = true; // Mouse đã exit → có thể peek lại lần sau
     if (_collapsed && _hovering) {
       _exitTimer?.cancel();
       _exitTimer = Timer(const Duration(milliseconds: 150), () {
