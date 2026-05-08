@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Production Web app
+    url: https://ptit-contest-app.pages.dev
+    about: Test app trực tiếp với tài khoản demo
+  - name: Notion project page
+    url: https://www.notion.so/35678677fb3d8150b200ca56be5a67e0
+    about: Xem progress + biên bản họp
