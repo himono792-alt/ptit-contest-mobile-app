@@ -10,7 +10,8 @@ Endpoints:
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, Query, status
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Query, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -350,3 +351,60 @@ async def moderate_review(
         db, user, review_id, data.is_visible, data.moderation_note
     )
     return ReviewOut.model_validate(review)
+
+
+# ============================================================
+# Sprint 21 hotfix (2026-05-09): backfill host_faculty_id
+# Dev/maintenance utility: contests cũ tạo trước khi BE auto-inject
+# faculty từ organizer profile có host_faculty_id = NULL → BCN approval
+# queue filter loại bỏ → BCN không thấy duyệt được. Endpoint này chạy
+# SQL UPDATE để fix các contests legacy.
+# ============================================================
+
+@router.post("/backfill-host-faculty")
+async def backfill_host_faculty(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """Admin maintenance — backfill host_faculty_id cho contests đang NULL.
+
+    Lấy faculty_id từ profile Organizer của user tạo contest (created_by).
+    Contest nào creator không có Organizer profile (vd admin tạo) sẽ skip.
+    """
+    if "ADMIN" not in user.role_codes:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Cần role ADMIN")
+
+    from app.models.contest import Contest
+    from app.models.master_data import Organizer
+
+    # Tìm contests có host_faculty_id NULL
+    null_stmt = select(Contest).where(Contest.host_faculty_id.is_(None))
+    contests = (await db.execute(null_stmt)).scalars().all()
+
+    updated: list[dict] = []
+    skipped: list[dict] = []
+    for c in contests:
+        org_stmt = select(Organizer).where(Organizer.user_id == c.created_by)
+        org = (await db.execute(org_stmt)).scalar_one_or_none()
+        if org is not None and org.faculty_id is not None:
+            c.host_faculty_id = org.faculty_id
+            updated.append({
+                "contest_id": c.contest_id,
+                "slug": c.slug,
+                "title": c.title,
+                "faculty_id": org.faculty_id,
+            })
+        else:
+            skipped.append({
+                "contest_id": c.contest_id,
+                "slug": c.slug,
+                "reason": "creator chưa có Organizer profile hoặc không có faculty_id",
+            })
+
+    await db.commit()
+    return {
+        "updated_count": len(updated),
+        "skipped_count": len(skipped),
+        "updated": updated,
+        "skipped": skipped,
+    }
