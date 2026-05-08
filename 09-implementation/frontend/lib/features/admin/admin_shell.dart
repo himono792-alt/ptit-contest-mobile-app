@@ -511,64 +511,73 @@ class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
             ),
           ),
         ),
-        // Layer 3: hot zone left edge KHI closed — wider 32px + clickable
-        // - Hover: peek sidebar (slide overlay)
-        // - Click: toggle pin permanent (skip step hover-rồi-tìm-chevron)
-        // - Visual: gradient accent line 4px + chevron icon center vertical
-        //   tăng affordance click rõ rệt
-        if (_collapsed && !_hovering)
+        // Layer 3: hot zone left edge KHI closed — ALWAYS rendered (không
+        // conditional theo _hovering) để tránh widget disposed mid-click.
+        // - Click anywhere trong 32px hot zone → toggle pin permanent
+        // - Hover trigger peek (qua onEnter)
+        // - Visual handle ptitRed visible khi !_hovering, fade out khi peek
+        // Z-order: rendered AFTER sidebar trong Stack → click events ưu tiên
+        // hot zone (left 32px) hơn sidebar khi peek overlay.
+        if (_collapsed)
           Positioned(
             left: 0,
             top: 0,
             bottom: 0,
-            width: 32, // wider hơn 12 để dễ click
+            width: 32,
             child: MouseRegion(
               cursor: SystemMouseCursors.click,
-              onEnter: (_) => setState(() => _hovering = true),
+              onEnter: (_) {
+                if (!_hovering) setState(() => _hovering = true);
+              },
               child: GestureDetector(
-                onTap: _toggleCollapsed, // CLICK = pin permanent ngay lập tức
+                onTap: _toggleCollapsed,
                 behavior: HitTestBehavior.opaque,
-                child: Stack(children: [
-                  // 4px accent line ptitRed gradient — visual cue handle
-                  Positioned(
-                    left: 0,
-                    top: 0,
-                    bottom: 0,
-                    width: 4,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            ptitRed.withValues(alpha: 0.5),
-                            ptitRed.withValues(alpha: 0.15),
-                            ptitRed.withValues(alpha: 0.5),
-                          ],
+                // AnimatedOpacity fade handle visual khi peek (sidebar che lên)
+                child: AnimatedOpacity(
+                  duration: _kSidebarAnim,
+                  opacity: _hovering ? 0 : 1,
+                  child: Stack(children: [
+                    // 4px accent line ptitRed gradient — visual cue
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: 4,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              ptitRed.withValues(alpha: 0.5),
+                              ptitRed.withValues(alpha: 0.15),
+                              ptitRed.withValues(alpha: 0.5),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  // Chevron icon centered — affordance "click để mở"
-                  Center(
-                    child: Container(
-                      width: 22,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: ptitRed.withValues(alpha: 0.85),
-                        borderRadius: const BorderRadius.only(
-                          topRight: Radius.circular(6),
-                          bottomRight: Radius.circular(6),
+                    // Chevron handle centered — affordance "click để mở"
+                    Center(
+                      child: Container(
+                        width: 22,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: ptitRed.withValues(alpha: 0.85),
+                          borderRadius: const BorderRadius.only(
+                            topRight: Radius.circular(6),
+                            bottomRight: Radius.circular(6),
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.chevron_right,
+                          size: 16,
+                          color: Colors.white,
                         ),
                       ),
-                      child: const Icon(
-                        Icons.chevron_right,
-                        size: 16,
-                        color: Colors.white,
-                      ),
                     ),
-                  ),
-                ]),
+                  ]),
+                ),
               ),
             ),
           ),
