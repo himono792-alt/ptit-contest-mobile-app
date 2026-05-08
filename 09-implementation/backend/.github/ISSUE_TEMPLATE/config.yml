@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Notion project page
+    url: https://www.notion.so/35678677fb3d8150b200ca56be5a67e0
+    about: Xem progress + biên bản họp + decision log
+  - name: API Swagger UI (production)
+    url: https://ptit-contest-mobile-app-production.up.railway.app/api/docs
+    about: Test endpoints trực tiếp
