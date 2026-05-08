@@ -468,19 +468,23 @@ class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
           ]),
         );
 
-    // Sprint 19 hotfix #5 (2026-05-08): collapsible sidebar với Stack overlay.
-    // - Khi mở: sidebar 240px chiếm slot trái, content fill phần còn lại
-    // - Khi đóng: sidebar slide ra ngoài (-240px), content fill full width
+    // Sprint 19 hotfix #5 + #6 (2026-05-08): collapsible sidebar với Stack overlay.
+    // - Khi mở: sidebar 240px chiếm slot trái, content fill phần còn lại,
+    //   toggle button nằm top-right của sidebar (x=200, top=14)
+    // - Khi đóng: sidebar slide ra ngoài (-240px), content có padding 56px để
+    //   chừa toggle button (top-left viewport x=12, top=14)
     // - Khi đóng + hover left edge 12px hot zone → sidebar peek slide vào
     //   (overlay trên content, không đẩy layout)
-    // - Toggle button luôn visible top-left, đổi icon theo state
+    // - Toggle button AnimatedPositioned dịch theo sidebar visibility →
+    //   KHÔNG đè header text "Trang chủ/Dashboard" của activeScreen
     return Scaffold(
       body: Stack(children: [
-        // Layer 1: main content with animated padding-left reserve sidebar
+        // Layer 1: content padding-left = collapsed ? 56 (toggle reserve) : 240 (sidebar)
         AnimatedPadding(
           duration: _kSidebarAnim,
           curve: Curves.easeOut,
-          padding: EdgeInsets.only(left: _collapsed ? 0 : _kSidebarWidth),
+          padding: EdgeInsets.only(
+              left: _collapsed ? 56 : _kSidebarWidth),
           child: activeScreen,
         ),
         // Layer 2: sidebar — slide in/out theo _showSidebar
@@ -521,14 +525,18 @@ class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
               child: const SizedBox.expand(),
             ),
           ),
-        // Layer 4: toggle button — góc trên-trái viewport
-        Positioned(
-          top: 12,
-          left: 12,
+        // Layer 4: toggle button — animated position theo sidebar visibility:
+        // - Đóng (sidebar hidden): top-left viewport (x=12)
+        // - Mở (sidebar visible): top-right của sidebar (x=200, sát ngay cạnh footer item)
+        AnimatedPositioned(
+          duration: _kSidebarAnim,
+          curve: Curves.easeOut,
+          top: 14,
+          left: _showSidebar ? _kSidebarWidth - 44 : 12,
           child: Material(
-            color: _collapsed
-                ? const Color(0xFF1F2937)
-                : Colors.white.withValues(alpha: 0.08),
+            color: _showSidebar
+                ? Colors.white.withValues(alpha: 0.08)
+                : const Color(0xFF1F2937),
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppRadius.tight)),
             child: InkWell(
