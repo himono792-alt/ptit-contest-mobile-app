@@ -248,11 +248,13 @@ class _WideAdminLayout extends ConsumerStatefulWidget {
 class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
   bool _collapsed = false;
   bool _hovering = false;
-  // Sprint 19 hotfix #10 (2026-05-08): debounce timer cho onExit. Khi mouse
-  // traverse giữa Layer 2 sidebar ↔ Layer 4 toggle button (z-order khác nhau
-  // trong Stack), onExit fires unwanted → sidebar collapse trước khi user
-  // click. Timer 150ms grace cho phép re-enter cancel collapse.
+  // Sprint 19 hotfix #10 (2026-05-08): debounce timer cho onExit.
   Timer? _exitTimer;
+  // Sprint 19 hotfix #11 (2026-05-08): track timestamp toggle gần nhất.
+  // Sau click toggle, user có xu hướng di chuột về trái (tìm button vừa biến
+  // mất) → enter hot zone → peek mở lại = "sidebar di lại giữ nguyên".
+  // Cooldown 600ms disable hover-peek sau toggle manual.
+  DateTime? _lastToggleAt;
 
   @override
   void initState() {
@@ -274,6 +276,7 @@ class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
 
   void _toggleCollapsed() {
     _exitTimer?.cancel();
+    _lastToggleAt = DateTime.now(); // Sprint 19 hotfix #11: cooldown anchor
     setState(() {
       _collapsed = !_collapsed;
       _hovering = false;
@@ -285,10 +288,19 @@ class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
   /// Sidebar visible khi: KHÔNG collapsed HOẶC đang hover (peek).
   bool get _showSidebar => !_collapsed || _hovering;
 
+  /// True nếu user vừa click toggle trong 600ms gần đây — disable hover peek
+  /// trong window này để tránh re-trigger nhầm.
+  bool get _inToggleCooldown {
+    if (_lastToggleAt == null) return false;
+    return DateTime.now().difference(_lastToggleAt!).inMilliseconds < 600;
+  }
+
   /// Sprint 19 hotfix #10: hover enter handler — cancel pending exit timer
   /// để traverse giữa sidebar↔toggle button không trigger collapse.
+  /// hotfix #11: bỏ qua nếu đang trong cooldown sau toggle.
   void _onSidebarHoverEnter() {
     _exitTimer?.cancel();
+    if (_inToggleCooldown) return;
     if (_collapsed && !_hovering) {
       setState(() => _hovering = true);
     }
