@@ -50,6 +50,20 @@ async def list_results(
     return [ContestResultOut.model_validate(r) for r in items]
 
 
+@contests_results_router.get("/{contest_id}/leaderboard")
+async def get_leaderboard(
+    contest_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[dict]:
+    """Sprint 16 (2026-05-08) — Leaderboard cho SV xem rank.
+
+    Trả list dict với: rank_no, final_score, award_title, entry_id,
+    entry_type (INDIVIDUAL/TEAM), display_name.
+    Public endpoint vì kết quả contest đã published là công khai.
+    """
+    return await result_service.list_leaderboard(db, contest_id)
+
+
 @contest_result_router.patch(
     "/{contest_result_id}",
     response_model=ContestResultOut,

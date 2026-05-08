@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.contest import Contest, ContestRound
-from app.models.entry import ContestEntry, TeamMember
+from app.models.entry import ContestEntry, Team, TeamMember
 from app.models.enums import (
     ApprovalStatus,
     ApprovalTarget,
@@ -111,6 +111,61 @@ async def list_contest_results(db: AsyncSession, contest_id: int) -> list[Contes
         .order_by(ContestResult.rank_no.nulls_last())
     )
     return list((await db.execute(stmt)).scalars().all())
+
+
+# ---------- Sprint 16 (2026-05-08) — Leaderboard SV ----------
+
+async def list_leaderboard(db: AsyncSession, contest_id: int) -> list[dict]:
+    """Sprint 16 — leaderboard SV: ContestResult + display_name + entry_type.
+
+    Trả list[dict] thay vì model để FE render podium top-3 + table:
+    - rank_no, final_score, award_title, entry_id, entry_type
+    - display_name: full_name của student (INDIVIDUAL) hoặc team_name (TEAM)
+    """
+    # Join ContestResult ↔ ContestEntry để biết entry_type + student_id/team_id
+    stmt = (
+        select(ContestResult, ContestEntry)
+        .join(ContestEntry, ContestEntry.entry_id == ContestResult.entry_id)
+        .where(ContestResult.contest_id == contest_id)
+        .order_by(ContestResult.rank_no.nulls_last())
+    )
+    rows = (await db.execute(stmt)).all()
+
+    # Bulk lookup display_name
+    student_ids = {e.student_id for _, e in rows if e.student_id is not None}
+    team_ids = {e.team_id for _, e in rows if e.team_id is not None}
+
+    student_names: dict[int, str] = {}
+    if student_ids:
+        s_stmt = (
+            select(Student.student_id, AppUser.full_name)
+            .join(AppUser, AppUser.user_id == Student.user_id)
+            .where(Student.student_id.in_(student_ids))
+        )
+        for sid, name in (await db.execute(s_stmt)).all():
+            student_names[sid] = name
+
+    team_names: dict[int, str] = {}
+    if team_ids:
+        t_stmt = select(Team.team_id, Team.team_name).where(Team.team_id.in_(team_ids))
+        for tid, name in (await db.execute(t_stmt)).all():
+            team_names[tid] = name
+
+    out = []
+    for cr, entry in rows:
+        if entry.entry_type == EntryType.INDIVIDUAL:
+            display = student_names.get(entry.student_id or 0, f"#SV{entry.student_id}")
+        else:
+            display = team_names.get(entry.team_id or 0, f"#Team{entry.team_id}")
+        out.append({
+            "rank_no": cr.rank_no,
+            "final_score": float(cr.final_score) if cr.final_score is not None else None,
+            "award_title": cr.award_title,
+            "entry_id": cr.entry_id,
+            "entry_type": entry.entry_type.value,
+            "display_name": display,
+        })
+    return out
 
 
 async def update_award(
