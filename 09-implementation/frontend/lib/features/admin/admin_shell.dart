@@ -468,26 +468,24 @@ class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
           ]),
         );
 
-    // Sprint 19 hotfix #5 + #6 (2026-05-08): collapsible sidebar với Stack overlay.
-    // - Khi mở: sidebar 240px chiếm slot trái, content fill phần còn lại,
-    //   toggle button nằm top-right của sidebar (x=200, top=14)
-    // - Khi đóng: sidebar slide ra ngoài (-240px), content có padding 56px để
-    //   chừa toggle button (top-left viewport x=12, top=14)
-    // - Khi đóng + hover left edge 12px hot zone → sidebar peek slide vào
-    //   (overlay trên content, không đẩy layout)
-    // - Toggle button AnimatedPositioned dịch theo sidebar visibility →
-    //   KHÔNG đè header text "Trang chủ/Dashboard" của activeScreen
+    // Sprint 19 hotfix #8 (2026-05-08): redesign theo Sentry pattern.
+    // - Toggle button NẰM TRONG sidebar header (top-right, chevron icon)
+    // - Khi đóng: sidebar slide -240 hoàn toàn → content fill 100% width
+    // - Hover left edge 12px → peek overlay sidebar (toggle button visible
+    //   trong peek, click để pin permanent)
+    // - Visual handle 3px ptitRed gradient ở left edge khi closed → cue
+    //   discoverability cho user biết hover được
     return Scaffold(
       body: Stack(children: [
-        // Layer 1: content padding-left = collapsed ? 56 (toggle reserve) : 240 (sidebar)
+        // Layer 1: content fill full width khi collapsed (no rail reservation)
         AnimatedPadding(
           duration: _kSidebarAnim,
           curve: Curves.easeOut,
           padding: EdgeInsets.only(
-              left: _collapsed ? 56 : _kSidebarWidth),
+              left: _collapsed ? 0 : _kSidebarWidth),
           child: activeScreen,
         ),
-        // Layer 2: sidebar — slide in/out theo _showSidebar
+        // Layer 2: sidebar — slide in/out + Material elevation khi peek
         AnimatedPositioned(
           duration: _kSidebarAnim,
           curve: Curves.easeOut,
@@ -513,7 +511,9 @@ class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
             ),
           ),
         ),
-        // Layer 3: hover hot zone 12px ở left edge — chỉ khi collapsed + chưa hover.
+        // Layer 3: visual handle indicator ở left edge khi closed — gradient
+        // ptitRed 3px width tạo accent line + tăng discoverability hover.
+        // Cùng MouseRegion làm hot zone 12px (rộng hơn handle để dễ hit).
         if (_collapsed && !_hovering)
           Positioned(
             left: 0,
@@ -521,55 +521,58 @@ class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
             bottom: 0,
             width: 12,
             child: MouseRegion(
+              cursor: SystemMouseCursors.click,
               onEnter: (_) => setState(() => _hovering = true),
-              child: const SizedBox.expand(),
+              child: Stack(children: [
+                // 3px accent line ptitRed gradient — visual cue
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 3,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          ptitRed.withValues(alpha: 0.4),
+                          ptitRed.withValues(alpha: 0.1),
+                          ptitRed.withValues(alpha: 0.4),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ]),
             ),
           ),
-        // Layer 4: toggle button — 2 style theo sidebar state:
-        // - Đóng (sidebar hidden): LEFT-RAIL 56x56 ở góc trái viewport, bg context.cardBg,
-        //   border-right + border-bottom match topbar của activeScreen → trông như
-        //   1 leading icon thuộc topbar, KHÔNG rời rạc.
-        // - Mở/Peek (sidebar visible): floating ở top-right sidebar header, bg trắng-nhạt
-        //   blend với dark sidebar.
+        // Layer 4: Toggle button NẰM TRONG sidebar header — slide cùng sidebar.
+        // Khi sidebar visible (mở/peek): button ở top-right sidebar (x=196).
+        // Khi sidebar hidden: button trượt ngoài viewport (-44) cùng sidebar.
         AnimatedPositioned(
           duration: _kSidebarAnim,
           curve: Curves.easeOut,
-          top: _showSidebar ? 14 : 0,
-          left: _showSidebar ? _kSidebarWidth - 44 : 0,
-          width: _showSidebar ? 36 : 56,
-          height: _showSidebar ? 36 : 56,
+          top: 14,
+          left: _showSidebar
+              ? _kSidebarWidth - 44
+              : -44, // out of viewport
+          width: 36,
+          height: 36,
           child: Material(
-            color: _showSidebar
-                ? Colors.white.withValues(alpha: 0.08)
-                : context.cardBg,
-            shape: _showSidebar
-                ? RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.tight))
-                : const RoundedRectangleBorder(),
+            color: Colors.white.withValues(alpha: 0.08),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.tight)),
             child: InkWell(
               onTap: _toggleCollapsed,
-              borderRadius: _showSidebar
-                  ? BorderRadius.circular(AppRadius.tight)
-                  : BorderRadius.zero,
-              child: Container(
-                decoration: !_showSidebar
-                    ? BoxDecoration(
-                        border: Border(
-                          right: BorderSide(color: context.cardBorder),
-                          bottom: BorderSide(color: context.cardBorder),
-                        ),
-                      )
-                    : null,
-                child: Center(
-                  child: Icon(
-                    _collapsed
-                        ? Icons.menu
-                        : Icons.menu_open_outlined,
-                    color: _showSidebar
-                        ? const Color(0xFFD1D5DB)
-                        : context.textMuted,
-                    size: _showSidebar ? 18 : 20,
-                  ),
+              borderRadius: BorderRadius.circular(AppRadius.tight),
+              child: Center(
+                child: Icon(
+                  _collapsed
+                      ? Icons.chevron_right // peek mode: pin sidebar permanent
+                      : Icons.chevron_left, // open mode: collapse
+                  color: const Color(0xFFD1D5DB),
+                  size: 20,
                 ),
               ),
             ),
