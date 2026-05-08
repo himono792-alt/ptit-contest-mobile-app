@@ -38,7 +38,9 @@ class ProfileScreen extends ConsumerWidget {
                 width: 76,
                 height: 76,
                 decoration: BoxDecoration(
-                  gradient: ptitGradientHero,
+                  // Sprint 18 (2026-05-08) S18-2: gradient red→purple cho avatar
+                  // theo design SVW-07 (khác hero card dùng red→pink).
+                  gradient: ptitGradientAvatar,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(

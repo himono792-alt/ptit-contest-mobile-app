@@ -116,6 +116,23 @@ class HomeScreen extends ConsumerWidget {
                         style: GoogleFonts.plusJakartaSans(
                             fontSize: 13, color: context.textFaint)),
                   ),
+                  // Sprint 18 (2026-05-08) S18-4: ⌘K kbd hint chỉ hiện ở web ≥768
+                  if (MediaQuery.of(context).size.width >= 768)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: context.appBg,
+                        border: Border.all(color: context.cardBorder),
+                        borderRadius: BorderRadius.circular(AppRadius.tight),
+                      ),
+                      child: Text('⌘K',
+                          style: GoogleFonts.jetBrainsMono(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: context.textMuted,
+                              letterSpacing: 0.4)),
+                    ),
                 ]),
               ),
             ),
@@ -185,6 +202,8 @@ class _StatsRow extends ConsumerWidget {
           value: '$ongoing',
           label: 'Đang diễn ra',
           tone: _StatTone.brand,
+          // Sprint 18 (2026-05-08) S18-1: icon prop visual richness.
+          icon: Icons.local_fire_department_outlined,
           onTap: () => onSwitchTab?.call(1),
         ),
       ),
@@ -194,6 +213,7 @@ class _StatsRow extends ConsumerWidget {
           value: '$completed',
           label: 'Đã hoàn thành',
           tone: _StatTone.neutral,
+          icon: Icons.check_circle_outline,
           onTap: () => onSwitchTab?.call(2),
         ),
       ),
@@ -205,6 +225,7 @@ class _StatsRow extends ConsumerWidget {
           // Sprint 2 fix M3 (2026-05-06): tone gold thay vì warn để tránh
           // dark mode render brown lệch palette (warnSoftDark = amber-900).
           tone: _StatTone.gold,
+          icon: Icons.emoji_events_outlined,
           onTap: () => onSwitchTab?.call(2),
         ),
       ),
@@ -219,11 +240,14 @@ class _StatCard extends StatelessWidget {
   final String label;
   final _StatTone tone;
   final VoidCallback? onTap;
+  // Sprint 18 (2026-05-08) S18-1: optional icon prop.
+  final IconData? icon;
   const _StatCard({
     required this.value,
     required this.label,
     required this.tone,
     this.onTap,
+    this.icon,
   });
 
   @override
@@ -246,6 +270,21 @@ class _StatCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Sprint 18 S18-1: icon top-right floating
+            if (icon != null) ...[
+              Row(children: [
+                Container(
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                    color: colors.fg.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppRadius.tight),
+                  ),
+                  child: Icon(icon, size: 14, color: colors.fg),
+                ),
+                const Spacer(),
+              ]),
+              const SizedBox(height: 8),
+            ],
             Text(value,
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 26,

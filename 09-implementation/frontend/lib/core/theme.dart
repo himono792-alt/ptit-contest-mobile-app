@@ -9,6 +9,23 @@ export 'radius.dart'; // Re-export để files import theme.dart có sẵn AppRa
 const Color ptitRed = Color(0xFFC8102E);
 const Color ptitRedSoft = Color(0xFFFEE5E9); // ≈ oklch(0.965 0.022 19)
 const Color ptitRedDark = Color(0xFFA00D24);
+
+// Sprint 18 (2026-05-08) S18-5: OKLCH 9-stop ramp cho PTIT brand
+// theo design tokens.css. Anchor 500 = ptitRed, đối xứng L từ 0.97 → 0.20.
+// Hue ≈ 19, chroma scale theo L để giữ perceptual uniformity.
+//
+// Ưu tiên dùng các stop này thay vì `ptitRed.withValues(alpha:0.X)` ad-hoc
+// vì OKLCH preserve perceived lightness tốt hơn alpha overlay.
+const Color ptitRed50 = Color(0xFFFFF1F3);  // pale tint — bg subtle
+const Color ptitRed100 = Color(0xFFFEE5E9); // = ptitRedSoft
+const Color ptitRed200 = Color(0xFFFCC9D0); // hover bg
+const Color ptitRed300 = Color(0xFFF89AA8); // disabled fg
+const Color ptitRed400 = Color(0xFFEE5970); // accent secondary
+const Color ptitRed500 = ptitRed;            // anchor brand
+const Color ptitRed600 = ptitRedDark;        // hover/pressed
+const Color ptitRed700 = Color(0xFF7E0A1C); // emphasized
+const Color ptitRed800 = Color(0xFF5C0815); // dark mode bg pill
+const Color ptitRed900 = Color(0xFF3D050D); // deepest, rare use
 const Color appBg = Color(0xFFFAF8F5); // ink-50 — warm-leaning bg
 const Color cardBorder = Color(0xFFEDE7DF); // ink-200 — softer border
 const Color textPrimary = Color(0xFF1C1815); // ink-900 — warm dark
@@ -37,6 +54,17 @@ const LinearGradient ptitGradientHero = LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
   colors: ptitGradientHeroColors,
+);
+
+// Sprint 18 (2026-05-08) S18-2: avatar gradient PTIT red → purple
+// theo design SVW-07 `linear-gradient(135deg, #C8102E, #7C3AED)`.
+// Riêng gradient cho avatar (không dùng cho hero card) để tránh đồng nhất
+// brand identity quá strong với purple — purple chỉ accent.
+const List<Color> ptitGradientAvatarColors = [ptitRed, Color(0xFF7C3AED)];
+const LinearGradient ptitGradientAvatar = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: ptitGradientAvatarColors,
 );
 
 // Soft layered shadow — phong cách Linear/Notion (mockup tokens.css)
