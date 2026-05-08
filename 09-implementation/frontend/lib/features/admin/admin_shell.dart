@@ -216,11 +216,13 @@ Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
 
 // ============== Wide layout (desktop) — sidebar 240px ==============
 
-/// Sprint 19 hotfix #5 (2026-05-08): collapsible sidebar với hover peek pattern.
-/// SharedPreferences key persist trạng thái thu/mở.
+/// Sprint 19 hotfix #14 (2026-05-08): Pattern B icon-only rail (VS Code/Slack/Sentry).
+/// Sidebar 2 width state: expanded 240px (full text+icon) hoặc rail 64px (icon only).
+/// SharedPreferences key persist trạng thái.
 const String _kSidebarCollapsedKey = 'admin.sidebar_collapsed';
-const double _kSidebarWidth = 240;
-const Duration _kSidebarAnim = Duration(milliseconds: 200);
+const double _kSidebarExpandedWidth = 240;
+const double _kSidebarRailWidth = 64;
+const Duration _kSidebarAnim = Duration(milliseconds: 220);
 
 class _WideAdminLayout extends ConsumerStatefulWidget {
   final List<_NavItem> items;
@@ -288,278 +290,309 @@ class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
     final onLogout = widget.onLogout;
     final activeScreen = widget.activeScreen;
 
-    final sidebar = Container(
-          width: _kSidebarWidth,
+    // Sprint 19 hotfix #14 (2026-05-08): Pattern B icon-only rail.
+    // Sidebar có 2 state width: expanded 240 (full text+icon) hoặc rail 64
+    // (icon only + tooltip). Brand/section/footer cũng adapt theo state.
+    final sidebar = AnimatedContainer(
+      duration: _kSidebarAnim,
+      curve: Curves.easeOut,
+      width: _collapsed ? _kSidebarRailWidth : _kSidebarExpandedWidth,
+      decoration: const BoxDecoration(
+        color: Color(0xFF1F2937),
+        border: Border(right: BorderSide(color: Colors.black12)),
+      ),
+      child: Column(children: [
+        // Brand header — logo "P" + (text PTIT Contest khi expanded) + toggle button
+        Container(
+          height: 64,
+          padding: EdgeInsets.symmetric(
+              horizontal: _collapsed ? 16 : 18, vertical: 12),
           decoration: const BoxDecoration(
-            color: Color(0xFF1F2937),
-            border: Border(right: BorderSide(color: Colors.black12)),
+            border: Border(bottom: BorderSide(color: Color(0xFF374151))),
           ),
-          child: Column(children: [
-            // Brand
+          child: Row(children: [
             Container(
-              padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-              decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: Color(0xFF374151))),
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                  color: ptitRed,
+                  borderRadius: BorderRadius.circular(AppRadius.sm)),
+              child: const Center(
+                child: Text('P',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14)),
               ),
-              child: Row(children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                      color: ptitRed, borderRadius: BorderRadius.circular(AppRadius.sm)),
-                  child: const Center(
-                    child: Text('P',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 14)),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                const Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('PTIT Contest',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700)),
-                        Text('Cổng quản lý',
-                            style:
-                                TextStyle(color: Color(0xFF9CA3AF), fontSize: 10)),
-                      ]),
-                ),
-              ]),
             ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                children: List.generate(items.length, (i) {
-                  final isActive = i == activeIdx;
-                  // Sprint 5 a11y: wrap admin sidebar item Semantics — pattern giống
-                  // Sprint 3 student_shell sidebar.
-                  return Semantics(
-                    label: items[i].label,
-                    button: !items[i].isSection,
-                    selected: isActive,
-                    hint: items[i].isSection
-                        ? 'Nhóm chức năng'
-                        : (isActive
-                            ? 'Đang ở mục này'
-                            : 'Chuyển sang mục ${items[i].label}'),
-                    child: items[i].isSection
-                        // Sprint 14 (2026-05-08): section divider header.
-                        // Linear/Notion pattern — uppercase nhỏ, mờ, top spacing.
-                        ? Padding(
-                            padding: EdgeInsets.fromLTRB(
-                                18, i == 0 ? 8 : 16, 18, 6),
-                            child: Text(
-                              items[i].label.toUpperCase(),
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: Color(0xFF9CA3AF),
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 1.2,
-                              ),
-                            ),
-                          )
-                        : InkWell(
-                            excludeFromSemantics: true,
-                            onTap: () => onSwitchTab(i),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 18, vertical: 9),
-                              decoration: BoxDecoration(
-                                color:
-                                    isActive ? const Color(0x26C8102E) : null,
-                                border: Border(
-                                  left: BorderSide(
-                                    color: isActive
-                                        ? ptitRed
-                                        : Colors.transparent,
-                                    width: 3,
-                                  ),
-                                ),
-                              ),
-                              child: Row(children: [
-                                Icon(items[i].icon,
-                                    size: 18,
-                                    color: isActive
-                                        ? Colors.white
-                                        : const Color(0xFFD1D5DB)),
-                                const SizedBox(width: 10),
-                                Text(items[i].label,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: isActive
-                                          ? Colors.white
-                                          : const Color(0xFFD1D5DB),
-                                      fontWeight: isActive
-                                          ? FontWeight.w600
-                                          : FontWeight.normal,
-                                    )),
-                              ]),
-                            ),
-                          ),
+            if (!_collapsed) ...[
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('PTIT Contest',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700)),
+                      Text('Cổng quản lý',
+                          style: TextStyle(
+                              color: Color(0xFF9CA3AF), fontSize: 10)),
+                    ]),
+              ),
+              // Toggle button góc phải header khi expanded
+              _SidebarToggleButton(
+                  collapsed: _collapsed, onTap: _toggleCollapsed),
+            ],
+          ]),
+        ),
+        // Toggle button khi collapsed — đặt riêng dưới brand cho rail layout
+        if (_collapsed)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Center(
+              child: _SidebarToggleButton(
+                  collapsed: _collapsed, onTap: _toggleCollapsed),
+            ),
+          ),
+        // Nav items — full row khi expanded, icon-only centered khi collapsed
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            children: List.generate(items.length, (i) {
+              final isActive = i == activeIdx;
+              final item = items[i];
+              if (item.isSection) {
+                // Section divider — show label khi expanded, divider line khi collapsed
+                if (_collapsed) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    child: Container(
+                      height: 1,
+                      color: const Color(0xFF374151),
+                    ),
                   );
-                }),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: Color(0xFF374151))),
-              ),
-              child: Row(children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                      color: context.ptitRedSoft, shape: BoxShape.circle),
-                  child: Center(
-                    child: Text(
-                      user.fullName.split(' ').last.substring(0, 1).toUpperCase(),
-                      style: const TextStyle(
-                          color: ptitRed,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13),
+                }
+                return Padding(
+                  padding: EdgeInsets.fromLTRB(18, i == 0 ? 8 : 16, 18, 6),
+                  child: Text(
+                    item.label.toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Color(0xFF9CA3AF),
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.2,
                     ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(user.fullName,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600),
-                            overflow: TextOverflow.ellipsis),
-                        Text(user.roles.join(','),
-                            style: const TextStyle(
-                                color: Color(0xFF9CA3AF), fontSize: 10),
-                            overflow: TextOverflow.ellipsis),
-                      ]),
-                ),
-                // Sprint 7 (2026-05-07): theme toggle nằm cạnh logout. Sidebar
-                // wide hardcode dark slate-800 nên icon dùng màu sáng cố định
-                // (không theo context.textPrimary) cho consistent.
-                IconButton(
-                  icon: Icon(
-                    isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                    size: 16,
-                    color: const Color(0xFFD1D5DB),
-                  ),
-                  tooltip: isDark ? 'Chuyển sang chế độ sáng' : 'Chuyển sang chế độ tối',
-                  onPressed: onToggleTheme,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.logout,
-                      size: 16, color: Color(0xFFD1D5DB)),
-                  tooltip: 'Đăng xuất',
-                  onPressed: onLogout,
-                ),
-              ]),
-            ),
-          ]),
-        );
-
-    // Sprint 19 hotfix #8 (2026-05-08): redesign theo Sentry pattern.
-    // - Toggle button NẰM TRONG sidebar header (top-right, chevron icon)
-    // - Khi đóng: sidebar slide -240 hoàn toàn → content fill 100% width
-    // - Hover left edge 12px → peek overlay sidebar (toggle button visible
-    //   trong peek, click để pin permanent)
-    // - Visual handle 3px ptitRed gradient ở left edge khi closed → cue
-    //   discoverability cho user biết hover được
-    return Scaffold(
-      body: Stack(children: [
-        // Layer 1: content fill full width khi collapsed (no rail reservation)
-        AnimatedPadding(
-          duration: _kSidebarAnim,
-          curve: Curves.easeOut,
-          padding: EdgeInsets.only(
-              left: _collapsed ? 0 : _kSidebarWidth),
-          child: activeScreen,
-        ),
-        // Sprint 19 hotfix #13 (2026-05-08): click-driven only, no hover-peek.
-        // Layer 2: sidebar — slide in/out theo collapsed state.
-        AnimatedPositioned(
-          duration: _kSidebarAnim,
-          curve: Curves.easeOut,
-          left: _showSidebar ? 0 : -_kSidebarWidth,
-          top: 0,
-          bottom: 0,
-          width: _kSidebarWidth,
-          child: sidebar,
-        ),
-        // Layer 3: hot zone left edge KHI collapsed — clickable strip 32px
-        // với 3px accent line ptitRed gradient. Click → mở sidebar.
-        // KHÔNG có MouseRegion onEnter/onExit (no hover-peek) → zero
-        // oscillation race condition.
-        if (_collapsed)
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: 32,
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                onTap: _toggleCollapsed,
-                behavior: HitTestBehavior.opaque,
-                child: Align(
-                  alignment: Alignment.centerLeft,
+                );
+              }
+              // Nav item clickable
+              final navWidget = Semantics(
+                label: item.label,
+                button: true,
+                selected: isActive,
+                hint: isActive
+                    ? 'Đang ở mục này'
+                    : 'Chuyển sang mục ${item.label}',
+                child: InkWell(
+                  excludeFromSemantics: true,
+                  onTap: () => onSwitchTab(i),
                   child: Container(
-                    width: 3,
+                    padding: EdgeInsets.symmetric(
+                        horizontal: _collapsed ? 0 : 18, vertical: 10),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          ptitRed.withValues(alpha: 0.4),
-                          ptitRed.withValues(alpha: 0.12),
-                          ptitRed.withValues(alpha: 0.4),
-                        ],
+                      color: isActive ? const Color(0x26C8102E) : null,
+                      border: Border(
+                        left: BorderSide(
+                          color: isActive ? ptitRed : Colors.transparent,
+                          width: 3,
+                        ),
+                      ),
+                    ),
+                    child: _collapsed
+                        // Rail icon-only — center vertical
+                        ? Center(
+                            child: Icon(item.icon,
+                                size: 20,
+                                color: isActive
+                                    ? Colors.white
+                                    : const Color(0xFFD1D5DB)),
+                          )
+                        : Row(children: [
+                            Icon(item.icon,
+                                size: 18,
+                                color: isActive
+                                    ? Colors.white
+                                    : const Color(0xFFD1D5DB)),
+                            const SizedBox(width: 10),
+                            Text(item.label,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: isActive
+                                      ? Colors.white
+                                      : const Color(0xFFD1D5DB),
+                                  fontWeight: isActive
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                )),
+                          ]),
+                  ),
+                ),
+              );
+              // Wrap với Tooltip khi collapsed cho a11y + UX
+              return _collapsed
+                  ? Tooltip(
+                      message: item.label,
+                      preferBelow: false,
+                      child: navWidget,
+                    )
+                  : navWidget;
+            }),
+          ),
+        ),
+        // Footer — avatar + (name+roles+actions khi expanded, chỉ avatar khi collapsed)
+        Container(
+          padding: EdgeInsets.symmetric(
+              horizontal: _collapsed ? 12 : 14, vertical: 14),
+          decoration: const BoxDecoration(
+            border: Border(top: BorderSide(color: Color(0xFF374151))),
+          ),
+          child: _collapsed
+              // Rail footer — chỉ avatar centered
+              ? Center(
+                  child: Tooltip(
+                    message:
+                        '${user.fullName} · ${user.roles.join(',')}',
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                          color: context.ptitRedSoft, shape: BoxShape.circle),
+                      child: Center(
+                        child: Text(
+                          user.fullName
+                              .split(' ')
+                              .last
+                              .substring(0, 1)
+                              .toUpperCase(),
+                          style: const TextStyle(
+                              color: ptitRed,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
-            ),
-          ),
-        // Layer 4: Toggle button góc phải sidebar header — slide cùng sidebar.
-        AnimatedPositioned(
-          duration: _kSidebarAnim,
-          curve: Curves.easeOut,
-          top: 14,
-          left: _showSidebar
-              ? _kSidebarWidth - 44
-              : -44,
-          width: 36,
-          height: 36,
-          child: Material(
-            color: Colors.white.withValues(alpha: 0.08),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadius.tight)),
-            child: InkWell(
-              onTap: _toggleCollapsed,
-              borderRadius: BorderRadius.circular(AppRadius.tight),
-              child: Center(
-                child: Icon(
-                  _collapsed
-                      ? Icons.chevron_right
-                      : Icons.chevron_left,
-                  color: const Color(0xFFD1D5DB),
-                  size: 20,
-                ),
+                )
+              // Expanded footer — full layout
+              : Row(children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                        color: context.ptitRedSoft, shape: BoxShape.circle),
+                    child: Center(
+                      child: Text(
+                        user.fullName
+                            .split(' ')
+                            .last
+                            .substring(0, 1)
+                            .toUpperCase(),
+                        style: const TextStyle(
+                            color: ptitRed,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(user.fullName,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600),
+                              overflow: TextOverflow.ellipsis),
+                          Text(user.roles.join(','),
+                              style: const TextStyle(
+                                  color: Color(0xFF9CA3AF), fontSize: 10),
+                              overflow: TextOverflow.ellipsis),
+                        ]),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      isDark
+                          ? Icons.light_mode_outlined
+                          : Icons.dark_mode_outlined,
+                      size: 16,
+                      color: const Color(0xFFD1D5DB),
+                    ),
+                    tooltip: isDark
+                        ? 'Chuyển sang chế độ sáng'
+                        : 'Chuyển sang chế độ tối',
+                    onPressed: onToggleTheme,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.logout,
+                        size: 16, color: Color(0xFFD1D5DB)),
+                    tooltip: 'Đăng xuất',
+                    onPressed: onLogout,
+                  ),
+                ]),
+        ),
+      ]),
+    );
+
+    // Sprint 19 hotfix #14 (2026-05-08): Pattern B — Row layout, sidebar
+    // luôn visible (rail 64 hoặc expanded 240). KHÔNG có Stack overlay,
+    // KHÔNG có hot zone, KHÔNG có hover. Toggle button nằm trong sidebar.
+    return Scaffold(
+      body: Row(children: [
+        sidebar,
+        Expanded(child: activeScreen),
+      ]),
+    );
+  }
+}
+
+/// Sprint 19 hotfix #14: Toggle button reusable cho cả expanded + rail mode.
+/// Expanded: chevron_left ở góc phải header. Rail: chevron_right centered.
+class _SidebarToggleButton extends StatelessWidget {
+  final bool collapsed;
+  final VoidCallback onTap;
+
+  const _SidebarToggleButton({required this.collapsed, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: collapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar',
+      preferBelow: false,
+      child: Material(
+        color: Colors.white.withValues(alpha: 0.08),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.tight)),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.tight),
+          child: SizedBox(
+            width: 32,
+            height: 32,
+            child: Center(
+              child: Icon(
+                collapsed ? Icons.chevron_right : Icons.chevron_left,
+                color: const Color(0xFFD1D5DB),
+                size: 20,
               ),
             ),
           ),
         ),
-      ]),
+      ),
     );
   }
 }
