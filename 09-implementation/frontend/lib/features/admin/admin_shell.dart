@@ -511,40 +511,65 @@ class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
             ),
           ),
         ),
-        // Layer 3: visual handle indicator ở left edge khi closed — gradient
-        // ptitRed 3px width tạo accent line + tăng discoverability hover.
-        // Cùng MouseRegion làm hot zone 12px (rộng hơn handle để dễ hit).
+        // Layer 3: hot zone left edge KHI closed — wider 32px + clickable
+        // - Hover: peek sidebar (slide overlay)
+        // - Click: toggle pin permanent (skip step hover-rồi-tìm-chevron)
+        // - Visual: gradient accent line 4px + chevron icon center vertical
+        //   tăng affordance click rõ rệt
         if (_collapsed && !_hovering)
           Positioned(
             left: 0,
             top: 0,
             bottom: 0,
-            width: 12,
+            width: 32, // wider hơn 12 để dễ click
             child: MouseRegion(
               cursor: SystemMouseCursors.click,
               onEnter: (_) => setState(() => _hovering = true),
-              child: Stack(children: [
-                // 3px accent line ptitRed gradient — visual cue
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: 3,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          ptitRed.withValues(alpha: 0.4),
-                          ptitRed.withValues(alpha: 0.1),
-                          ptitRed.withValues(alpha: 0.4),
-                        ],
+              child: GestureDetector(
+                onTap: _toggleCollapsed, // CLICK = pin permanent ngay lập tức
+                behavior: HitTestBehavior.opaque,
+                child: Stack(children: [
+                  // 4px accent line ptitRed gradient — visual cue handle
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: 4,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            ptitRed.withValues(alpha: 0.5),
+                            ptitRed.withValues(alpha: 0.15),
+                            ptitRed.withValues(alpha: 0.5),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ]),
+                  // Chevron icon centered — affordance "click để mở"
+                  Center(
+                    child: Container(
+                      width: 22,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: ptitRed.withValues(alpha: 0.85),
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(6),
+                          bottomRight: Radius.circular(6),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.chevron_right,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ]),
+              ),
             ),
           ),
         // Layer 4: Toggle button NẰM TRONG sidebar header — slide cùng sidebar.
