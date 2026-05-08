@@ -86,17 +86,18 @@ async def assign_judge(
     return JudgeAssignmentOut.model_validate(assignment)
 
 
-@me_assignments_router.get(
-    "/judge-assignments",
-    response_model=list[JudgeAssignmentOut],
-)
+@me_assignments_router.get("/judge-assignments")
 async def list_my_assignments(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> list[JudgeAssignmentOut]:
-    """JUDGE — Xem các assignment của mình (cần chấm)."""
-    items = await judging_service.list_my_judge_assignments(db, user)
-    return [JudgeAssignmentOut.model_validate(a) for a in items]
+) -> list[dict]:
+    """JUDGE — Xem các assignment của mình (cần chấm).
+
+    Sprint 18 fix (2026-05-08): trả `list[dict]` enriched với is_scored +
+    scored_count + total_criteria. FE filter "Bài cần chấm" theo is_scored
+    để assignment không còn xuất hiện sau khi submit (cũ: vẫn hiện y nguyên).
+    """
+    return await judging_service.list_my_judge_assignments(db, user)
 
 
 # ---------- Score ----------

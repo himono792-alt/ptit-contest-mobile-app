@@ -142,8 +142,15 @@ async def assign_judge(
 
 async def list_my_judge_assignments(
     db: AsyncSession, user: AppUser
-) -> list[JudgeAssignment]:
-    """JUDGE — list các assignment của mình (chấm bài nào)."""
+) -> list[dict]:
+    """JUDGE — list các assignment của mình (chấm bài nào).
+
+    Sprint 18 fix (2026-05-08): trả `dict` thay model để enrich `is_scored`,
+    `scored_count`, `total_criteria`. FE dùng để filter hero count + show
+    pill "Đã chấm" thay vì im lặng giữ assignment trong list sau submit.
+
+    Định nghĩa is_scored = (scored_count >= total_criteria) AND total_criteria > 0
+    """
     judge_stmt = select(Judge).where(Judge.user_id == user.user_id)
     judge = (await db.execute(judge_stmt)).scalar_one_or_none()
     if judge is None:
@@ -154,7 +161,51 @@ async def list_my_judge_assignments(
         .where(JudgeAssignment.judge_id == judge.judge_id)
         .order_by(desc(JudgeAssignment.assigned_at))
     )
-    return list((await db.execute(stmt)).scalars().all())
+    assignments = list((await db.execute(stmt)).scalars().all())
+    if not assignments:
+        return []
+
+    # Bulk count criteria per round
+    round_ids = {a.round_id for a in assignments}
+    crit_stmt = (
+        select(RoundScoreCriterion.round_id, func.count(RoundScoreCriterion.criterion_id))
+        .where(RoundScoreCriterion.round_id.in_(round_ids))
+        .group_by(RoundScoreCriterion.round_id)
+    )
+    criteria_count_by_round: dict[int, int] = {
+        rid: cnt for rid, cnt in (await db.execute(crit_stmt)).all()
+    }
+
+    # Bulk count scores per assignment
+    assignment_ids = [a.assignment_id for a in assignments]
+    score_stmt = (
+        select(Score.assignment_id, func.count(Score.score_id))
+        .where(Score.assignment_id.in_(assignment_ids))
+        .group_by(Score.assignment_id)
+    )
+    scored_count_by_assignment: dict[int, int] = {
+        aid: cnt for aid, cnt in (await db.execute(score_stmt)).all()
+    }
+
+    out: list[dict] = []
+    for a in assignments:
+        total = criteria_count_by_round.get(a.round_id, 0)
+        scored = scored_count_by_assignment.get(a.assignment_id, 0)
+        out.append({
+            "assignment_id": a.assignment_id,
+            "round_id": a.round_id,
+            "entry_id": a.entry_id,
+            "submission_id": a.submission_id,
+            "judge_id": a.judge_id,
+            "assigned_by": a.assigned_by,
+            "can_view_identity": a.can_view_identity,
+            "assigned_at": a.assigned_at.isoformat(),
+            # Sprint 18 enrichment fields
+            "is_scored": scored >= total and total > 0,
+            "scored_count": scored,
+            "total_criteria": total,
+        })
+    return out
 
 
 # ---------- Score ----------
