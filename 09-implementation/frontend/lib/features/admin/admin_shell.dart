@@ -423,20 +423,11 @@ class _WideAdminLayout extends ConsumerWidget {
             ),
           ]),
         ),
-        // Sprint 13 Batch A (2026-05-08): smooth tab transition fade 220ms.
-        // Mỗi screen có ValueKey theo runtimeType để AnimatedSwitcher detect
-        // child change và fade. Honor reduce-motion qua MediaQuery (built-in).
-        Expanded(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 220),
-            switchInCurve: Curves.easeOut,
-            switchOutCurve: Curves.easeIn,
-            child: KeyedSubtree(
-              key: ValueKey(activeScreen.runtimeType),
-              child: activeScreen,
-            ),
-          ),
-        ),
+        // Sprint 19 hotfix #3 (2026-05-08): bỏ AnimatedSwitcher fade — desktop
+        // wide layout sidebar admin cũng instant switch như mobile để consistent
+        // UX (Linear/Notion/Stripe pattern). AnimatedSwitcher stack 2 widget
+        // overlap khi transition → flicker.
+        Expanded(child: activeScreen),
       ]),
     );
   }
@@ -539,16 +530,13 @@ class _MobileAdminLayoutState extends ConsumerState<_MobileAdminLayout> {
           widget.onLogout();
         },
       ),
-      // Sprint 13 Batch A (2026-05-08): smooth tab fade cho mobile drawer admin.
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 220),
-        switchInCurve: Curves.easeOut,
-        switchOutCurve: Curves.easeIn,
-        child: KeyedSubtree(
-          key: ValueKey(widget.activeScreen.runtimeType),
-          child: widget.activeScreen,
-        ),
-      ),
+      // Sprint 19 hotfix #3 (2026-05-08): bỏ AnimatedSwitcher fade vì khi
+      // switch tab admin, AnimatedSwitcher mặc định **stack 2 widget chồng**
+      // (Stack-based layout) → 2 screen overlap render → flicker, content
+      // jumpy, 2 fetcher cùng fire request. Pattern chuẩn admin dashboard
+      // (Linear/Notion/Stripe) là instant switch — fast, predictable, không
+      // confused user. Mobile drawer + bottom nav vẫn smooth qua tab indicator.
+      body: widget.activeScreen,
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         // Sprint 19 fix: dùng bottomActiveIdx (đã map qua origIndex) thay
