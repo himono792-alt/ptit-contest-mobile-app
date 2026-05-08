@@ -13,6 +13,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
@@ -215,7 +216,13 @@ Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
 
 // ============== Wide layout (desktop) — sidebar 240px ==============
 
-class _WideAdminLayout extends ConsumerWidget {
+/// Sprint 19 hotfix #5 (2026-05-08): collapsible sidebar với hover peek pattern.
+/// SharedPreferences key persist trạng thái thu/mở.
+const String _kSidebarCollapsedKey = 'admin.sidebar_collapsed';
+const double _kSidebarWidth = 240;
+const Duration _kSidebarAnim = Duration(milliseconds: 200);
+
+class _WideAdminLayout extends ConsumerStatefulWidget {
   final List<_NavItem> items;
   final int activeIdx;
   final Widget activeScreen;
@@ -233,7 +240,39 @@ class _WideAdminLayout extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_WideAdminLayout> createState() => _WideAdminLayoutState();
+}
+
+class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
+  bool _collapsed = false;
+  bool _hovering = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCollapsedState();
+  }
+
+  Future<void> _loadCollapsedState() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() => _collapsed = prefs.getBool(_kSidebarCollapsedKey) ?? false);
+  }
+
+  void _toggleCollapsed() {
+    setState(() {
+      _collapsed = !_collapsed;
+      _hovering = false; // Reset hover khi user toggle thủ công
+    });
+    SharedPreferences.getInstance()
+        .then((p) => p.setBool(_kSidebarCollapsedKey, _collapsed));
+  }
+
+  /// Sidebar visible khi: KHÔNG collapsed HOẶC đang hover (peek).
+  bool get _showSidebar => !_collapsed || _hovering;
+
+  @override
+  Widget build(BuildContext context) {
     // Sprint 7 (2026-05-07): theme toggle cho GV/BCN/Admin — trước đây chỉ SV
     // có (profile_screen). Resolve effective brightness: nếu mode = system thì
     // đọc từ MediaQuery platform brightness.
@@ -243,10 +282,15 @@ class _WideAdminLayout extends ConsumerWidget {
     void onToggleTheme() {
       ref.read(themeProvider.notifier).setMode(isDark ? ThemeMode.light : ThemeMode.dark);
     }
-    return Scaffold(
-      body: Row(children: [
-        Container(
-          width: 240,
+    final items = widget.items;
+    final activeIdx = widget.activeIdx;
+    final user = widget.user;
+    final onSwitchTab = widget.onSwitchTab;
+    final onLogout = widget.onLogout;
+    final activeScreen = widget.activeScreen;
+
+    final sidebar = Container(
+          width: _kSidebarWidth,
           decoration: const BoxDecoration(
             color: Color(0xFF1F2937),
             border: Border(right: BorderSide(color: Colors.black12)),
@@ -422,12 +466,87 @@ class _WideAdminLayout extends ConsumerWidget {
               ]),
             ),
           ]),
+        );
+
+    // Sprint 19 hotfix #5 (2026-05-08): collapsible sidebar với Stack overlay.
+    // - Khi mở: sidebar 240px chiếm slot trái, content fill phần còn lại
+    // - Khi đóng: sidebar slide ra ngoài (-240px), content fill full width
+    // - Khi đóng + hover left edge 12px hot zone → sidebar peek slide vào
+    //   (overlay trên content, không đẩy layout)
+    // - Toggle button luôn visible top-left, đổi icon theo state
+    return Scaffold(
+      body: Stack(children: [
+        // Layer 1: main content with animated padding-left reserve sidebar
+        AnimatedPadding(
+          duration: _kSidebarAnim,
+          curve: Curves.easeOut,
+          padding: EdgeInsets.only(left: _collapsed ? 0 : _kSidebarWidth),
+          child: activeScreen,
         ),
-        // Sprint 19 hotfix #3 (2026-05-08): bỏ AnimatedSwitcher fade — desktop
-        // wide layout sidebar admin cũng instant switch như mobile để consistent
-        // UX (Linear/Notion/Stripe pattern). AnimatedSwitcher stack 2 widget
-        // overlap khi transition → flicker.
-        Expanded(child: activeScreen),
+        // Layer 2: sidebar — slide in/out theo _showSidebar
+        AnimatedPositioned(
+          duration: _kSidebarAnim,
+          curve: Curves.easeOut,
+          left: _showSidebar ? 0 : -_kSidebarWidth,
+          top: 0,
+          bottom: 0,
+          width: _kSidebarWidth,
+          child: MouseRegion(
+            onEnter: (_) {
+              if (_collapsed && !_hovering) {
+                setState(() => _hovering = true);
+              }
+            },
+            onExit: (_) {
+              if (_collapsed && _hovering) {
+                setState(() => _hovering = false);
+              }
+            },
+            child: Material(
+              elevation: _collapsed && _hovering ? 12 : 0,
+              color: Colors.transparent,
+              child: sidebar,
+            ),
+          ),
+        ),
+        // Layer 3: hover hot zone 12px ở left edge — chỉ khi collapsed + chưa hover.
+        if (_collapsed && !_hovering)
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 12,
+            child: MouseRegion(
+              onEnter: (_) => setState(() => _hovering = true),
+              child: const SizedBox.expand(),
+            ),
+          ),
+        // Layer 4: toggle button — góc trên-trái viewport
+        Positioned(
+          top: 12,
+          left: 12,
+          child: Material(
+            color: _collapsed
+                ? const Color(0xFF1F2937)
+                : Colors.white.withValues(alpha: 0.08),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.tight)),
+            child: InkWell(
+              onTap: _toggleCollapsed,
+              borderRadius: BorderRadius.circular(AppRadius.tight),
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Icon(
+                  _collapsed
+                      ? Icons.menu
+                      : Icons.menu_open_outlined,
+                  color: const Color(0xFFD1D5DB),
+                  size: 18,
+                ),
+              ),
+            ),
+          ),
+        ),
       ]),
     );
   }
