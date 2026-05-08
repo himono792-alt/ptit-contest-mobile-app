@@ -9,8 +9,6 @@
 // chen chúc cho dropdown filter + table. Material guideline: <1024px = mobile/tablet
 // dùng drawer, ≥1024px = desktop dùng sidebar.
 
-import 'dart:async';
-
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -247,27 +245,11 @@ class _WideAdminLayout extends ConsumerStatefulWidget {
 
 class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
   bool _collapsed = false;
-  bool _hovering = false;
-  // Sprint 19 hotfix #10 (2026-05-08): debounce timer cho onExit.
-  Timer? _exitTimer;
-  // Sprint 19 hotfix #11 (2026-05-08): track timestamp toggle gần nhất.
-  DateTime? _lastToggleAt;
-  // Sprint 19 hotfix #12 (2026-05-08): "armed" flag yêu cầu user PHẢI rời
-  // khỏi hot zone trước khi peek có thể trigger. Tránh oscillation khi user
-  // giữ chuột sát mép trái: hot zone mount dưới mouse → onEnter fires →
-  // peek mở. Flag false cho đến khi onExit fires (mouse thực sự rời).
-  bool _hoverArmed = true;
 
   @override
   void initState() {
     super.initState();
     _loadCollapsedState();
-  }
-
-  @override
-  void dispose() {
-    _exitTimer?.cancel();
-    super.dispose();
   }
 
   Future<void> _loadCollapsedState() async {
@@ -277,52 +259,16 @@ class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
   }
 
   void _toggleCollapsed() {
-    _exitTimer?.cancel();
-    _lastToggleAt = DateTime.now();
-    _hoverArmed = false; // Sprint 19 hotfix #12: disarm peek đến khi mouse exit
-    setState(() {
-      _collapsed = !_collapsed;
-      _hovering = false;
-    });
+    setState(() => _collapsed = !_collapsed);
     SharedPreferences.getInstance()
         .then((p) => p.setBool(_kSidebarCollapsedKey, _collapsed));
   }
 
-  /// Sidebar visible khi: KHÔNG collapsed HOẶC đang hover (peek).
-  bool get _showSidebar => !_collapsed || _hovering;
-
-  /// True nếu user vừa click toggle trong 600ms gần đây — disable hover peek
-  /// trong window này để tránh re-trigger nhầm.
-  bool get _inToggleCooldown {
-    if (_lastToggleAt == null) return false;
-    return DateTime.now().difference(_lastToggleAt!).inMilliseconds < 600;
-  }
-
-  /// Sprint 19 hotfix #10: hover enter handler — cancel pending exit timer
-  /// để traverse giữa sidebar↔toggle button không trigger collapse.
-  /// hotfix #11: bỏ qua nếu đang trong cooldown sau toggle.
-  /// hotfix #12: bỏ qua nếu chưa "armed" (chưa có mouse exit thực sự).
-  void _onSidebarHoverEnter() {
-    _exitTimer?.cancel();
-    if (_inToggleCooldown) return;
-    if (!_hoverArmed) return; // Yêu cầu explicit exit trước khi peek
-    if (_collapsed && !_hovering) {
-      setState(() => _hovering = true);
-    }
-  }
-
-  /// Hover exit với 150ms grace period — đủ time cho onEnter của widget kế
-  /// trong Stack fire trước khi sidebar collapse.
-  /// hotfix #12: re-arm peek khi mouse thực sự rời.
-  void _onSidebarHoverExit() {
-    _hoverArmed = true; // Mouse đã exit → có thể peek lại lần sau
-    if (_collapsed && _hovering) {
-      _exitTimer?.cancel();
-      _exitTimer = Timer(const Duration(milliseconds: 150), () {
-        if (mounted) setState(() => _hovering = false);
-      });
-    }
-  }
+  /// Sprint 19 hotfix #13 (2026-05-08): bỏ hẳn hover-peek pattern. Chỉ
+  /// click-driven: click left edge (3px accent line + 32px hit zone) → mở,
+  /// click chevron toggle góc phải sidebar → đóng. Loại bỏ toàn bộ race
+  /// condition giữa hover ↔ click trigger. Predictable + zero oscillation.
+  bool get _showSidebar => !_collapsed;
 
   @override
   Widget build(BuildContext context) {
@@ -538,7 +484,8 @@ class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
               left: _collapsed ? 0 : _kSidebarWidth),
           child: activeScreen,
         ),
-        // Layer 2: sidebar — slide in/out + Material elevation khi peek
+        // Sprint 19 hotfix #13 (2026-05-08): click-driven only, no hover-peek.
+        // Layer 2: sidebar — slide in/out theo collapsed state.
         AnimatedPositioned(
           duration: _kSidebarAnim,
           curve: Curves.easeOut,
@@ -546,21 +493,12 @@ class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
           top: 0,
           bottom: 0,
           width: _kSidebarWidth,
-          child: MouseRegion(
-            onEnter: (_) => _onSidebarHoverEnter(),
-            onExit: (_) => _onSidebarHoverExit(),
-            child: Material(
-              elevation: _collapsed && _hovering ? 12 : 0,
-              color: Colors.transparent,
-              child: sidebar,
-            ),
-          ),
+          child: sidebar,
         ),
-        // Layer 3: hot zone left edge KHI closed — width 32px, always rendered.
-        // - Click trong hot zone → toggle pin permanent
-        // - Hover trigger peek
-        // - Visual: KHÔNG có chevron đỏ ở giữa (user complain), chỉ subtle
-        //   accent line 3px gradient ptitRed cho visual cue minimal.
+        // Layer 3: hot zone left edge KHI collapsed — clickable strip 32px
+        // với 3px accent line ptitRed gradient. Click → mở sidebar.
+        // KHÔNG có MouseRegion onEnter/onExit (no hover-peek) → zero
+        // oscillation race condition.
         if (_collapsed)
           Positioned(
             left: 0,
@@ -569,28 +507,22 @@ class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
             width: 32,
             child: MouseRegion(
               cursor: SystemMouseCursors.click,
-              onEnter: (_) => _onSidebarHoverEnter(),
-              onExit: (_) => _onSidebarHoverExit(),
               child: GestureDetector(
                 onTap: _toggleCollapsed,
                 behavior: HitTestBehavior.opaque,
-                child: AnimatedOpacity(
-                  duration: _kSidebarAnim,
-                  opacity: _hovering ? 0 : 1,
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Container(
-                      width: 3,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            ptitRed.withValues(alpha: 0.4),
-                            ptitRed.withValues(alpha: 0.12),
-                            ptitRed.withValues(alpha: 0.4),
-                          ],
-                        ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    width: 3,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          ptitRed.withValues(alpha: 0.4),
+                          ptitRed.withValues(alpha: 0.12),
+                          ptitRed.withValues(alpha: 0.4),
+                        ],
                       ),
                     ),
                   ),
@@ -598,11 +530,7 @@ class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
               ),
             ),
           ),
-        // Layer 4: Toggle button NẰM TRONG sidebar header — slide cùng sidebar.
-        // Khi sidebar visible (mở/peek): button ở top-right sidebar (x=196).
-        // Khi sidebar hidden: button trượt ngoài viewport (-44) cùng sidebar.
-        // Sprint 19 hotfix #10: thêm MouseRegion với handler để mouse traverse
-        // sidebar→toggle KHÔNG trigger sidebar collapse (cancel exit timer).
+        // Layer 4: Toggle button góc phải sidebar header — slide cùng sidebar.
         AnimatedPositioned(
           duration: _kSidebarAnim,
           curve: Curves.easeOut,
@@ -612,24 +540,20 @@ class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
               : -44,
           width: 36,
           height: 36,
-          child: MouseRegion(
-            onEnter: (_) => _onSidebarHoverEnter(),
-            onExit: (_) => _onSidebarHoverExit(),
-            child: Material(
-              color: Colors.white.withValues(alpha: 0.08),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.tight)),
-              child: InkWell(
-                onTap: _toggleCollapsed,
-                borderRadius: BorderRadius.circular(AppRadius.tight),
-                child: Center(
-                  child: Icon(
-                    _collapsed
-                        ? Icons.chevron_right
-                        : Icons.chevron_left,
-                    color: const Color(0xFFD1D5DB),
-                    size: 20,
-                  ),
+          child: Material(
+            color: Colors.white.withValues(alpha: 0.08),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.tight)),
+            child: InkWell(
+              onTap: _toggleCollapsed,
+              borderRadius: BorderRadius.circular(AppRadius.tight),
+              child: Center(
+                child: Icon(
+                  _collapsed
+                      ? Icons.chevron_right
+                      : Icons.chevron_left,
+                  color: const Color(0xFFD1D5DB),
+                  size: 20,
                 ),
               ),
             ),
