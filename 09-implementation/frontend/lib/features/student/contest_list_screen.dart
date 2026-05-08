@@ -8,6 +8,7 @@ import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/models/contest.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/empty_view.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_shimmer.dart';
 import '../../core/widgets/m_top_bar.dart';
@@ -157,7 +158,14 @@ class _ContestListScreenState extends ConsumerState<ContestListScreen> {
               color: ptitRed,
               onRefresh: () async => ref.invalidate(contestListProvider),
               child: data.items.isEmpty
-                  ? const _EmptyView()
+                  // Sprint 18 (2026-05-08) S18-3: dùng EmptyView global enhanced
+                  // (icon 72 + bg circle + heading bold) thay private text-only.
+                  ? const EmptyView(
+                      icon: Icons.emoji_events_outlined,
+                      title: 'Chưa có cuộc thi nào',
+                      subtitle:
+                          'Hãy quay lại sau khi BTC mở thêm cuộc thi mới.',
+                    )
                   : ListView.builder(
                       padding: const EdgeInsets.all(16),
                       itemCount: data.items.length,
@@ -205,14 +213,8 @@ class _StatusChip extends ConsumerWidget {
   }
 }
 
-class _EmptyView extends StatelessWidget {
-  const _EmptyView();
-  @override
-  Widget build(BuildContext context) => Center(
-        child: Padding(padding: EdgeInsets.all(32),
-            child: Text('Chưa có cuộc thi nào', style: TextStyle(color: context.textMuted))),
-      );
-}
+// Sprint 18 (2026-05-08): private _EmptyView removed — replaced bằng global
+// EmptyView widget với enhanced illustration (S18-3).
 
 class _ErrorView extends StatelessWidget {
   final Object error;
