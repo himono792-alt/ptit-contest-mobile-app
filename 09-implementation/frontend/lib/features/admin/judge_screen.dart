@@ -78,23 +78,43 @@ class JudgeScreen extends ConsumerWidget {
                       ]),
                     ),
                   )
-                : ListView.builder(
-                    padding: EdgeInsets.fromLTRB(isMobile ? 14 : 24, 16, isMobile ? 14 : 24, 24),
-                    // Sprint 16 (2026-05-08): hero card top theo design gv-01.
-                    // Index 0 = hero, items list shift +1.
-                    itemCount: items.length + 1,
-                    itemBuilder: (_, i) {
-                      if (i == 0) {
-                        return _TodayJudgingHeroCard(
-                          count: items.length,
-                          onStart: () => _openScoreDialog(
-                              context, ref, items.first as Map<String, dynamic>),
-                        );
-                      }
-                      return _AssignmentCard(
-                          data: items[i - 1] as Map<String, dynamic>);
-                    },
-                  ),
+                : Builder(builder: (_) {
+                    // Sprint 18 fix (2026-05-08): filter hero count + first
+                    // unscored cho CTA "Bắt đầu chấm". Assignment đã chấm
+                    // không hide hẳn — vẫn hiện cuối list với pill "Đã chấm"
+                    // để GV review history.
+                    final unscored = items
+                        .where((it) =>
+                            (it as Map<String, dynamic>)['is_scored'] != true)
+                        .toList();
+                    final scored = items
+                        .where((it) =>
+                            (it as Map<String, dynamic>)['is_scored'] == true)
+                        .toList();
+                    final ordered = [...unscored, ...scored];
+                    return ListView.builder(
+                      padding: EdgeInsets.fromLTRB(isMobile ? 14 : 24, 16, isMobile ? 14 : 24, 24),
+                      // Sprint 16 (2026-05-08): hero card top theo design gv-01.
+                      // Index 0 = hero, items list shift +1.
+                      itemCount: ordered.length + 1,
+                      itemBuilder: (_, i) {
+                        if (i == 0) {
+                          final firstUnscored = unscored.isNotEmpty
+                              ? unscored.first as Map<String, dynamic>
+                              : null;
+                          return _TodayJudgingHeroCard(
+                            count: unscored.length,
+                            onStart: firstUnscored == null
+                                ? () {}
+                                : () => _openScoreDialog(
+                                    context, ref, firstUnscored),
+                          );
+                        }
+                        return _AssignmentCard(
+                            data: ordered[i - 1] as Map<String, dynamic>);
+                      },
+                    );
+                  }),
           ),
         ),
       ]),
@@ -110,6 +130,10 @@ class _AssignmentCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final fmt = DateFormat('dd/MM/yy HH:mm');
     final canSeeId = data['can_view_identity'] as bool? ?? false;
+    // Sprint 18 fix (2026-05-08): is_scored + scored_count enriched từ BE.
+    final isScored = data['is_scored'] == true;
+    final scored = data['scored_count'] as int? ?? 0;
+    final total = data['total_criteria'] as int? ?? 0;
 
     return MCard(
       onTap: () => _openScoreDialog(context, ref, data),
@@ -124,11 +148,19 @@ class _AssignmentCard extends ConsumerWidget {
                       fontWeight: FontWeight.w700,
                       color: context.textPrimary)),
             ),
-            Pill(
-              label: canSeeId ? 'Open judging' : 'Blind',
-              color: canSeeId ? context.infoBlue : context.warnOrange,
-              bg: canSeeId ? context.infoSoft : context.warnSoft,
-            ),
+            // Sprint 18: pill "Đã chấm" green ưu tiên hiện nếu scored.
+            if (isScored)
+              Pill(
+                label: 'Đã chấm',
+                color: context.successGreen,
+                bg: context.successSoft,
+              )
+            else
+              Pill(
+                label: canSeeId ? 'Open judging' : 'Blind',
+                color: canSeeId ? context.infoBlue : context.warnOrange,
+                bg: canSeeId ? context.infoSoft : context.warnSoft,
+              ),
           ]),
           const SizedBox(height: 6),
           Text(
@@ -142,12 +174,19 @@ class _AssignmentCard extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: context.ptitRedSoft,
+              color: isScored ? context.successSoft : context.ptitRedSoft,
               borderRadius: BorderRadius.circular(AppRadius.tight),
             ),
-            child: const Text('Tap để nhập điểm',
+            child: Text(
+                isScored
+                    ? 'Đã chấm $scored/$total tiêu chí · Tap xem/sửa'
+                    : (total > 0
+                        ? 'Tap để chấm điểm ($total tiêu chí)'
+                        : 'Tap để nhập điểm'),
                 style: TextStyle(
-                    fontSize: 11, color: ptitRed, fontWeight: FontWeight.w600)),
+                    fontSize: 11,
+                    color: isScored ? context.successGreen : ptitRed,
+                    fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -452,11 +491,21 @@ class _TodayJudgingHeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final today = DateFormat('EEEE, dd/MM').format(DateTime.now());
+    // Sprint 18 fix (2026-05-08): khi count=0 (đã chấm hết) → gradient xanh
+    // success + label "Đã chấm xong tất cả" thay vì gradient red disabled.
+    final allDone = count == 0;
+    final gradient = allDone
+        ? const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF10B981), Color(0xFF34D399)],
+          )
+        : ptitGradientHero;
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
       decoration: BoxDecoration(
-        gradient: ptitGradientHero,
+        gradient: gradient,
         borderRadius: BorderRadius.circular(AppRadius.md),
         boxShadow: const [
           BoxShadow(
@@ -472,9 +521,10 @@ class _TodayJudgingHeroCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(children: [
-                const Icon(Icons.gavel, color: Colors.white, size: 18),
+                Icon(allDone ? Icons.check_circle_outline : Icons.gavel,
+                    color: Colors.white, size: 18),
                 const SizedBox(width: 8),
-                Text('Hôm nay cần chấm',
+                Text(allDone ? 'Đã chấm xong tất cả' : 'Hôm nay cần chấm',
                     style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.92),
                         fontSize: 12,
@@ -482,20 +532,28 @@ class _TodayJudgingHeroCard extends StatelessWidget {
                         letterSpacing: 0.4)),
               ]),
               const SizedBox(height: 8),
-              Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
-                Text('$count',
+              if (allDone)
+                Text('Hoàn thành',
                     style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 40,
+                        fontSize: 24,
                         fontWeight: FontWeight.w800,
-                        height: 1)),
-                const SizedBox(width: 6),
-                Text('bài',
-                    style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500)),
-              ]),
+                        height: 1))
+              else
+                Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
+                  Text('$count',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 40,
+                          fontWeight: FontWeight.w800,
+                          height: 1)),
+                  const SizedBox(width: 6),
+                  Text('bài',
+                      style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.85),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500)),
+                ]),
               const SizedBox(height: 2),
               Text(today,
                   style: TextStyle(
@@ -505,21 +563,22 @@ class _TodayJudgingHeroCard extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        FilledButton.icon(
-          onPressed: count == 0 ? null : onStart,
-          icon: const Icon(Icons.play_arrow_rounded, size: 18),
-          label: const Text('Bắt đầu chấm'),
-          style: FilledButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: ptitRed,
-            minimumSize: const Size(140, 40),
-            elevation: 0,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadius.tight)),
-            textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        if (!allDone)
+          FilledButton.icon(
+            onPressed: onStart,
+            icon: const Icon(Icons.play_arrow_rounded, size: 18),
+            label: const Text('Bắt đầu chấm'),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: ptitRed,
+              minimumSize: const Size(140, 40),
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.tight)),
+              textStyle: const TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
-        ),
       ]),
     );
   }
