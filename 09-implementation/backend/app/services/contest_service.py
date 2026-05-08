@@ -91,8 +91,19 @@ async def create_contest(db: AsyncSession, user: AppUser, data: ContestCreateIn)
         if data.team_max_members < data.team_min_members:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "team_max < team_min")
 
+    # Sprint 21+ fix (2026-05-09): nếu form không gửi host_faculty_id (field
+    # optional), auto inject faculty_id từ profile Organizer của GV. Lý do
+    # phát hiện: BCN approval queue filter `Contest.host_faculty_id == bcn_faculty_id`
+    # → contest có host_faculty_id NULL không vào queue → BCN không thấy duyệt.
+    payload = data.model_dump()
+    if payload.get("host_faculty_id") is None:
+        org_stmt = select(Organizer).where(Organizer.user_id == user.user_id)
+        org = (await db.execute(org_stmt)).scalar_one_or_none()
+        if org is not None and org.faculty_id is not None:
+            payload["host_faculty_id"] = org.faculty_id
+
     contest = Contest(
-        **data.model_dump(),
+        **payload,
         status=ContestStatus.DRAFT,
         created_by=user.user_id,
         proposed_by=user.user_id,
