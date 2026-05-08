@@ -1,6 +1,7 @@
 """Submission router (SV-08 nộp bài, GV-04 quản lý).
 
 Endpoints:
+  GET  /api/rounds/{round_id}                              — Round detail (Sprint 16 countdown)
   POST /api/rounds/{round_id}/submissions/me/versions      — SV nộp version mới
   POST /api/submissions/versions/{id}/files                — SV upload file (multipart)
   GET  /api/submissions/files/{file_id}/download           — Download file (BYTEA stream)
@@ -20,7 +21,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import r2_client
 from app.database import get_db
 from app.deps import CurrentUser
+from app.models.contest import ContestRound
 from app.models.submission import SubmissionFile, SubmissionVersion
+from app.schemas.contest import ContestRoundOut
 from app.schemas.submission import (
     SubmissionDetail,
     SubmissionOut,
@@ -50,6 +53,24 @@ _ALLOWED_MIME_TYPES = {
     "text/plain",
     "text/csv",
 }
+
+
+# ---------- ROUND DETAIL (Sprint 16 2026-05-08 — countdown card SV submission) ----------
+
+@rounds_router.get("/{round_id}", response_model=ContestRoundOut)
+async def get_round_detail(
+    round_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ContestRoundOut:
+    """Sprint 16 — trả round detail kèm submission_close_at + end_at để FE
+    render countdown timer. Public endpoint (không cần auth) vì info contest
+    đã public qua list-rounds, chỉ thêm tiện shortcut khi FE chỉ có round_id."""
+    rnd = (
+        await db.execute(select(ContestRound).where(ContestRound.round_id == round_id))
+    ).scalar_one_or_none()
+    if rnd is None:
+        raise HTTPException(404, f"Round {round_id} không tồn tại")
+    return ContestRoundOut.model_validate(rnd)
 
 
 # ---------- SV ----------
