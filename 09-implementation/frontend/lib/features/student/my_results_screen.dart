@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/app_colors.dart';
@@ -136,6 +137,19 @@ class _ResultCard extends StatelessWidget {
                 context,
                 contestId: result.contestId,
                 contestTitle: result.contestTitle,
+              ),
+            ),
+          ),
+          // Sprint 16 (2026-05-08): button vào Bảng xếp hạng full
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.leaderboard_outlined, size: 16),
+              label: const Text('Bảng xếp hạng'),
+              onPressed: () => context.push(
+                '/contests/${result.contestId}/leaderboard',
+                extra: result.contestTitle,
               ),
             ),
           ),
