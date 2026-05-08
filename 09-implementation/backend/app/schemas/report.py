@@ -101,3 +101,56 @@ class SystemSummaryOut(BaseModel):
     total_certificates_issued: int = 0
     total_reviews: int = 0
     avg_review_rating: Decimal | None = None
+
+
+# ---------- Sprint 23 (2026-05-09): BCN/BTC dashboard real-data ----------
+
+class ApprovalStatsOut(BaseModel):
+    """BCN dashboard donut chart — count by approval status trong N ngày."""
+
+    days: int
+    approved: int = 0
+    revision_requested: int = 0
+    rejected: int = 0
+    total: int = 0
+    avg_processing_hours: float | None = None
+
+
+class BcnDeltasOut(BaseModel):
+    """BCN dashboard 4 stat cards với trend deltas."""
+
+    queue_pending: int = 0
+    queue_pending_delta_24h: int = 0  # so với 24h trước (- = giảm)
+    urgent_count: int = 0  # SLA ≤24h sắp hết hạn
+    contests_ongoing: int = 0
+    contests_ongoing_delta_7d: int = 0
+    students_total: int = 0
+    students_delta_30d: int = 0
+
+
+class BtcDeltasOut(BaseModel):
+    """BTC dashboard 4 stat cards với trend deltas."""
+
+    contests_ongoing: int = 0
+    contests_ongoing_delta_7d: int = 0
+    submissions_pending_judge: int = 0
+    submissions_judged_24h: int = 0
+    registrations_pending: int = 0
+    registrations_pending_delta_24h: int = 0
+    students_total: int = 0
+
+
+class ActivityFeedItemOut(BaseModel):
+    """1 entry trong activity feed."""
+
+    timestamp: datetime
+    action: str  # vd "approve_q1", "submit_proposal", "register"
+    actor_name: str | None = None
+    contest_title: str | None = None
+    contest_id: int | None = None
+    note: str | None = None
+
+
+class ActivityFeedOut(BaseModel):
+    items: list[ActivityFeedItemOut] = []
+    total: int = 0

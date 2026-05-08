@@ -10,6 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.deps import CurrentUser
 from app.schemas.report import (
+    ActivityFeedOut,
+    ApprovalStatsOut,
+    BcnDeltasOut,
+    BtcDeltasOut,
     ContestProgressItem,
     ContestStatsOut,
     FacultySummaryOut,
@@ -74,6 +78,46 @@ async def system_summary(
 ) -> SystemSummaryOut:
     """AD-05 — Báo cáo toàn hệ thống."""
     return SystemSummaryOut(**await report_service.system_summary(db, user, year))
+
+
+# ---------- Sprint 23 (2026-05-09): Real-time stats ----------
+
+@reports_router.get("/approval-stats", response_model=ApprovalStatsOut)
+async def approval_stats(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    days: int = Query(30, ge=1, le=365),
+) -> ApprovalStatsOut:
+    """BCN-08 — Donut chart Hiệu suất duyệt N ngày qua."""
+    return ApprovalStatsOut(**await report_service.approval_stats(db, user, days))
+
+
+@reports_router.get("/bcn-deltas", response_model=BcnDeltasOut)
+async def bcn_deltas(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> BcnDeltasOut:
+    """BCN-09 — 4 stat cards với delta vs 24h/7d/30d trước."""
+    return BcnDeltasOut(**await report_service.bcn_deltas(db, user))
+
+
+@reports_router.get("/btc-deltas", response_model=BtcDeltasOut)
+async def btc_deltas(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> BtcDeltasOut:
+    """GV-09 — 4 stat cards với delta vs 24h/7d trước."""
+    return BtcDeltasOut(**await report_service.btc_deltas(db, user))
+
+
+@reports_router.get("/activity-feed", response_model=ActivityFeedOut)
+async def activity_feed(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    limit: int = Query(10, ge=1, le=50),
+) -> ActivityFeedOut:
+    """GV-10 — Activity feed gần nhất (approve, submit, register, judge)."""
+    return ActivityFeedOut(**await report_service.activity_feed(db, user, limit))
 
 
 # ---------- Phase 2 sprint 1 step 3 (2026-05-06): Excel export ----------

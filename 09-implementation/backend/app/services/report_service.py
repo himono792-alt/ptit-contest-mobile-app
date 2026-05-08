@@ -789,3 +789,351 @@ async def export_system_summary_xlsx(
     today_str = datetime.now(timezone.utc).strftime("%Y%m%d")
     filename = f"bao-cao-he-thong-{summary['year']}-{today_str}.xlsx"
     return buf.read(), filename
+
+
+# ============================================================
+# Sprint 23 (2026-05-09): Real-time stats endpoints
+# ============================================================
+
+from datetime import timedelta as _td  # noqa: E402
+
+from app.models.workflow import WorkflowApproval  # noqa: E402
+from app.models.enums import ApprovalStatus  # noqa: E402
+
+
+async def approval_stats(
+    db: AsyncSession, user, days: int = 30
+) -> dict:
+    """BCN-08 — Donut chart Hiệu suất duyệt N ngày qua.
+
+    Filter theo faculty của HOD. Admin xem toàn hệ thống.
+    """
+    faculty_id = await _ensure_hod_or_admin(db, user)
+    cutoff = datetime.now(timezone.utc) - _td(days=days)
+
+    base = select(WorkflowApproval).join(
+        Contest, Contest.contest_id == WorkflowApproval.contest_id
+    ).where(WorkflowApproval.reviewed_at >= cutoff)
+    if faculty_id is not None:
+        base = base.where(Contest.host_faculty_id == faculty_id)
+
+    # Counts by status
+    counts_stmt = select(
+        WorkflowApproval.status, func.count()
+    ).select_from(WorkflowApproval).join(
+        Contest, Contest.contest_id == WorkflowApproval.contest_id
+    ).where(WorkflowApproval.reviewed_at >= cutoff)
+    if faculty_id is not None:
+        counts_stmt = counts_stmt.where(Contest.host_faculty_id == faculty_id)
+    counts_stmt = counts_stmt.group_by(WorkflowApproval.status)
+
+    rows = (await db.execute(counts_stmt)).all()
+    counts = {st: cnt for st, cnt in rows}
+    approved = counts.get(ApprovalStatus.APPROVED, 0)
+    revision = counts.get(ApprovalStatus.REVISION_REQUESTED, 0)
+    rejected = counts.get(ApprovalStatus.REJECTED, 0)
+
+    # Avg processing hours (reviewed_at - submitted_at)
+    avg_stmt = select(
+        func.avg(
+            func.extract(
+                'epoch',
+                WorkflowApproval.reviewed_at - WorkflowApproval.submitted_at,
+            )
+            / 3600.0
+        )
+    ).select_from(WorkflowApproval).join(
+        Contest, Contest.contest_id == WorkflowApproval.contest_id
+    ).where(
+        WorkflowApproval.reviewed_at >= cutoff,
+        WorkflowApproval.reviewed_at.isnot(None),
+    )
+    if faculty_id is not None:
+        avg_stmt = avg_stmt.where(Contest.host_faculty_id == faculty_id)
+    avg_hours = (await db.execute(avg_stmt)).scalar()
+
+    return {
+        "days": days,
+        "approved": approved,
+        "revision_requested": revision,
+        "rejected": rejected,
+        "total": approved + revision + rejected,
+        "avg_processing_hours": float(avg_hours) if avg_hours is not None else None,
+    }
+
+
+async def bcn_deltas(db: AsyncSession, user) -> dict:
+    """BCN dashboard 4 stat cards với delta vs 24h/7d/30d trước."""
+    faculty_id = await _ensure_hod_or_admin(db, user)
+    now = datetime.now(timezone.utc)
+    h24_ago = now - _td(hours=24)
+    d7_ago = now - _td(days=7)
+    d30_ago = now - _td(days=30)
+    sla_24h = now + _td(hours=24)  # urgent = deadline ≤ now+24h => submitted_at ≤ now-24h (SLA 48h)
+    submit_threshold = now - _td(hours=24)  # SLA 48h - 24h remain = submitted_at < now-24h
+
+    # Queue pending (status=PENDING) hiện tại
+    queue_stmt = select(func.count()).select_from(WorkflowApproval).join(
+        Contest, Contest.contest_id == WorkflowApproval.contest_id
+    ).where(WorkflowApproval.status == ApprovalStatus.PENDING)
+    if faculty_id is not None:
+        queue_stmt = queue_stmt.where(Contest.host_faculty_id == faculty_id)
+    queue_pending = (await db.execute(queue_stmt)).scalar_one()
+
+    # Pending count 24h trước (snapshot — count items submitted before 24h ago + still pending OR reviewed > 24h ago)
+    # Approximation: count approvals submitted < 24h ago + still pending
+    queue_24h_stmt = select(func.count()).select_from(WorkflowApproval).join(
+        Contest, Contest.contest_id == WorkflowApproval.contest_id
+    ).where(
+        WorkflowApproval.submitted_at < h24_ago,
+        # PENDING hoặc reviewed > h24_ago
+        (WorkflowApproval.status == ApprovalStatus.PENDING) |
+        (WorkflowApproval.reviewed_at > h24_ago),
+    )
+    if faculty_id is not None:
+        queue_24h_stmt = queue_24h_stmt.where(Contest.host_faculty_id == faculty_id)
+    queue_24h_ago = (await db.execute(queue_24h_stmt)).scalar_one()
+    queue_delta = queue_pending - queue_24h_ago
+
+    # Urgent: PENDING với submitted_at < submit_threshold (deadline ≤ now+24h)
+    urgent_stmt = select(func.count()).select_from(WorkflowApproval).join(
+        Contest, Contest.contest_id == WorkflowApproval.contest_id
+    ).where(
+        WorkflowApproval.status == ApprovalStatus.PENDING,
+        WorkflowApproval.submitted_at < submit_threshold,
+    )
+    if faculty_id is not None:
+        urgent_stmt = urgent_stmt.where(Contest.host_faculty_id == faculty_id)
+    urgent = (await db.execute(urgent_stmt)).scalar_one()
+
+    # Contests ongoing (REG_OPEN/REG_CLOSED/ONGOING) hiện tại
+    ongoing_stmt = select(func.count()).select_from(Contest).where(
+        Contest.status.in_([
+            ContestStatus.REG_OPEN, ContestStatus.REG_CLOSED, ContestStatus.ONGOING
+        ])
+    )
+    if faculty_id is not None:
+        ongoing_stmt = ongoing_stmt.where(Contest.host_faculty_id == faculty_id)
+    ongoing = (await db.execute(ongoing_stmt)).scalar_one()
+
+    # Contests ongoing 7d ago: count contests có start_at <= now AND end_at > now-7d AND status was active
+    # Approximation: count contests created_at <= d7_ago AND status đang active hiện tại
+    ongoing_7d_stmt = select(func.count()).select_from(Contest).where(
+        Contest.created_at < d7_ago,
+        Contest.status.in_([
+            ContestStatus.REG_OPEN, ContestStatus.REG_CLOSED, ContestStatus.ONGOING
+        ])
+    )
+    if faculty_id is not None:
+        ongoing_7d_stmt = ongoing_7d_stmt.where(Contest.host_faculty_id == faculty_id)
+    ongoing_7d_ago = (await db.execute(ongoing_7d_stmt)).scalar_one()
+    ongoing_delta = ongoing - ongoing_7d_ago
+
+    # Students total: count Students có StudentDirectory.faculty_id match.
+    # HOD lọc theo khoa, ADMIN xem tất.
+    students_stmt = (
+        select(func.count())
+        .select_from(Student)
+        .join(StudentDirectory,
+              StudentDirectory.directory_id == Student.directory_id)
+    )
+    if faculty_id is not None:
+        students_stmt = students_stmt.where(
+            StudentDirectory.faculty_id == faculty_id
+        )
+    students_total = (await db.execute(students_stmt)).scalar_one()
+
+    students_30d_stmt = (
+        select(func.count())
+        .select_from(Student)
+        .join(StudentDirectory,
+              StudentDirectory.directory_id == Student.directory_id)
+        .where(Student.created_at < d30_ago)
+    )
+    if faculty_id is not None:
+        students_30d_stmt = students_30d_stmt.where(
+            StudentDirectory.faculty_id == faculty_id
+        )
+    students_30d_ago = (await db.execute(students_30d_stmt)).scalar_one()
+    students_delta = students_total - students_30d_ago
+
+    return {
+        "queue_pending": queue_pending,
+        "queue_pending_delta_24h": queue_delta,
+        "urgent_count": urgent,
+        "contests_ongoing": ongoing,
+        "contests_ongoing_delta_7d": ongoing_delta,
+        "students_total": students_total,
+        "students_delta_30d": students_delta,
+    }
+
+
+async def btc_deltas(db: AsyncSession, user) -> dict:
+    """BTC dashboard 4 stat cards với delta vs 24h/7d trước. Filter contests created_by user."""
+    if "ORGANIZER" not in user.role_codes and "ADMIN" not in user.role_codes:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Cần ORGANIZER hoặc ADMIN")
+    now = datetime.now(timezone.utc)
+    h24_ago = now - _td(hours=24)
+    d7_ago = now - _td(days=7)
+
+    # Contests organizer của user
+    base_where = []
+    if "ADMIN" not in user.role_codes:
+        base_where.append(Contest.created_by == user.user_id)
+
+    # Ongoing
+    ongoing_stmt = select(func.count()).select_from(Contest).where(
+        *base_where,
+        Contest.status.in_([
+            ContestStatus.REG_OPEN, ContestStatus.REG_CLOSED, ContestStatus.ONGOING
+        ])
+    )
+    ongoing = (await db.execute(ongoing_stmt)).scalar_one()
+
+    ongoing_7d_stmt = select(func.count()).select_from(Contest).where(
+        *base_where,
+        Contest.created_at < d7_ago,
+        Contest.status.in_([
+            ContestStatus.REG_OPEN, ContestStatus.REG_CLOSED, ContestStatus.ONGOING
+        ])
+    )
+    ongoing_7d_ago = (await db.execute(ongoing_7d_stmt)).scalar_one()
+
+    # Submissions pending judge: count submissions của contests organizer status=ONGOING/REG_CLOSED
+    sub_stmt = select(func.count()).select_from(Submission).join(
+        Contest, Contest.contest_id == Submission.contest_id
+    ).where(
+        *base_where,
+        Submission.status == SubmissionStatus.SUBMITTED,
+    )
+    submissions_pending = (await db.execute(sub_stmt)).scalar_one()
+
+    # Submissions judged 24h: status LOCKED (đã chấm xong) updated_at >= 24h ago
+    sub_24h_stmt = select(func.count()).select_from(Submission).join(
+        Contest, Contest.contest_id == Submission.contest_id
+    ).where(
+        *base_where,
+        Submission.updated_at >= h24_ago,
+        Submission.status == SubmissionStatus.LOCKED,
+    )
+    submissions_judged_24h = (await db.execute(sub_24h_stmt)).scalar_one()
+
+    # Registrations pending: entries PENDING của contests organizer
+    reg_stmt = select(func.count()).select_from(ContestEntry).join(
+        Contest, Contest.contest_id == ContestEntry.contest_id
+    ).where(
+        *base_where,
+        ContestEntry.registration_status == RegistrationStatus.PENDING,
+    )
+    reg_pending = (await db.execute(reg_stmt)).scalar_one()
+
+    reg_24h_stmt = select(func.count()).select_from(ContestEntry).join(
+        Contest, Contest.contest_id == ContestEntry.contest_id
+    ).where(
+        *base_where,
+        ContestEntry.registration_status == RegistrationStatus.PENDING,
+        ContestEntry.created_at < h24_ago,
+    )
+    reg_pending_24h_ago = (await db.execute(reg_24h_stmt)).scalar_one()
+    reg_delta = reg_pending - reg_pending_24h_ago
+
+    # Total students unique trong các entries APPROVED+PENDING
+    # (chỉ count cá nhân — bỏ team count vì team dùng team_id riêng)
+    students_stmt = (
+        select(func.count(func.distinct(ContestEntry.student_id)))
+        .select_from(ContestEntry)
+        .join(Contest, Contest.contest_id == ContestEntry.contest_id)
+        .where(
+            *base_where,
+            ContestEntry.registration_status.in_([
+                RegistrationStatus.APPROVED, RegistrationStatus.PENDING
+            ]),
+            ContestEntry.student_id.isnot(None),
+        )
+    )
+    students_total = (await db.execute(students_stmt)).scalar_one()
+
+    return {
+        "contests_ongoing": ongoing,
+        "contests_ongoing_delta_7d": ongoing - ongoing_7d_ago,
+        "submissions_pending_judge": submissions_pending,
+        "submissions_judged_24h": submissions_judged_24h,
+        "registrations_pending": reg_pending,
+        "registrations_pending_delta_24h": reg_delta,
+        "students_total": students_total,
+    }
+
+
+async def activity_feed(db: AsyncSession, user, limit: int = 10) -> dict:
+    """GV-08 — Activity feed gần nhất (approve, submit, register, judge).
+
+    Filter theo organizer của user (Admin xem tất). Lấy events:
+      - WorkflowApproval submitted/reviewed
+      - ContestEntry created (đăng ký)
+      - Submission created (nộp bài)
+    Merge sort theo timestamp desc.
+    """
+    if "ORGANIZER" not in user.role_codes and "ADMIN" not in user.role_codes:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Cần ORGANIZER hoặc ADMIN")
+
+    is_admin = "ADMIN" in user.role_codes
+    base_where_contest = [] if is_admin else [Contest.created_by == user.user_id]
+
+    items: list[dict] = []
+
+    # Approvals: lấy reviewed (decision) hoặc submitted (proposal) gần đây
+    appr_stmt = (
+        select(WorkflowApproval, Contest, AppUser)
+        .join(Contest, Contest.contest_id == WorkflowApproval.contest_id)
+        .join(AppUser, AppUser.user_id == WorkflowApproval.submitted_by)
+        .where(*base_where_contest)
+        .order_by(WorkflowApproval.updated_at.desc())
+        .limit(limit)
+    )
+    for ap, contest, actor in (await db.execute(appr_stmt)).all():
+        if ap.reviewed_at is not None:
+            action = (
+                "approve_q1" if ap.status == ApprovalStatus.APPROVED and ap.step.value == "BCN_QD1"
+                else "approve_q2" if ap.status == ApprovalStatus.APPROVED and ap.step.value == "BCN_QD2"
+                else "request_revision" if ap.status == ApprovalStatus.REVISION_REQUESTED
+                else "reject" if ap.status == ApprovalStatus.REJECTED
+                else "submit_proposal"
+            )
+            ts = ap.reviewed_at
+        else:
+            action = "submit_proposal"
+            ts = ap.submitted_at
+        items.append({
+            "timestamp": ts,
+            "action": action,
+            "actor_name": actor.full_name,
+            "contest_title": contest.title,
+            "contest_id": contest.contest_id,
+            "note": ap.bcn_comment if ap.reviewed_at else ap.submission_note,
+        })
+
+    # Registrations cá nhân (entries có student_id) — actor_name từ Student.user → AppUser
+    reg_stmt = (
+        select(ContestEntry, Contest, AppUser)
+        .join(Contest, Contest.contest_id == ContestEntry.contest_id)
+        .join(Student, Student.student_id == ContestEntry.student_id)
+        .join(AppUser, AppUser.user_id == Student.user_id)
+        .where(*base_where_contest, ContestEntry.student_id.isnot(None))
+        .order_by(ContestEntry.created_at.desc())
+        .limit(limit)
+    )
+    for entry, contest, actor in (await db.execute(reg_stmt)).all():
+        items.append({
+            "timestamp": entry.created_at,
+            "action": "register",
+            "actor_name": actor.full_name,
+            "contest_title": contest.title,
+            "contest_id": contest.contest_id,
+            "note": None,
+        })
+
+    # Sort merged + limit
+    items.sort(key=lambda x: x["timestamp"], reverse=True)
+    items = items[:limit]
+
+    return {"items": items, "total": len(items)}
