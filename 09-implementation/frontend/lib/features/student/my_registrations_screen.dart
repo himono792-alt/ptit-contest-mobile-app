@@ -189,6 +189,67 @@ class _EntryCard extends ConsumerWidget {
     }
   }
 
+  /// Sprint 17 (2026-05-08) S17-3: visual progress bar theo stage.
+  /// Map contest_status + registration_status → % + color.
+  Widget _buildProgress(BuildContext context, String cs, String rs) {
+    final double percent;
+    final Color barColor;
+    final String label;
+
+    if (rs == 'PENDING') {
+      percent = 0.10;
+      barColor = context.warnOrange;
+      label = 'Chờ BTC duyệt';
+    } else if (cs == 'REG_OPEN' || cs == 'REG_CLOSED') {
+      percent = 0.25;
+      barColor = context.infoBlue;
+      label = 'Đã đăng ký';
+    } else if (cs == 'ONGOING') {
+      percent = 0.65;
+      barColor = ptitRed;
+      label = 'Đang dự thi';
+    } else if (cs == 'FINISHED') {
+      percent = 1.0;
+      barColor = context.successGreen;
+      label = 'Đã kết thúc';
+    } else {
+      percent = 0.05;
+      barColor = context.textMuted;
+      label = cs;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          Expanded(
+            child: Text(label,
+                style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    color: barColor,
+                    letterSpacing: 0.3)),
+          ),
+          Text('${(percent * 100).toInt()}%',
+              style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                  color: barColor)),
+        ]),
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(99),
+          child: LinearProgressIndicator(
+            value: percent,
+            minHeight: 5,
+            backgroundColor: context.cardBorder,
+            valueColor: AlwaysStoppedAnimation(barColor),
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<void> _navSubmit(BuildContext context, WidgetRef ref) async {
     try {
       final res = await ref
@@ -267,6 +328,9 @@ class _EntryCard extends ConsumerWidget {
             ' → ${fmt.format(DateTime.parse(entry['contest_end_at']).toLocal())}',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(color: context.textFaint),
           ),
+          // Sprint 17 (2026-05-08) S17-3: progress bar theo contest_status
+          const SizedBox(height: 10),
+          _buildProgress(context, cs, rs),
           if (canCancel || canSubmit || isFinished) ...[
             const SizedBox(height: 10),
             Row(children: [

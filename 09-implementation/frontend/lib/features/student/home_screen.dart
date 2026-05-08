@@ -132,6 +132,9 @@ class HomeScreen extends ConsumerWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
                 children: [
+                  // Sprint 17 (2026-05-08) S17-1: Featured contest hero
+                  // theo design sv-05 + SVW-02. Show contest top REG_OPEN/ONGOING.
+                  const _FeaturedHero(),
                   _StatsRow(onSwitchTab: onSwitchTab),
                   const SizedBox(height: 22),
                   _SectionHead(
@@ -423,6 +426,123 @@ class _FeaturedCard extends StatelessWidget {
       m == 'ONLINE' ? 'Online' : (m == 'OFFLINE' ? 'Offline' : 'Hybrid');
 }
 
+// ===================== Sprint 17 S17-1: Featured hero =====================
+
+/// Hero card "SỰ KIỆN NỔI BẬT" theo design sv-05 + SVW-02.
+/// Chọn contest theo priority REG_OPEN > ONGOING > PUBLISHED, hiển thị
+/// gradient red với CTA "Đăng ký ngay →". Tap → /contests/:slug.
+class _FeaturedHero extends ConsumerWidget {
+  const _FeaturedHero();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncList = ref.watch(contestListProvider);
+    return asyncList.when(
+      loading: () => const SizedBox(height: 110),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (data) {
+        if (data.items.isEmpty) return const SizedBox.shrink();
+        // Priority: REG_OPEN nhất (CTA "Đăng ký ngay" mạnh nhất)
+        final sorted = [...data.items]
+          ..sort((a, b) {
+            int score(String s) => switch (s) {
+                  'REG_OPEN' => 0,
+                  'ONGOING' => 1,
+                  'PUBLISHED' => 2,
+                  _ => 9,
+                };
+            return score(a.status).compareTo(score(b.status));
+          });
+        final hot = sorted.first;
+        final isRegOpen = hot.status == 'REG_OPEN';
+        final ctaLabel = isRegOpen ? 'Đăng ký ngay' : 'Xem chi tiết';
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 18),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            onTap: () => context.push('/contests/${hot.slug}'),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+              decoration: BoxDecoration(
+                gradient: ptitGradientHero,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                boxShadow: const [
+                  BoxShadow(
+                      color: Color(0x1F000000),
+                      blurRadius: 14,
+                      offset: Offset(0, 4)),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    const Icon(Icons.bolt, color: Colors.white, size: 16),
+                    const SizedBox(width: 6),
+                    Text('SỰ KIỆN NỔI BẬT',
+                        style: GoogleFonts.plusJakartaSans(
+                            color: Colors.white,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.4)),
+                  ]),
+                  const SizedBox(height: 8),
+                  Text(hot.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.plusJakartaSans(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
+                          height: 1.25)),
+                  const SizedBox(height: 12),
+                  Row(children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(AppRadius.tight),
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Text(ctaLabel,
+                            style: GoogleFonts.plusJakartaSans(
+                                color: ptitRed,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w800)),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.arrow_forward,
+                            color: ptitRed, size: 14),
+                      ]),
+                    ),
+                    const SizedBox(width: 10),
+                    if (isRegOpen)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: Text('Đang mở ĐK',
+                            style: GoogleFonts.plusJakartaSans(
+                                color: Colors.white,
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700)),
+                      ),
+                  ]),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 // ===================== Bell button (with badge) =====================
 
 class _BellButton extends ConsumerWidget {
@@ -451,17 +571,23 @@ class _BellButton extends ConsumerWidget {
           excludeSemantics: true, // tránh nested với IconButton inner
           child: IconButton(
           iconSize: 18,
-          visualDensity: VisualDensity.compact,
+          visualDensity: VisualDensity.compact, constraints: const BoxConstraints(minWidth: 44, minHeight: 44), // P0 #4 hit area ≥44 (WCAG 2.5.5)
           icon: Icon(Icons.notifications_outlined, color: context.textPrimary),
           onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const NotificationsScreen())),
           ),
         ),
       ),
-      if (unread > 0)
-        Positioned(
-          right: 6,
-          top: 6,
+      // Sprint 13 Batch A (2026-05-08): badge có animated scale + pulse
+      // khi unread > 0. ScaleTransition 250ms khi scale từ 0 → 1 (xuất hiện),
+      // 1 → 0 (biến mất). User chú ý hơn khi noti mới đến.
+      Positioned(
+        right: 6,
+        top: 6,
+        child: AnimatedScale(
+          scale: unread > 0 ? 1.0 : 0.0,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.elasticOut,
           child: Container(
             width: 9,
             height: 9,
@@ -472,6 +598,7 @@ class _BellButton extends ConsumerWidget {
             ),
           ),
         ),
+      ),
     ]);
   }
 }

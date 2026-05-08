@@ -13,6 +13,7 @@ import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_top_bar.dart';
 import 'cert_verify_screen.dart';
 import 'edit_profile_screen.dart';
+import 'my_results_screen.dart' show myResultsProvider;
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -87,6 +88,11 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                 ],
               ),
+              // Sprint 17 (2026-05-08) S17-2: 3 achievement stats
+              const SizedBox(height: 16),
+              Divider(color: context.cardBorder, height: 1),
+              const SizedBox(height: 12),
+              const _AchievementStats(),
             ]),
           ),
           const SizedBox(height: 8),
@@ -111,7 +117,7 @@ class ProfileScreen extends ConsumerWidget {
                       icon: const Icon(Icons.edit_outlined,
                           size: 16, color: ptitRed),
                       tooltip: 'Cập nhật thông tin',
-                      visualDensity: VisualDensity.compact,
+                      visualDensity: VisualDensity.compact, constraints: const BoxConstraints(minWidth: 44, minHeight: 44), // P0 #4 hit area ≥44 (WCAG 2.5.5)
                       onPressed: () => Navigator.of(context).push(
                           MaterialPageRoute(
                               builder: (_) => const EditProfileScreen())),
@@ -123,7 +129,9 @@ class ProfileScreen extends ConsumerWidget {
                           ? DateFormat('dd/MM/yyyy').format(user.dob!)
                           : '—'),
                   _infoRow(context, 'Giới tính', user.gender ?? '—'),
-                  _infoRow(context, 'Số CMND/CCCD', user.citizenId ?? '—'),
+                  // Sprint 8 fix #6 (2026-05-07): CCCD/CMND là PII nhạy cảm —
+                  // mask 3+•••+3 mặc định, nút mắt toggle để user reveal khi cần.
+                  _MaskedCitizenIdRow(value: user.citizenId),
                   _infoRow(context, 'Nơi sinh', user.placeOfBirth ?? '—'),
                   _infoRow(context, 'Quốc tịch', user.nationality ?? '—'),
                   _infoRow(context, 'Dân tộc', user.ethnicity ?? '—'),
@@ -417,6 +425,142 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Sprint 17 (2026-05-08) S17-2: 3 stats achievement trong profile header.
+/// Cuộc thi (count my results) / Giải thưởng (count award != null) /
+/// Chứng nhận (count my results — every published result has cert).
+class _AchievementStats extends ConsumerWidget {
+  const _AchievementStats();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncResults = ref.watch(myResultsProvider);
+    final results = asyncResults.maybeWhen(data: (r) => r, orElse: () => []);
+    final contestCount = results.length;
+    final awardCount =
+        results.where((r) => (r.awardTitle ?? '').isNotEmpty).length;
+    // Mỗi result đã published → 1 cert verifiable
+    final certCount = contestCount;
+
+    return Row(
+      children: [
+        Expanded(
+            child: _statColumn(context,
+                value: '$contestCount', label: 'Cuộc thi')),
+        _vDivider(context),
+        Expanded(
+            child: _statColumn(context,
+                value: '$awardCount',
+                label: 'Giải thưởng',
+                color: context.achievementGold)),
+        _vDivider(context),
+        Expanded(
+            child: _statColumn(context,
+                value: '$certCount',
+                label: 'Chứng nhận',
+                color: ptitRed)),
+      ],
+    );
+  }
+
+  Widget _statColumn(BuildContext context,
+      {required String value, required String label, Color? color}) {
+    return Column(
+      children: [
+        Text(value,
+            style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: color ?? context.textPrimary,
+                letterSpacing: -0.5,
+                height: 1)),
+        const SizedBox(height: 4),
+        Text(label,
+            style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: context.textMuted)),
+      ],
+    );
+  }
+
+  Widget _vDivider(BuildContext context) => Container(
+        width: 1,
+        height: 30,
+        color: context.cardBorder,
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+      );
+}
+
+/// Sprint 8 fix #6 (2026-05-07): hàng "Số CMND/CCCD" có mask + nút mắt reveal.
+///
+/// Mặc định mask kiểu `123•••••••012` để tránh leak PII khi user mở app
+/// trước người khác hoặc screen-share. Click eye icon → hiện full value;
+/// click lại → mask trở lại. Reload screen → reset về trạng thái mask.
+class _MaskedCitizenIdRow extends StatefulWidget {
+  final String? value;
+  const _MaskedCitizenIdRow({required this.value});
+
+  @override
+  State<_MaskedCitizenIdRow> createState() => _MaskedCitizenIdRowState();
+}
+
+class _MaskedCitizenIdRowState extends State<_MaskedCitizenIdRow> {
+  bool _revealed = false;
+
+  /// Mask quy tắc: giữ 3 ký tự đầu + 3 ký tự cuối, thay phần giữa bằng `•`.
+  /// Length ≤ 6 → mask toàn bộ (chuỗi `••••`).
+  String _mask(String v) {
+    if (v.length <= 6) return '•' * v.length;
+    return '${v.substring(0, 3)}${'•' * (v.length - 6)}${v.substring(v.length - 3)}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final raw = widget.value;
+    final isPlaceholder = raw == null || raw.isEmpty;
+    final display = isPlaceholder ? '—' : (_revealed ? raw : _mask(raw));
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        SizedBox(
+          width: 110,
+          child: Text('Số CMND/CCCD',
+              style: TextStyle(fontSize: 11, color: context.textMuted)),
+        ),
+        Expanded(
+          child: Text(
+            display,
+            style: TextStyle(
+              fontSize: 12.5,
+              color: isPlaceholder ? context.textFaint : context.textPrimary,
+              fontWeight: isPlaceholder ? FontWeight.w400 : FontWeight.w600,
+              letterSpacing: _revealed ? 0 : 1.5,
+            ),
+          ),
+        ),
+        // Chỉ hiện nút mắt khi có data thật, tránh confuse với placeholder '—'.
+        if (!isPlaceholder)
+          Semantics(
+            button: true,
+            label: _revealed ? 'Ẩn số CCCD' : 'Hiển thị số CCCD',
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              // Sprint 8 P0 #4 (2026-05-07): hit area ≥44 (WCAG 2.5.5 AA).
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              iconSize: 18,
+              icon: Icon(
+                _revealed ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                color: context.textMuted,
+              ),
+              onPressed: () => setState(() => _revealed = !_revealed),
+            ),
+          ),
+      ]),
     );
   }
 }

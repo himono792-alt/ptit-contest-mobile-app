@@ -57,6 +57,7 @@ class NotificationBadge extends ConsumerWidget {
           onPressed: onTap,
           icon: Icon(Icons.notifications_outlined, color: context.textMuted),
           visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints(minWidth: 44, minHeight: 44), // P0 #4 hit area ≥44 (WCAG 2.5.5)
         ),
       ),
       if (unread > 0)
@@ -147,19 +148,59 @@ class NotificationsScreen extends ConsumerWidget {
               ),
             );
           }
+          // Sprint 17 (2026-05-08) S17-4: group by time bucket.
+          final widgets = _groupByTime(context, items, ref);
           return RefreshIndicator(
             color: ptitRed,
             onRefresh: () async => ref.invalidate(notificationsProvider),
-            child: ListView.builder(
+            child: ListView(
               padding: const EdgeInsets.all(16),
-              itemCount: items.length,
-              itemBuilder: (_, i) =>
-                  _NotificationCard(data: items[i], onTap: () => _markRead(context, ref, items[i])),
+              children: widgets,
             ),
           );
         },
       ),
     );
+  }
+
+  /// Sprint 17 (2026-05-08) S17-4: group notifications theo bucket thời gian.
+  /// 3 bucket: Hôm nay (today) / Tuần này (last 7 days) / Cũ hơn.
+  List<Widget> _groupByTime(BuildContext context,
+      List<Map<String, dynamic>> items, WidgetRef ref) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final weekAgo = today.subtract(const Duration(days: 6));
+
+    final List<Map<String, dynamic>> bucketToday = [];
+    final List<Map<String, dynamic>> bucketWeek = [];
+    final List<Map<String, dynamic>> bucketOlder = [];
+
+    for (final n in items) {
+      final created = DateTime.parse(n['created_at']).toLocal();
+      final dayOnly = DateTime(created.year, created.month, created.day);
+      if (!dayOnly.isBefore(today)) {
+        bucketToday.add(n);
+      } else if (!dayOnly.isBefore(weekAgo)) {
+        bucketWeek.add(n);
+      } else {
+        bucketOlder.add(n);
+      }
+    }
+
+    final widgets = <Widget>[];
+    void addBucket(String label, List<Map<String, dynamic>> bucket) {
+      if (bucket.isEmpty) return;
+      widgets.add(_TimeBucketHeader(label: label, count: bucket.length));
+      for (final n in bucket) {
+        widgets.add(_NotificationCard(
+            data: n, onTap: () => _markRead(context, ref, n)));
+      }
+    }
+
+    addBucket('Hôm nay', bucketToday);
+    addBucket('Tuần này', bucketWeek);
+    addBucket('Cũ hơn', bucketOlder);
+    return widgets;
   }
 
   Future<void> _markRead(
@@ -312,3 +353,46 @@ class _NotificationCard extends StatelessWidget {
 String _msg(Object e) => e is DioException
     ? (e.response?.data is Map ? '${e.response?.data['detail']}' : e.message ?? '')
     : '$e';
+
+/// Sprint 17 (2026-05-08) S17-4: section header cho time bucket.
+class _TimeBucketHeader extends StatelessWidget {
+  final String label;
+  final int count;
+  const _TimeBucketHeader({required this.label, required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+      child: Row(
+        children: [
+          Text(label,
+              style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w800,
+                  color: context.textMuted,
+                  letterSpacing: 0.8)),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+            decoration: BoxDecoration(
+              color: context.cardBorder,
+              borderRadius: BorderRadius.circular(99),
+            ),
+            child: Text('$count',
+                style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: context.textMuted)),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(left: 10),
+              child: Container(height: 1, color: context.cardBorder),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
