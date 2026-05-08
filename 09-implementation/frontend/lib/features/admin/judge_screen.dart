@@ -7,6 +7,7 @@ import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
+import '../../core/widgets/m_shimmer.dart';
 import '../../core/widgets/pill.dart';
 
 final myAssignmentsProvider =
@@ -58,8 +59,8 @@ class JudgeScreen extends ConsumerWidget {
         ),
         Expanded(
           child: asyncList.when(
-            loading: () => const Center(
-                child: CircularProgressIndicator(color: ptitRed)),
+            // Sprint 8c (2026-05-07): skeleton thay spinner.
+            loading: () => const MCardListSkeleton(count: 3),
             error: (e, _) => Center(
                 child: Text('Lỗi: ${_msg(e)}',
                     style: const TextStyle(color: ptitRed))),
@@ -79,9 +80,20 @@ class JudgeScreen extends ConsumerWidget {
                   )
                 : ListView.builder(
                     padding: EdgeInsets.fromLTRB(isMobile ? 14 : 24, 16, isMobile ? 14 : 24, 24),
-                    itemCount: items.length,
-                    itemBuilder: (_, i) =>
-                        _AssignmentCard(data: items[i] as Map<String, dynamic>),
+                    // Sprint 16 (2026-05-08): hero card top theo design gv-01.
+                    // Index 0 = hero, items list shift +1.
+                    itemCount: items.length + 1,
+                    itemBuilder: (_, i) {
+                      if (i == 0) {
+                        return _TodayJudgingHeroCard(
+                          count: items.length,
+                          onStart: () => _openScoreDialog(
+                              context, ref, items.first as Map<String, dynamic>),
+                        );
+                      }
+                      return _AssignmentCard(
+                          data: items[i - 1] as Map<String, dynamic>);
+                    },
                   ),
           ),
         ),
@@ -100,7 +112,7 @@ class _AssignmentCard extends ConsumerWidget {
     final canSeeId = data['can_view_identity'] as bool? ?? false;
 
     return MCard(
-      onTap: () => _openScoreDialog(context, ref),
+      onTap: () => _openScoreDialog(context, ref, data),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -142,13 +154,16 @@ class _AssignmentCard extends ConsumerWidget {
     );
   }
 
-  Future<void> _openScoreDialog(BuildContext context, WidgetRef ref) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => _ScoreDialog(assignment: data),
-    );
-    if (ok == true) ref.invalidate(myAssignmentsProvider);
-  }
+}
+
+// Sprint 16 (2026-05-08): top-level helper để hero card + assignment card share.
+Future<void> _openScoreDialog(
+    BuildContext context, WidgetRef ref, Map<String, dynamic> data) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (_) => _ScoreDialog(assignment: data),
+  );
+  if (ok == true) ref.invalidate(myAssignmentsProvider);
 }
 
 class _ScoreDialog extends ConsumerStatefulWidget {
@@ -424,3 +439,88 @@ class _ScoreDialogState extends ConsumerState<_ScoreDialog> {
 String _msg(Object e) => e is DioException
     ? (e.response?.data is Map ? '${e.response?.data['detail']}' : e.message ?? '')
     : '$e';
+
+/// Sprint 16 (2026-05-08): hero card "Hôm nay cần chấm" theo design gv-01.
+/// - Gradient red `ptitGradientHero`, count to + CTA bắt đầu chấm bài đầu tiên.
+/// - Click "Bắt đầu chấm" mở dialog của assignment đầu tiên trong list.
+class _TodayJudgingHeroCard extends StatelessWidget {
+  final int count;
+  final VoidCallback onStart;
+
+  const _TodayJudgingHeroCard({required this.count, required this.onStart});
+
+  @override
+  Widget build(BuildContext context) {
+    final today = DateFormat('EEEE, dd/MM').format(DateTime.now());
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+      decoration: BoxDecoration(
+        gradient: ptitGradientHero,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1F000000),
+            blurRadius: 14,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                const Icon(Icons.gavel, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Text('Hôm nay cần chấm',
+                    style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.92),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.4)),
+              ]),
+              const SizedBox(height: 8),
+              Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
+                Text('$count',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 40,
+                        fontWeight: FontWeight.w800,
+                        height: 1)),
+                const SizedBox(width: 6),
+                Text('bài',
+                    style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500)),
+              ]),
+              const SizedBox(height: 2),
+              Text(today,
+                  style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.78),
+                      fontSize: 11)),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        FilledButton.icon(
+          onPressed: count == 0 ? null : onStart,
+          icon: const Icon(Icons.play_arrow_rounded, size: 18),
+          label: const Text('Bắt đầu chấm'),
+          style: FilledButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: ptitRed,
+            minimumSize: const Size(140, 40),
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.tight)),
+            textStyle: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
+      ]),
+    );
+  }
+}
