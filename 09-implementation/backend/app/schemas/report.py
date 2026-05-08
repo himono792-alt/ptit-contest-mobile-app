@@ -1,5 +1,6 @@
 """Pydantic schemas cho reports/stats (GV-07, BCN-03, BCN-05, AD-05)."""
 
+from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, Field
