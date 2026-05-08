@@ -525,31 +525,51 @@ class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
               child: const SizedBox.expand(),
             ),
           ),
-        // Layer 4: toggle button — animated position theo sidebar visibility:
-        // - Đóng (sidebar hidden): top-left viewport (x=12)
-        // - Mở (sidebar visible): top-right của sidebar (x=200, sát ngay cạnh footer item)
+        // Layer 4: toggle button — 2 style theo sidebar state:
+        // - Đóng (sidebar hidden): LEFT-RAIL 56x56 ở góc trái viewport, bg context.cardBg,
+        //   border-right + border-bottom match topbar của activeScreen → trông như
+        //   1 leading icon thuộc topbar, KHÔNG rời rạc.
+        // - Mở/Peek (sidebar visible): floating ở top-right sidebar header, bg trắng-nhạt
+        //   blend với dark sidebar.
         AnimatedPositioned(
           duration: _kSidebarAnim,
           curve: Curves.easeOut,
-          top: 14,
-          left: _showSidebar ? _kSidebarWidth - 44 : 12,
+          top: _showSidebar ? 14 : 0,
+          left: _showSidebar ? _kSidebarWidth - 44 : 0,
+          width: _showSidebar ? 36 : 56,
+          height: _showSidebar ? 36 : 56,
           child: Material(
             color: _showSidebar
                 ? Colors.white.withValues(alpha: 0.08)
-                : const Color(0xFF1F2937),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadius.tight)),
+                : context.cardBg,
+            shape: _showSidebar
+                ? RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.tight))
+                : const RoundedRectangleBorder(),
             child: InkWell(
               onTap: _toggleCollapsed,
-              borderRadius: BorderRadius.circular(AppRadius.tight),
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Icon(
-                  _collapsed
-                      ? Icons.menu
-                      : Icons.menu_open_outlined,
-                  color: const Color(0xFFD1D5DB),
-                  size: 18,
+              borderRadius: _showSidebar
+                  ? BorderRadius.circular(AppRadius.tight)
+                  : BorderRadius.zero,
+              child: Container(
+                decoration: !_showSidebar
+                    ? BoxDecoration(
+                        border: Border(
+                          right: BorderSide(color: context.cardBorder),
+                          bottom: BorderSide(color: context.cardBorder),
+                        ),
+                      )
+                    : null,
+                child: Center(
+                  child: Icon(
+                    _collapsed
+                        ? Icons.menu
+                        : Icons.menu_open_outlined,
+                    color: _showSidebar
+                        ? const Color(0xFFD1D5DB)
+                        : context.textMuted,
+                    size: _showSidebar ? 18 : 20,
+                  ),
                 ),
               ),
             ),
