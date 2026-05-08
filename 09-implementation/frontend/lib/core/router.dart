@@ -7,6 +7,7 @@ import '../features/admin/contest_admin_detail_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/otp_login_screen.dart';
 import '../features/auth/signup_screen.dart';
+import '../features/auth/splash_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/student/contest_detail_screen.dart';
 import '../features/student/leaderboard_screen.dart';
@@ -37,9 +38,22 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: notifier,
     redirect: (context, state) {
       final auth = ref.read(authProvider);
-      if (auth.isLoading) return null;
-
       final loc = state.matchedLocation;
+
+      // Sprint 19 fix flicker (2026-05-08): trong khi auth chưa resolve,
+      // redirect tất cả route → /splash để tránh flicker StudentShell brief
+      // trên Android. Khi auth resolve, splash sẽ tự bị redirect đi.
+      if (auth.isLoading) {
+        return loc == '/splash' ? null : '/splash';
+      }
+      // Auth đã resolve nhưng còn ở /splash → redirect đi (login hoặc landing)
+      if (loc == '/splash') {
+        final user = auth.value;
+        if (user == null) {
+          return onboardingCompletedFlag.value ? '/login' : '/onboarding';
+        }
+        return _landingFor(user);
+      }
       // Sprint 9 Group 1 (2026-05-07): /otp-login + /signup được phép truy cập
       // KHI chưa login (giống /login). Khi đã login mà mò vào → đẩy về landing.
       // Sprint 19 (2026-05-08) S19-3: thêm /onboarding vào auth entry list.
@@ -105,6 +119,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/signup', builder: (_, __) => const SignupScreen()),
       // Sprint 19 (2026-05-08) S19-3: mobile onboarding 3 slides.
       GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
+      // Sprint 19 fix flicker (2026-05-08): splash trung gian khi auth boot.
+      GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
       // Sprint 2 fix C3+M1 (2026-05-06): wrap 3 sub-routes vào StudentShellScaffold
       // để desktop ≥900px hiện sidebar (consistency với shell chính). Mobile/APK
       // vẫn render child raw (existing back-arrow behavior).
