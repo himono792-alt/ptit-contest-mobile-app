@@ -90,7 +90,16 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: '/', builder: (_, __) => const StudentShell()),
-      GoRoute(path: '/admin', builder: (_, __) => const AdminShell()),
+      // Sprint 19 hotfix #4 (2026-05-08): NoTransitionPage cho /admin + /admin/:tab.
+      // Khi user click tab sidebar/bottom nav, switchTab() gọi context.go() update URL.
+      // Nếu dùng builder mặc định, GoRouter push MaterialPage mới với slide animation
+      // → "cửa sổ chèn lên" khi chuyển tab. NoTransitionPage giữ shell instance,
+      // chỉ swap activeScreen sub-tree, instant switch như Linear/Notion.
+      GoRoute(
+        path: '/admin',
+        pageBuilder: (_, __) =>
+            const NoTransitionPage(child: AdminShell()),
+      ),
       // Sprint 8 fix #2 (2026-05-07): deep-link /admin/<tab> như /admin/contests,
       // /admin/users... Trước đây F5 hoặc share-link 404. Slug whitelist để tránh
       // /admin/<garbage> match nhầm — fallback Dashboard cho UX tốt hơn 404.
@@ -98,7 +107,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // '/admin/contests/:id/manage' bên dưới (GoRouter match by path-length).
       GoRoute(
         path: '/admin/:tab',
-        builder: (_, state) {
+        pageBuilder: (_, state) {
           final tab = state.pathParameters['tab'];
           // Sprint 14 (2026-05-08): split approvals → approvals-q1 / approvals-q2.
           // + thêm contests-new (P2.2 GV Tạo cuộc thi sidebar) + backup (P2.1).
@@ -110,7 +119,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             'configs', 'backup', 'audit-log', 'anomaly',
           };
           final initialTab = allowed.contains(tab) ? tab : null;
-          return AdminShell(initialTab: initialTab);
+          return NoTransitionPage(child: AdminShell(initialTab: initialTab));
         },
       ),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
