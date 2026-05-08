@@ -108,3 +108,34 @@ async def export_contest_results_xlsx(
             "Content-Length": str(len(data)),
         },
     )
+
+
+@admin_reports_router.get("/reports/system-summary.xlsx")
+async def export_system_summary_xlsx(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    year: int = Query(default_factory=lambda: datetime.now(timezone.utc).year),
+) -> StreamingResponse:
+    """Sprint 9b fix AD-05 (2026-05-07): xuất xlsx báo cáo tổng hệ thống.
+
+    Trước đây FE button "Xuất Excel (AD-05)" call endpoint này nhưng BE chỉ có
+    `.json` version → 404. Giờ thêm route trả xlsx 3 sheets (Tổng quan / Phân
+    loại user / Metadata).
+
+    Permission: ADMIN only — service `system_summary` enforce qua role check.
+    """
+    data, filename = await report_service.export_system_summary_xlsx(db, user, year)
+
+    def _iter():
+        chunk_size = 64 * 1024
+        for i in range(0, len(data), chunk_size):
+            yield data[i:i + chunk_size]
+
+    return StreamingResponse(
+        _iter(),
+        media_type=_XLSX_MIME,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Length": str(len(data)),
+        },
+    )

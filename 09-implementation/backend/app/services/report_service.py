@@ -669,3 +669,123 @@ async def export_contest_results_xlsx(
     filename = f"ket-qua-{contest.slug}-{today_str}.xlsx"
 
     return buf.read(), filename
+
+
+# ============================================================
+# Sprint 9b fix AD-05 (2026-05-07): system-summary xlsx export
+# ============================================================
+
+async def export_system_summary_xlsx(
+    db: AsyncSession, user: AppUser, year: int
+) -> tuple[bytes, str]:
+    """AD-05 — Render báo cáo tổng hệ thống ra xlsx.
+
+    Sheet 1 'Tổng quan': stat counts (users/contests/entries/submissions/certs/reviews).
+    Sheet 2 'Phân loại user': breakdown theo role (STUDENT/ORGANIZER/JUDGE/HOD/ADMIN).
+    Sheet 3 'Metadata': year, người xuất, thời gian xuất.
+
+    Permission: ADMIN only — service `system_summary` enforce qua role check.
+    """
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.utils import get_column_letter
+
+    # Reuse JSON service — đã enforce admin permission + đếm stats.
+    summary = await system_summary(db, user, year)
+
+    wb = Workbook()
+    ws1 = wb.active
+    ws1.title = "Tổng quan"
+    ws2 = wb.create_sheet("Phân loại user")
+    ws3 = wb.create_sheet("Metadata")
+
+    # PTIT brand styles — match per-contest export.
+    header_font = Font(bold=True, color="FFFFFF", size=11)
+    header_fill = PatternFill(
+        start_color="1E3A8A", end_color="1E3A8A", fill_type="solid")
+    header_align = Alignment(horizontal="center", vertical="center")
+
+    def _write_headers(ws, headers: list[str]) -> None:
+        for col_idx, h in enumerate(headers, start=1):
+            cell = ws.cell(row=1, column=col_idx, value=h)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_align
+        ws.freeze_panes = "A2"
+        ws.auto_filter.ref = f"A1:{get_column_letter(len(headers))}1"
+
+    def _autosize(ws, max_width: int = 50) -> None:
+        for col_idx in range(1, ws.max_column + 1):
+            col_letter = get_column_letter(col_idx)
+            max_len = 0
+            for row in ws.iter_rows(min_col=col_idx, max_col=col_idx):
+                for cell in row:
+                    val = str(cell.value) if cell.value is not None else ""
+                    if len(val) > max_len:
+                        max_len = len(val)
+            ws.column_dimensions[col_letter].width = min(
+                max(max_len + 2, 10), max_width)
+
+    # ----- Sheet 1: Tổng quan -----
+    _write_headers(ws1, ["Hạng mục", "Giá trị", "Ghi chú"])
+    avg_rating = summary.get("avg_review_rating")
+    avg_str = f"{float(avg_rating):.2f}" if avg_rating is not None else "—"
+    overview_rows = [
+        ("Năm thống kê", summary["year"], "Theo created_at contest"),
+        ("Tổng users (active)", summary["total_users"],
+         "Đã loại DELETED status"),
+        ("Tổng cuộc thi", summary["total_contests"], "Tạo trong năm"),
+        ("Đã PUBLISHED+", summary["contests_published_or_after"],
+         "REG_OPEN/CLOSED/ONGOING/FINISHED"),
+        ("Đã FINISHED", summary["contests_finished"], "Kết thúc + đã chấm"),
+        ("Tổng entries", summary["total_entries"], "Tất cả status"),
+        ("Tổng bài nộp", summary["total_submissions"], "Tất cả version"),
+        ("Chứng nhận đã cấp", summary["total_certificates_issued"],
+         "Loại trừ revoked"),
+        ("Reviews từ SV", summary["total_reviews"], "Chỉ visible"),
+        ("Sao trung bình", avg_str, "Reviews visible"),
+    ]
+    for ridx, (k, v, note) in enumerate(overview_rows, start=2):
+        ws1.cell(row=ridx, column=1, value=k).font = Font(bold=True)
+        ws1.cell(row=ridx, column=2, value=v)
+        ws1.cell(row=ridx, column=3, value=note).font = Font(
+            italic=True, color="6B7280")
+    _autosize(ws1)
+
+    # ----- Sheet 2: Phân loại user -----
+    _write_headers(ws2, ["Vai trò", "Số lượng (active)"])
+    role_rows = [
+        ("STUDENT — Sinh viên", summary["students_active"]),
+        ("ORGANIZER — Giảng viên BTC", summary["organizers"]),
+        ("JUDGE — Giám khảo", summary["judges"]),
+        ("HOD — Trưởng/CN khoa", summary["department_heads"]),
+        ("ADMIN — Quản trị hệ thống", summary["admins"]),
+    ]
+    for ridx, (role, cnt) in enumerate(role_rows, start=2):
+        ws2.cell(row=ridx, column=1, value=role)
+        ws2.cell(row=ridx, column=2, value=cnt)
+    _autosize(ws2)
+
+    # ----- Sheet 3: Metadata -----
+    _write_headers(ws3, ["Trường thông tin", "Giá trị"])
+    metadata_rows = [
+        ("Loại báo cáo", "AD-05 Tổng quan hệ thống PTIT Contest"),
+        ("Năm thống kê", str(summary["year"])),
+        ("Người xuất", f"{user.full_name} ({user.email})"),
+        (
+            "Thời gian xuất",
+            datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+        ),
+    ]
+    for ridx, (k, v) in enumerate(metadata_rows, start=2):
+        ws3.cell(row=ridx, column=1, value=k).font = Font(bold=True)
+        ws3.cell(row=ridx, column=2, value=v)
+    _autosize(ws3)
+
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    today_str = datetime.now(timezone.utc).strftime("%Y%m%d")
+    filename = f"bao-cao-he-thong-{summary['year']}-{today_str}.xlsx"
+    return buf.read(), filename
