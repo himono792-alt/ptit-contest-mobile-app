@@ -8,6 +8,7 @@ import 'core/router.dart';
 import 'core/theme.dart';
 import 'core/theme_dark.dart';
 import 'core/theme_provider.dart';
+import 'features/onboarding/onboarding_screen.dart' show isOnboardingCompleted, onboardingCompletedFlag;
 
 /// DSN frontend Sentry — inject qua dart-define ở build time.
 /// `flutter build web --dart-define=SENTRY_DSN_FRONTEND=https://xxx@sentry.io/yyy`.
@@ -15,7 +16,13 @@ import 'core/theme_provider.dart';
 const _sentryDsnFrontend = String.fromEnvironment('SENTRY_DSN_FRONTEND');
 
 Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   usePathUrlStrategy();
+
+  // Sprint 19 (2026-05-08) S19-3: load onboarding flag sớm để router redirect
+  // có info sync trong callback. SharedPreferences có cache in-memory sau lần
+  // đầu init, nhưng để chắc chắn dùng flag global.
+  onboardingCompletedFlag.value = await isOnboardingCompleted();
 
   // Sprint 3 (2026-05-07): Sentry frontend wrap runApp.
   // Backend đã có Sentry từ Phase 1 step 1, frontend bổ sung để full-stack
