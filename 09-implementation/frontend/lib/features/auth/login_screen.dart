@@ -31,8 +31,11 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-  final _emailCtrl = TextEditingController(text: 'b22dccn001@ptit.edu.vn');
-  final _pwdCtrl = TextEditingController(text: 'abc123');
+  // Sprint 28 hotfix #5 (2026-05-10): bỏ default credentials hardcoded khỏi
+  // source code — GitGuardian flag email+password pair pattern. User vẫn
+  // demo được nhanh qua _RoleTabs autofill (chỉ email, không password).
+  final _emailCtrl = TextEditingController();
+  final _pwdCtrl = TextEditingController();
   bool _loading = false;
   bool _showPwd = false;
   String? _error;
@@ -410,14 +413,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           const SizedBox(height: 22),
 
           // Sprint 19 S19-2: Role tabs.
-          // Sprint 26 (2026-05-09): click tab auto-fill tài khoản test cho dev.
+          // Sprint 26 (2026-05-09): click tab auto-fill email demo cho dev.
+          // Sprint 28 hotfix #5 (2026-05-10): chỉ fill email, KHÔNG fill
+          // password — tránh GitGuardian flag email+password pair pattern.
           _RoleTabs(
             selected: _selectedRoleTab,
             onChanged: (i) => setState(() {
               _selectedRoleTab = i;
-              final creds = _testCredentialsFor(i);
-              _emailCtrl.text = creds.email;
-              _pwdCtrl.text = creds.password;
+              _emailCtrl.text = _demoEmailFor(i);
             }),
           ),
           const SizedBox(height: 18),
@@ -685,7 +688,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     _DemoAccountRow(role: 'GV', email: 'gv@ptit.edu.vn'),
                     _DemoAccountRow(role: 'BCN', email: 'bcn@ptit.edu.vn'),
                     const SizedBox(height: 4),
-                    Text('Mật khẩu chung: abc123',
+                    // Sprint 28 hotfix #5 (2026-05-10): xóa password literal khỏi
+                    // source. Hỏi GV hướng dẫn để biết password demo.
+                    Text('Mật khẩu chung: hỏi GV hướng dẫn',
                         style: GoogleFonts.plusJakartaSans(
                             fontSize: 10.5,
                             color: context.textMuted,
@@ -720,19 +725,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     );
   }
 
-  /// Sprint 26 (2026-05-09): tài khoản test mặc định cho mỗi role tab.
-  /// Click tab → auto-fill email + password để dev/demo nhanh.
-  ({String email, String password}) _testCredentialsFor(int idx) {
+  /// Sprint 26 (2026-05-09): tài khoản demo mặc định cho mỗi role tab.
+  /// Sprint 28 hotfix #5 (2026-05-10): chỉ trả email, password user nhập
+  /// tay (tránh GitGuardian flag email+password pair pattern trong source).
+  String _demoEmailFor(int idx) {
     switch (idx) {
       case 1:
-        return (email: 'gv@ptit.edu.vn', password: 'abc123');
+        return 'gv@ptit.edu.vn';
       case 2:
-        return (email: 'bcn@ptit.edu.vn', password: 'abc123');
+        return 'bcn@ptit.edu.vn';
       case 3:
-        return (email: 'admin@ptit.edu.vn', password: 'abc123');
+        return 'admin@ptit.edu.vn';
       case 0:
       default:
-        return (email: 'b22dccn001@ptit.edu.vn', password: 'abc123');
+        return 'b22dccn001@ptit.edu.vn';
     }
   }
 

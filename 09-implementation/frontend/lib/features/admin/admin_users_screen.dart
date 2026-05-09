@@ -647,7 +647,9 @@ class _CreateUserDialog extends ConsumerStatefulWidget {
 
 class _CreateUserDialogState extends ConsumerState<_CreateUserDialog> {
   final _email = TextEditingController();
-  final _password = TextEditingController(text: 'abc123');
+  // Sprint 28 hotfix #5 (2026-05-10): bỏ default password literal khỏi source
+  // — GitGuardian flag pattern email+password pair. Admin nhập tay khi tạo.
+  final _password = TextEditingController();
   final _fullName = TextEditingController();
   final _phone = TextEditingController();
   final Set<String> _roles = {'STUDENT'};
