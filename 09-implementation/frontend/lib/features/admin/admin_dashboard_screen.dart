@@ -1061,7 +1061,7 @@ class _BTCHeader extends ConsumerWidget {
 
     final asyncContests = ref.watch(adminContestsProvider);
     final activeCount = asyncContests.maybeWhen(
-      data: (list) => list.where((c) {
+      data: (resp) => resp.items.where((c) {
         return c.status == 'REG_OPEN' ||
             c.status == 'REG_CLOSED' ||
             c.status == 'ONGOING';
@@ -1069,7 +1069,7 @@ class _BTCHeader extends ConsumerWidget {
       orElse: () => 0,
     );
     final draftCount = asyncContests.maybeWhen(
-      data: (list) => list
+      data: (resp) => resp.items
           .where((c) => c.status == 'DRAFT' || c.status == 'PROPOSED')
           .length,
       orElse: () => 0,
