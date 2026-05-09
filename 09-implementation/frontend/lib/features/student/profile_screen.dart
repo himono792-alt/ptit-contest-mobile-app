@@ -243,7 +243,10 @@ class ProfileScreen extends ConsumerWidget {
         ),
       );
 
-  void _editProfileDialog(BuildContext context, WidgetRef ref) {
+  // Sprint 28 (2026-05-09): legacy `_editProfileDialog` removed — đã replace
+  // bằng `EditProfileScreen` riêng (sprint 5+). Giữ `_changePasswordDialog`.
+  // ignore: unused_element
+  void _editProfileDialogLegacy(BuildContext context, WidgetRef ref) {
     final user = ref.read(authProvider).value!;
     final nameCtrl = TextEditingController(text: user.fullName);
     final phoneCtrl = TextEditingController(text: user.phone ?? '');

@@ -1222,6 +1222,211 @@ Decision: **DEFER toàn bộ upgrade** vì:
 
 **Tổng Sprint 19**: 4 build deploy FE Cloudflare + 1 APK build local. ~6 file FE diff. 0 file BE diff. Production URL cuối: `https://6ace6c7b.ptit-contest-app.pages.dev`. APK file deliverable cho thầy.
 
+**4.27 Tổng hợp Sprint 20-25 --- Dashboard redesign + real-time stats (2026-05-08 → 2026-05-09)**
+
+Giai đoạn này nhóm hoàn thiện UI 3 actor phía admin shell theo mockup design folder, đồng thời wire data thật từ backend cho các widget thống kê:
+
+-   **Sprint 20-21** SV/GV redesign: sidebar grouped 3 nhóm (TỔNG QUAN / CUỘC THI / BÁO CÁO), Pattern B collapse 240↔64 cho student_shell + admin_shell, SV Home dashboard 3 gradient hero + 2-col timeline/stats, GV/BTC dashboard rich `_BTCDashboardRich` với 4 stat card trend & progress + 2-col Cuộc thi của tôi 3 cards status badge + Lịch sắp tới. Sidebar dark mode toggle icon sun/moon cho cả 4 role. APK Android build hotfix Kotlin stdlib mismatch.
+
+-   **Sprint 22 BCN**: dashboard rich `_BCNDashboardRich` match mockup --- header "Dashboard --- {Khoa}" + 4 stat cards (Queue chờ duyệt / Sắp hạn ≤24h / CT đang diễn ra / SV khoa) + 2-col Queue ưu tiên top 5 SLA color-coded + Hiệu suất duyệt donut chart CustomPaint + Cảnh báo card.
+
+-   **Sprint 23 real-time stats**: 4 backend endpoint `/reports/approval-stats /bcn-deltas /btc-deltas /activity-feed` filter theo HOD faculty / organizer scope. Frontend wire donut chart data thật (avg processing hours format `< 1h` / `N.Nh`), trend cards thật (`▲ +N` / `▼ N` / `— ổn định`), GV activity feed terminal mono log (time relative + icon ✓ ▶ ! ✗ + color-coded). Step 4 build thật 7 placeholder screens GV+BCN (gv-extra_screens.dart + bcn_extra_screens.dart) tận dụng `adminContestsProvider` + `hodFacultyStatsProvider` + system-summary.xlsx export.
+
+-   **Sprint 24 polish**: BCN sidebar Đề xuất QĐ1/QĐ2 cuộc thi badge live count filter `pendingApprovalsProvider.target_type`. Activity feed BE merge thêm Submission events (`submit_work` icon ↑, `judge_locked` icon ★).
+
+-   **Sprint 25 cert templates CRUD**: Alembic migration `0002_faculty_cert_templates.py` (faculty-level table + trigger updated_at) + model `FacultyCertTemplate` + 3 schemas + 4 endpoint `/admin/faculty-cert-templates` (HOD scope filter, Admin all). Frontend `BcnCertTemplatesScreen` wire data thật + dialog form CRUD + Delete confirm. Testing pass 1024+768 viewport + dark mode.
+
+Tổng 6 sprint, ~30 file thay đổi, 4 BE endpoint mới, 1 Alembic migration, 4 deploy hash chính `b2a2eeb9 / 0fd35c1a / d5afd4dd / e95de872 / bad89337 / 2216d35a`. Tất cả pass E2E live verify trên Cloudflare Pages.
+
+**4.28 Sprint 26 --- Skeleton loading polish (2026-05-09)**
+
+Mục tiêu: skeleton trước đây thô (border cứng, shimmer chỉ light mode hard-code, period 1500ms cảm giác ngắt). Refactor `lib/core/widgets/m_shimmer.dart` theo pattern modern apps (LinkedIn / Notion / Linear).
+
+**4.28.1 Theme-aware shimmer**
+
+Tách 2 cặp màu base/highlight tùy theme:
+
+-   Light: base `#E9ECEF`, highlight `#F6F7F9`.
+
+-   Dark: base `#2A2724`, highlight `#3D3936`.
+
+`MShimmer` widget tự `Theme.of(context).brightness` chọn cặp màu, không còn hard-code 1 cặp như cũ.
+
+**4.28.2 Stagger fade-in + period mượt**
+
+Thêm tham số `staggerDelayMs = 80` --- mỗi `MShimmerBar` delay incremental 80ms trước khi bắt đầu shimmer wave, tạo cảm giác "rolling" thay vì tất cả nhấp đồng loạt. Period giảm 1500 → 1200ms (theo benchmark Notion 1100ms, Linear 1200ms).
+
+Bỏ border cứng quanh skeleton bar, radius giảm 8 → 6 (đồng bộ với card thật).
+
+**4.28.3 A11y reduce motion fallback**
+
+Wrap với `MediaQuery.of(context).disableAnimations` --- khi user OS bật "reduce motion" → skeleton chuyển sang `Container` static pulse (opacity 0.6) thay vì shimmer animation. Đáp ứng WCAG 2.3.3 Pause/Stop/Hide.
+
+**4.28.4 Verify**
+
+JS inject `fetch('/api/contests').then(r => new Promise(rs => setTimeout(() => rs(r), 3000)))` slow API 3s → skeleton hiện rõ trong cả light + dark. Build deploy `1e0c61a8`. ~339 dòng diff trong 1 file.
+
+**4.29 Sprint 27 --- Login screen polish (2026-05-09)**
+
+Mục tiêu: branding panel login (web ≥900) trước đây hiện 4 stats hardcoded `1,847 / 42 / 12 / 99.9%` --- số fake không demo professional, không có nguồn tham chiếu. Thay bằng feature có giá trị nội dung + UX dev tốt hơn cho demo.
+
+**4.29.1 `_BrandQuoteRotator` --- Quote động viên có author**
+
+Replace `_BrandStat` bằng widget StatefulWidget `_BrandQuoteRotator` cycle 6 quote nổi tiếng có tên tác giả:
+
+| Quote | Author |
+|---|---|
+| "Học, học nữa, học mãi." | V. I. Lenin |
+| "Hiền tài là nguyên khí của quốc gia." | Thân Nhân Trung --- 1484 |
+| "Education is the most powerful weapon which you can use to change the world." | Nelson Mandela |
+| "An investment in knowledge pays the best interest." | Benjamin Franklin |
+| "Live as if you were to die tomorrow. Learn as if you were to live forever." | Mahatma Gandhi |
+| "The beautiful thing about learning is that no one can take it away from you." | B. B. King |
+
+`Timer.periodic(Duration(seconds: 6))` auto-cycle. `AnimatedSwitcher` 500ms `FadeTransition` + `SlideTransition` từ offset `(0, 0.05)` → `Offset.zero`. 6 indicator dots ở dưới, dot active dài 18px (animated 250ms), dot inactive 6px.
+
+Header decorative quote mark `"` 56px white opacity 0.32. Tách dòng author bằng line ngang 22×1.5px white opacity 0.55.
+
+**4.29.2 Role tab auto-fill test credentials**
+
+`_RoleTabs.onChanged` callback thêm logic fill ngay email + password test theo role:
+
+| Tab | Email | Password |
+|---|---|---|
+| 0 = Sinh viên | b22dccn001@ptit.edu.vn | abc123 |
+| 1 = GV / BTC | gv@ptit.edu.vn | abc123 |
+| 2 = BCN khoa | bcn@ptit.edu.vn | abc123 |
+| 3 = Quản trị | admin@ptit.edu.vn | abc123 |
+
+Dev / demo nhanh không cần nhớ credentials --- click tab → fill ngay → click "Đăng nhập". UX hỗ trợ thầy cô khi check demo.
+
+Build deploy `97950086`. File diff: `login_screen.dart` (~360 dòng).
+
+**4.30 Sprint 28 --- Login split-outward animation + 4 navigation hotfixes (2026-05-09)**
+
+Sprint cuối cùng gồm 1 feature animation + 4 bug fix navigation phát hiện qua dogfooding.
+
+**4.30.1 Login split-outward animation**
+
+Mục tiêu: khi login thành công, thay vì đột ngột chuyển sang dashboard (white flash), tạo animation tách đôi 2 panels (đỏ gradient trái + đen form phải) trượt ra 2 bên, lộ ra reveal placeholder bên dưới --- cảm giác "vào hệ thống" thay vì "trang biến mất".
+
+**Architecture**:
+
+-   `_LoginScreenState` thêm `with SingleTickerProviderStateMixin`.
+
+-   `late final AnimationController _splitCtrl = AnimationController(duration: 750ms)`.
+
+-   `bool _splitting = false` flag điều khiển reveal placeholder visibility.
+
+-   Web ≥900: `Transform.translate` 2 panels offset đối xứng `±width/2 × _splitCtrl.value` curve `Curves.easeInOutCubic`.
+
+-   Mobile <900: fallback `Transform.translate(0, -height × 0.10 × v)` + `Opacity(1 - v)` fade-out + slide-up.
+
+-   Reveal placeholder dưới panels: logo PTIT 88×88 gradient `AppRadius.lg` + text "Đang vào hệ thống" 17px w800 + spinner 28px ptitRed --- match style với `splash_screen.dart` để bridge transition seamless.
+
+**Bypass router redirect**:
+
+Dùng `authService.login()` trực tiếp (chỉ save token vào secure storage, KHÔNG đụng auth state) thay vì `authProvider.notifier.login()` --- nhờ vậy router không refresh listener không trigger redirect ngay → có 750ms cho animation chạy. Sau khi panels slide xong → `ref.invalidate(authProvider)` → re-fetch /me → state đổi → router tự redirect (LoginScreen unmount tự nhiên).
+
+**A11y fallback**: `MediaQuery.of(context).disableAnimations` true → skip animation, gọi invalidate ngay (đáp ứng WCAG 2.3.3).
+
+**Catch error**: nếu login DioException giữa chừng → reset `_splitting=false` + `_splitCtrl.value=0` để user thử lại.
+
+**4.30.2 Hotfix #1 --- Contest card "có lúc vào được có lúc không"**
+
+**Symptom**: User trên `/admin` (Dashboard) click contest card trong widget "Cuộc thi của tôi" → URL đổi `/admin/contests` nhưng UI vẫn ở Dashboard (random reproduce).
+
+**Root cause**: `_AdminShellState._initialApplied` cờ sticky `true` sau lần đầu apply `widget.initialTab`. Khi GoRouter reuse cùng State instance giữa `/admin` và `/admin/<tab>` (cùng widget type `AdminShell`), build kế tiếp với widget.initialTab khác KHÔNG re-apply (cờ stuck).
+
+**Fix**: thêm `didUpdateWidget` so sánh `widget.initialTab != oldWidget.initialTab` → reset cờ → build kế tiếp re-apply đúng tab.
+
+```dart
+@override
+void didUpdateWidget(covariant AdminShell oldWidget) {
+  super.didUpdateWidget(oldWidget);
+  if (widget.initialTab != oldWidget.initialTab) {
+    _initialApplied = false;
+  }
+}
+```
+
+**4.30.3 Hotfix #2 --- Browser back về `/admin` UI vẫn ở contests**
+
+**Symptom**: User ở `/admin/contests` bấm browser back → URL về `/admin` nhưng UI vẫn ở Cuộc thi của tôi.
+
+**Root cause**: hotfix #1 ban đầu chỉ handle chiều `null → non-null`. Khi `widget.initialTab` đổi từ `'contests'` → `null`, condition `widget.initialTab != null` fail → cờ không reset.
+
+**Fix 2 chiều**: bỏ điều kiện non-null trong `didUpdateWidget`. Build re-apply block fallback `_idx = items.indexWhere(slug == 'dashboard')` khi `widget.initialTab == null` để default về Dashboard.
+
+**4.30.4 Hotfix #3 --- Click Kết quả/Thống kê redirect Dashboard**
+
+**Symptom**: GV click sidebar Kết quả / Thống kê / Xuất báo cáo → URL `/admin/gv-results` nhưng UI nhảy về Dashboard.
+
+**Root cause**: 7 slug GV/BCN còn thiếu trong allow-list `core/router.dart`:
+
+```
+gv-calendar, gv-results, gv-stats, gv-export,
+bcn-cert-templates, bcn-stats, bcn-report-bgh
+```
+
+Router fallback `initialTab = null` → kết hợp hotfix #2 fallback Dashboard → user nhảy về Dashboard.
+
+**Fix**: thêm 7 slug vào `allowed` set.
+
+**4.30.5 Hotfix #4 --- F5 reload + deeplink drop tab**
+
+**Symptom**: User ở `/admin/gv-stats` bấm F5 → reload → URL về `/admin` Dashboard mất context. Tương tự với shareable deeplink `/admin/contests` gửi cho user khác.
+
+**Root cause**: full URL nav (F5/deeplink) → Flutter app reboot → `auth.isLoading=true` → router redirect `/splash`. Sau khi auth resolve, splash redirect `_landingFor(user)` = `/admin` --- HOÀN TOÀN DROP tab gốc trong URL ban đầu.
+
+**Fix**: preserve URL gốc qua query param `?to=<encoded>`:
+
+```dart
+if (auth.isLoading) {
+  if (loc == '/splash') return null;
+  final encoded = Uri.encodeComponent(state.uri.toString());
+  return '/splash?to=$encoded';
+}
+if (loc == '/splash') {
+  final user = auth.value;
+  if (user == null) {
+    return onboardingCompletedFlag.value ? '/login' : '/onboarding';
+  }
+  // Đọc `to` query param và redirect về URL gốc thay vì _landingFor.
+  final to = state.uri.queryParameters['to'];
+  if (to != null && to.isNotEmpty && !to.startsWith('/splash')) {
+    return to;
+  }
+  return _landingFor(user);
+}
+```
+
+**Bonus**: shareable deeplink giờ work --- gửi link `/admin/contests/15/manage` cho user khác, họ login xong sẽ vào thẳng contest đó thay vì landing `/admin`.
+
+**4.30.6 E2E verify Chrome MCP 7/7 PASS**
+
+| # | Test case | Result |
+|---|---|---|
+| 1 | In-app click sidebar Kết quả → UI Kết quả + URL `/admin/gv-results` | ✓ |
+| 2 | In-app click sidebar Thống kê → UI Thống kê | ✓ |
+| 3 | In-app click sidebar Xuất báo cáo → UI Xuất | ✓ |
+| 4 | Browser back `/admin/gv-export` → `/admin/gv-stats` UI Thống kê | ✓ |
+| 5 | Browser back tiếp → `/admin/gv-results` UI Kết quả | ✓ |
+| 6 | Browser back tiếp → `/admin` UI Dashboard | ✓ |
+| 7 | F5 reload tại `/admin/gv-stats` → vẫn UI Thống kê (post hotfix #4) | ✓ |
+
+**4.30.7 Tổng hợp Sprint 28**
+
+| Hotfix | File | Deploy |
+|---|---|---|
+| Login split-outward animation | `lib/features/auth/login_screen.dart` | `97950086` |
+| #1 didUpdateWidget reset _initialApplied | `lib/features/admin/admin_shell.dart` | `6a79390d` |
+| #2 build() fallback Dashboard | `lib/features/admin/admin_shell.dart` | `6a79390d` |
+| #3 allow-list 7 slug GV/BCN | `lib/core/router.dart` | `6a79390d` |
+| #4 splash preserve URL `?to=` | `lib/core/router.dart` | `627e134a` |
+
+3 file FE diff, 0 file BE diff, 4 deploy hash. E2E verify Chrome MCP 7/7 PASS. Production URL cuối Sprint 28: `https://627e134a.ptit-contest-app.pages.dev`.
+
 **CHƯƠNG 5 --- ĐÁNH GIÁ VÀ CẢI TIẾN**
 
 **5.1 Hạn chế hiện tại**

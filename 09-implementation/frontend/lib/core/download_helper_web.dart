@@ -1,6 +1,8 @@
 // Web implementation cho download bytes (xlsx, pdf, csv...).
 // Pattern giống cert_open_web.dart — dùng dart:html chỉ load trên web build.
 
+// ignore_for_file: avoid_web_libraries_in_flutter
+// Lý do: file này chỉ load qua conditional import khi platform là web.
 import 'dart:html' as html;
 import 'dart:typed_data';
 

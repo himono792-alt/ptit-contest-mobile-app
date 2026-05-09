@@ -327,7 +327,6 @@ class _TeamCardState extends ConsumerState<_TeamCard> {
   Widget build(BuildContext context) {
     final t = widget.team;
     final members = (t['members'] as List).cast<Map<String, dynamic>>();
-    final user = ref.watch(authProvider).value;
     final fmt = DateFormat('dd/MM/yy HH:mm');
 
     return MCard(

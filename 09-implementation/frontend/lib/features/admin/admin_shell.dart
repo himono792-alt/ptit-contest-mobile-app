@@ -49,6 +49,25 @@ class _AdminShellState extends ConsumerState<AdminShell> {
   int _idx = 0;
   bool _initialApplied = false;
 
+  // Sprint 28 hotfix (2026-05-09): khi GoRouter reuse cùng State instance giữa
+  // /admin và /admin/<tab> (vì cùng widget type AdminShell), `_initialApplied`
+  // sticky=true sau lần đầu áp dụng → các lần `context.go('/admin/contests')`
+  // tiếp theo từ widget khác (vd contest card trên dashboard) không trigger
+  // re-apply → URL đổi nhưng `_idx` vẫn ở tab cũ ("có lúc vào được có lúc
+  // không"). Reset cờ ở didUpdateWidget khi widget.initialTab thay đổi để
+  // build kế tiếp re-apply đúng tab.
+  //
+  // Sprint 28 hotfix #2 (2026-05-09): mở rộng cho cả case initialTab thay đổi
+  // sang `null` (browser back từ /admin/contests về /admin) — fix lúc trước
+  // chỉ handle non-null nên back không reset _idx về Dashboard.
+  @override
+  void didUpdateWidget(covariant AdminShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialTab != oldWidget.initialTab) {
+      _initialApplied = false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).value;
@@ -177,9 +196,20 @@ class _AdminShellState extends ConsumerState<AdminShell> {
     // Sprint 8 fix #2: lần đầu build, nếu router truyền initialTab thì align _idx.
     // Dùng cờ _initialApplied để chỉ apply 1 lần (sau đó user có thể tự switch tab
     // bằng sidebar mà không bị reset).
-    if (!_initialApplied && widget.initialTab != null) {
-      final wantedIdx = items.indexWhere((it) => it.slug == widget.initialTab);
-      if (wantedIdx >= 0) _idx = wantedIdx;
+    //
+    // Sprint 28 hotfix #2 (2026-05-09): khi initialTab=null (URL `/admin` raw,
+    // vd browser back từ `/admin/contests`) → reset về tab Dashboard, không
+    // giữ _idx cũ. didUpdateWidget đã reset _initialApplied ở chiều ngược lại.
+    if (!_initialApplied) {
+      if (widget.initialTab != null) {
+        final wantedIdx =
+            items.indexWhere((it) => it.slug == widget.initialTab);
+        if (wantedIdx >= 0) _idx = wantedIdx;
+      } else {
+        // /admin raw → Dashboard mặc định.
+        final dashIdx = items.indexWhere((it) => it.slug == 'dashboard');
+        if (dashIdx >= 0) _idx = dashIdx;
+      }
       _initialApplied = true;
     }
 
@@ -320,7 +350,8 @@ class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
   /// click-driven: click left edge (3px accent line + 32px hit zone) → mở,
   /// click chevron toggle góc phải sidebar → đóng. Loại bỏ toàn bộ race
   /// condition giữa hover ↔ click trigger. Predictable + zero oscillation.
-  bool get _showSidebar => !_collapsed;
+  // Sprint 28 (2026-05-09): _showSidebar getter loại bỏ — duplicate `!_collapsed`,
+  // không có ai gọi. Dùng `!_collapsed` trực tiếp.
 
   @override
   Widget build(BuildContext context) {

@@ -362,7 +362,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
     final fmt = DateFormat('dd/MM/yyyy HH:mm');
     final st = c['status'] as String;
 
-    String _safeFmt(dynamic v) =>
+    String safeFmt(dynamic v) =>
         v == null ? '—' : fmt.format(DateTime.parse(v as String).toLocal());
 
     return SingleChildScrollView(
@@ -458,17 +458,17 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
             _InfoRow('Khoa chủ trì', 'ID #${c['host_faculty_id'] ?? '—'}'),
             _InfoRow('Hình thức', '${c['delivery_mode']} · ${c['participation_mode']}'),
             _InfoRow('Địa điểm', (c['location_text'] ?? '—').toString()),
-            _InfoRow('Mở đăng ký', _safeFmt(c['registration_open_at'])),
-            _InfoRow('Đóng đăng ký', _safeFmt(c['registration_close_at'])),
-            _InfoRow('Bắt đầu thi', _safeFmt(c['start_at'])),
-            _InfoRow('Kết thúc thi', _safeFmt(c['end_at'])),
+            _InfoRow('Mở đăng ký', safeFmt(c['registration_open_at'])),
+            _InfoRow('Đóng đăng ký', safeFmt(c['registration_close_at'])),
+            _InfoRow('Bắt đầu thi', safeFmt(c['start_at'])),
+            _InfoRow('Kết thúc thi', safeFmt(c['end_at'])),
             _InfoRow('Số entry tối đa', '${c['max_entries'] ?? "—"}'),
             _InfoRow('Team size', c['participation_mode'] == 'TEAM'
                 ? '${c['team_min_members'] ?? "?"} - ${c['team_max_members'] ?? "?"} thành viên'
                 : 'Cá nhân'),
             _InfoRow('Cần nộp bài', (c['requires_submission'] == true) ? 'Có' : 'Không'),
             _InfoRow('Công khai', (c['is_public'] == true) ? 'Có' : 'Không'),
-            _InfoRow('Created at', _safeFmt(c['created_at'])),
+            _InfoRow('Created at', safeFmt(c['created_at'])),
             _InfoRow('Owner user_id', '#${c['created_by'] ?? '—'}'),
           ]),
         ),

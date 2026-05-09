@@ -11,7 +11,7 @@ import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_shimmer.dart';
 import '../../core/widgets/pill.dart';
 
-const _ALL_ROLES = ['ADMIN', 'ORGANIZER', 'JUDGE', 'HOD', 'STUDENT'];
+const _kAllRoles = ['ADMIN', 'ORGANIZER', 'JUDGE', 'HOD', 'STUDENT'];
 
 class _UsersParams {
   final String? roleFilter;
@@ -151,7 +151,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                 ),
                 items: [
                   const DropdownMenuItem(value: null, child: Text('Tất cả')),
-                  ..._ALL_ROLES.map(
+                  ..._kAllRoles.map(
                       (r) => DropdownMenuItem(value: r, child: Text(r))),
                 ],
                 onChanged: (v) =>
@@ -579,12 +579,12 @@ class _UserRowState extends ConsumerState<_UserRow> {
                           await api.dio
                               .patch('/admin/users/${u['user_id']}/roles',
                                   data: {'role_codes': roles});
-                          if (!mounted) return;
+                          if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Đã cập nhật roles')));
                           widget.refresh();
                         } catch (e) {
-                          if (!mounted) return;
+                          if (!context.mounted) return;
                           final msg = e is DioException
                               ? (e.response?.data is Map ? '${e.response?.data['detail']}' : e.message ?? '')
                               : '$e';
@@ -743,7 +743,7 @@ class _CreateUserDialogState extends ConsumerState<_CreateUserDialog> {
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 8,
-                  children: _ALL_ROLES.map((r) {
+                  children: _kAllRoles.map((r) {
                     final selected = _roles.contains(r);
                     return FilterChip(
                       label: Text(r),
@@ -820,7 +820,7 @@ class _RolesDialogState extends State<_RolesDialog> {
       content: Wrap(
         spacing: 8,
         runSpacing: 8,
-        children: _ALL_ROLES.map((r) {
+        children: _kAllRoles.map((r) {
           final on = _selected.contains(r);
           return FilterChip(
             label: Text(r),

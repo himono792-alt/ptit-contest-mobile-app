@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../app_colors.dart';
-import '../theme.dart';
 
 /// Wrap content vào max-width 400px khi chạy web (mobile UX).
 class MobileFrame extends StatelessWidget {

@@ -257,7 +257,7 @@ class _ContestsTable extends StatelessWidget {
         ]),
       ),
       // Rows
-      ...items.map((c) => _ContestRow(c: c)).toList(),
+      ...items.map((c) => _ContestRow(c: c)),
       // Footer
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),

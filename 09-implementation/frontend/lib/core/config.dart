@@ -5,7 +5,7 @@
 ///
 /// Hoặc sửa default `_defaultBase` rồi rebuild:
 ///   - Local web dev:        http://localhost:8000
-///   - LAN test (iPhone):    http://<windows-lan-ip>:8000
+///   - LAN test (iPhone):    `http://<windows-lan-ip>:8000`
 ///   - Android emulator:     http://10.0.2.2:8000
 class AppConfig {
   static const String _defaultBase = 'http://localhost:8000';

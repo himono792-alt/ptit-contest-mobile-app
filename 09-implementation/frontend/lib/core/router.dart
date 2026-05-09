@@ -43,14 +43,27 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Sprint 19 fix flicker (2026-05-08): trong khi auth chưa resolve,
       // redirect tất cả route → /splash để tránh flicker StudentShell brief
       // trên Android. Khi auth resolve, splash sẽ tự bị redirect đi.
+      //
+      // Sprint 28 hotfix #4 (2026-05-09): preserve URL gốc qua query param
+      // `?to=...` — trước đây F5 reload tại `/admin/gv-stats` → splash flow
+      // drop tab → user về `/admin` Dashboard mất context. Encode toàn URL
+      // (path + query) để khôi phục đúng tab + sub-state sau auth resolve.
       if (auth.isLoading) {
-        return loc == '/splash' ? null : '/splash';
+        if (loc == '/splash') return null;
+        final encoded = Uri.encodeComponent(state.uri.toString());
+        return '/splash?to=$encoded';
       }
       // Auth đã resolve nhưng còn ở /splash → redirect đi (login hoặc landing)
       if (loc == '/splash') {
         final user = auth.value;
         if (user == null) {
           return onboardingCompletedFlag.value ? '/login' : '/onboarding';
+        }
+        // Sprint 28 hotfix #4: read `to` query param và redirect về URL gốc.
+        // Skip nếu `to` trỏ về /splash để tránh loop.
+        final to = state.uri.queryParameters['to'];
+        if (to != null && to.isNotEmpty && !to.startsWith('/splash')) {
+          return to;
         }
         return _landingFor(user);
       }
@@ -111,12 +124,20 @@ final routerProvider = Provider<GoRouter>((ref) {
           final tab = state.pathParameters['tab'];
           // Sprint 14 (2026-05-08): split approvals → approvals-q1 / approvals-q2.
           // + thêm contests-new (P2.2 GV Tạo cuộc thi sidebar) + backup (P2.1).
+          // Sprint 28 hotfix #3 (2026-05-09): bổ sung 7 slug GV/BCN còn thiếu —
+          // gv-calendar / gv-results / gv-stats / gv-export / bcn-cert-templates
+          // / bcn-stats / bcn-report-bgh. Trước đây click các tab này router
+          // fallback initialTab=null → AdminShell reset về Dashboard.
           const allowed = {
             'dashboard', 'contests', 'contests-new',
             'approvals-q1', 'approvals-q2',
             'monitor', 'judge',
             'users', 'master-data', 'reviews',
             'configs', 'backup', 'audit-log', 'anomaly',
+            // GV/BTC tabs
+            'gv-calendar', 'gv-results', 'gv-stats', 'gv-export',
+            // BCN/HOD tabs
+            'bcn-cert-templates', 'bcn-stats', 'bcn-report-bgh',
           };
           final initialTab = allowed.contains(tab) ? tab : null;
           return NoTransitionPage(child: AdminShell(initialTab: initialTab));

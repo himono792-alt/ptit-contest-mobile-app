@@ -40,8 +40,12 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
   @override
   void dispose() {
     _emailCtrl.dispose();
-    for (final c in _otpCtrls) c.dispose();
-    for (final f in _otpFocusNodes) f.dispose();
+    for (final c in _otpCtrls) {
+      c.dispose();
+    }
+    for (final f in _otpFocusNodes) {
+      f.dispose();
+    }
     _countdown?.cancel();
     super.dispose();
   }
@@ -102,7 +106,9 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
 
   Future<void> _resendOtp() async {
     // Clear current OTP và request lại
-    for (final c in _otpCtrls) c.clear();
+    for (final c in _otpCtrls) {
+      c.clear();
+    }
     setState(() => _error = null);
     await _requestOtp();
   }
@@ -326,7 +332,9 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
                         ? null
                         : () => setState(() {
                               _stage2 = false;
-                              for (final c in _otpCtrls) c.clear();
+                              for (final c in _otpCtrls) {
+                                c.clear();
+                              }
                               _error = null;
                               _countdown?.cancel();
                             }),

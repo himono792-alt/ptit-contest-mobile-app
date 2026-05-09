@@ -28,7 +28,8 @@ class LoginScreen extends ConsumerStatefulWidget {
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController(text: 'b22dccn001@ptit.edu.vn');
   final _pwdCtrl = TextEditingController(text: 'abc123');
@@ -40,12 +41,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   // Chỉ thay đổi hint email + label cho UX rõ ràng.
   int _selectedRoleTab = 0; // 0=SV, 1=GV/BTC, 2=BCN, 3=Admin
 
+  // Sprint 28 (2026-05-09): split outward animation khi login success.
+  // Login API → save token (KHÔNG qua authProvider.login để tránh state change).
+  // Set _splitting=true → forward 700ms → 2 panels (red+dark) slide outward
+  // reveal background → invalidate(authProvider) → re-build /me → router redirect.
+  late final AnimationController _splitCtrl;
+  bool _splitting = false;
+
   // Phase 2 sprint 1 step 4 (2026-05-06): biometric login button visibility.
   bool _biometricVisible = false;
 
   @override
   void initState() {
     super.initState();
+    _splitCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 750),
+    );
     _checkBiometric();
     _loadRememberMe();
   }
@@ -106,6 +118,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void dispose() {
     _emailCtrl.dispose();
     _pwdCtrl.dispose();
+    _splitCtrl.dispose();
     super.dispose();
   }
 
@@ -118,17 +131,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       // Sprint 19: persist Ghi nhớ tôi BEFORE login (nếu fail vẫn nhớ email)
       await _saveRememberMe();
-      await ref
-          .read(authProvider.notifier)
-          .login(_emailCtrl.text.trim(), _pwdCtrl.text);
+      // Sprint 28 (2026-05-09): gọi authService.login() trực tiếp thay vì
+      // authProvider.login() để KHÔNG trigger state change ngay → router KHÔNG
+      // redirect → ta có thời gian chạy animation split-outward 750ms. Sau khi
+      // panels slide xong → ref.invalidate(authProvider) → re-build /me →
+      // router redirect (LoginScreen unmount tự nhiên).
+      final svc = ref.read(authServiceProvider);
+      await svc.login(_emailCtrl.text.trim(), _pwdCtrl.text);
+      if (!mounted) return;
+
+      // A11y: nếu user bật "reduce motion" → skip animation, redirect ngay.
+      final reduceMotion = MediaQuery.of(context).disableAnimations;
+      if (reduceMotion) {
+        ref.invalidate(authProvider);
+        return; // không reset _loading: redirect sẽ unmount screen
+      }
+
+      setState(() => _splitting = true);
+      await _splitCtrl.forward(from: 0);
+      if (!mounted) return;
+      // Animation xong → trigger router redirect.
+      ref.invalidate(authProvider);
     } on DioException catch (e) {
       setState(() {
         _error = e.response?.data is Map
             ? (e.response?.data['detail']?.toString() ?? 'Lỗi đăng nhập')
             : 'Không kết nối được server';
+        _splitting = false;
+        _loading = false;
       });
-    } finally {
-      if (mounted) setState(() => _loading = false);
+      // Reset animation về 0 phòng trường hợp lỗi giữa chừng.
+      _splitCtrl.value = 0;
     }
   }
 
@@ -136,18 +169,114 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.appBg,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (ctx, constraints) {
-            final isWide = constraints.maxWidth >= 900;
-            if (isWide) {
-              return Row(children: [
-                Expanded(flex: 5, child: _buildBrandingPanel(context)),
-                Expanded(flex: 5, child: _buildFormPanel(context, scrollable: true)),
-              ]);
-            }
-            return _buildFormPanel(context, scrollable: true);
-          },
+      body: Stack(
+        children: [
+          // Sprint 28 (2026-05-09): reveal placeholder hiện ra khi 2 panels
+          // split outward — user thấy logo PTIT + spinner thay vì màn trắng,
+          // tạo cảm giác đang "vào hệ thống" thay vì "trang biến mất".
+          if (_splitting)
+            Positioned.fill(child: _buildRevealPlaceholder(context)),
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (ctx, constraints) {
+                final isWide = constraints.maxWidth >= 900;
+                return AnimatedBuilder(
+                  animation: _splitCtrl,
+                  builder: (ctx, _) {
+                    final v = Curves.easeInOutCubic.transform(_splitCtrl.value);
+                    if (isWide) {
+                      // Web ≥900: 2 panels slide horizontal đối xứng ra 2 bên,
+                      // ranh giới đỏ↔đen ở giữa "tách đôi" lộ ra dashboard.
+                      final w = constraints.maxWidth;
+                      return Row(children: [
+                        Expanded(
+                          flex: 5,
+                          child: Transform.translate(
+                            offset: Offset(-w / 2 * v, 0),
+                            child: _buildBrandingPanel(context),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 5,
+                          child: Transform.translate(
+                            offset: Offset(w / 2 * v, 0),
+                            child: _buildFormPanel(context, scrollable: true),
+                          ),
+                        ),
+                      ]);
+                    }
+                    // Mobile <900: không có 2 panels song song, fallback fade-out
+                    // + slide-up nhẹ để vẫn có cảm giác chuyển trang mượt.
+                    return Transform.translate(
+                      offset: Offset(0, -constraints.maxHeight * 0.10 * v),
+                      child: Opacity(
+                        opacity: 1 - v,
+                        child: _buildFormPanel(context, scrollable: true),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Sprint 28 (2026-05-09): reveal placeholder render dưới 2 panels split.
+  /// Hiện logo + spinner + dòng chữ "Đang vào hệ thống" — bridge giữa lúc
+  /// panels slide outward và lúc router redirect sang home dashboard.
+  Widget _buildRevealPlaceholder(BuildContext context) {
+    return Container(
+      color: context.appBg,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                gradient: ptitGradientHero,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                boxShadow: [
+                  BoxShadow(
+                      color: ptitRed.withValues(alpha: 0.35),
+                      blurRadius: 24,
+                      offset: const Offset(0, 10)),
+                ],
+              ),
+              child: Center(
+                child: Text('P',
+                    style: GoogleFonts.plusJakartaSans(
+                        color: Colors.white,
+                        fontSize: 38,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -2)),
+              ),
+            ),
+            const SizedBox(height: 28),
+            Text('Đang vào hệ thống',
+                style: GoogleFonts.plusJakartaSans(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: context.textPrimary,
+                    letterSpacing: -0.4)),
+            const SizedBox(height: 6),
+            Text('PTIT Contest đang chuẩn bị giao diện…',
+                style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500,
+                    color: context.textMuted)),
+            const SizedBox(height: 22),
+            SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2.5, color: ptitRed),
+            ),
+          ],
         ),
       ),
     );

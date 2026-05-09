@@ -6,6 +6,8 @@
 /// nhưng đủ cho dev / demo).
 ///
 /// Conditional import: `dart:html` chỉ load trên web để APK build không crash.
+library;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
