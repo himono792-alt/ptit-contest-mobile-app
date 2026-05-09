@@ -72,3 +72,37 @@ class CertVerifyOut(BaseModel):
     issued_at: datetime | None = None
     revoked: bool = False
     revoke_reason: str | None = None
+
+
+# ===== Sprint 25 P2-C1 (2026-05-09): Faculty-level cert templates =====
+
+class FacultyCertTemplateIn(BaseModel):
+    """BCN tạo/sửa template — faculty_id auto-inject từ HOD profile."""
+
+    name: str = Field(..., max_length=150)
+    layout_description: str
+    signers: str
+    is_active: bool = False
+
+
+class FacultyCertTemplateUpdate(BaseModel):
+    """PATCH partial update."""
+
+    name: str | None = Field(None, max_length=150)
+    layout_description: str | None = None
+    signers: str | None = None
+    is_active: bool | None = None
+
+
+class FacultyCertTemplateOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    template_id: int
+    faculty_id: int
+    name: str
+    layout_description: str
+    signers: str
+    is_active: bool
+    created_by: int | None = None
+    created_at: datetime
+    updated_at: datetime

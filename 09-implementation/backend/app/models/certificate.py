@@ -65,3 +65,29 @@ class IssuedCertificate(Base):
     revoke_reason: Mapped[str | None] = mapped_column(Text)
 
     contest_result: Mapped["ContestResult"] = relationship(back_populates="issued_certificate")
+
+
+# Sprint 25 P2-C1 (2026-05-09): faculty-level template (khác CertificateTemplate
+# per-contest). BCN quản lý các mẫu cho khoa, GV chọn template khi cấp cert.
+class FacultyCertTemplate(Base):
+    __tablename__ = "faculty_cert_templates"
+
+    template_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    faculty_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey("faculties.faculty_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    name: Mapped[str] = mapped_column(String(150), nullable=False)
+    layout_description: Mapped[str] = mapped_column(Text, nullable=False)
+    signers: Mapped[str] = mapped_column(Text, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_by: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("app_users.user_id", ondelete="SET NULL"),
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(),
+    )

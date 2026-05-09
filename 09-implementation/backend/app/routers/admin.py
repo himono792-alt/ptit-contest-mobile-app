@@ -408,3 +408,154 @@ async def backfill_host_faculty(
         "updated": updated,
         "skipped": skipped,
     }
+
+
+# ============================================================
+# Sprint 25 P2-C1 (2026-05-09): Faculty cert templates CRUD
+# Quản lý mẫu chứng nhận theo khoa — BCN/HOD scope.
+# Admin xem/sửa được tất cả khoa (qua query param), HOD chỉ khoa của mình.
+# ============================================================
+
+@router.get("/faculty-cert-templates")
+async def list_faculty_cert_templates(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list:
+    """List templates của faculty user (HOD scope) hoặc tất cả (Admin)."""
+    from app.models.certificate import FacultyCertTemplate
+    from app.models.master_data import DepartmentHead
+    from app.schemas.certificate import FacultyCertTemplateOut
+
+    is_admin = "ADMIN" in user.role_codes
+    is_hod = "HOD" in user.role_codes
+    if not (is_admin or is_hod):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "Cần role ADMIN hoặc HOD")
+
+    stmt = select(FacultyCertTemplate)
+    if is_hod and not is_admin:
+        dh = (await db.execute(
+            select(DepartmentHead).where(DepartmentHead.user_id == user.user_id)
+        )).scalar_one_or_none()
+        if dh is None:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN, "User chưa có profile HOD")
+        stmt = stmt.where(FacultyCertTemplate.faculty_id == dh.faculty_id)
+
+    rows = (await db.execute(stmt.order_by(FacultyCertTemplate.template_id.desc()))).scalars().all()
+    return [FacultyCertTemplateOut.model_validate(r).model_dump(mode='json') for r in rows]
+
+
+@router.post("/faculty-cert-templates", status_code=status.HTTP_201_CREATED)
+async def create_faculty_cert_template(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    data: Annotated[dict, Body()],
+) -> dict:
+    """HOD tạo template mới cho khoa của mình. Admin truyền faculty_id qua body."""
+    from app.models.certificate import FacultyCertTemplate
+    from app.models.master_data import DepartmentHead
+    from app.schemas.certificate import FacultyCertTemplateOut
+
+    is_admin = "ADMIN" in user.role_codes
+    is_hod = "HOD" in user.role_codes
+    if not (is_admin or is_hod):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "Cần role ADMIN hoặc HOD")
+
+    # Auto inject faculty_id từ HOD profile (nếu không phải admin truyền tay)
+    if is_admin and "faculty_id" in data:
+        faculty_id = data["faculty_id"]
+    else:
+        dh = (await db.execute(
+            select(DepartmentHead).where(DepartmentHead.user_id == user.user_id)
+        )).scalar_one_or_none()
+        if dh is None:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN, "User chưa có profile HOD")
+        faculty_id = dh.faculty_id
+
+    tpl = FacultyCertTemplate(
+        faculty_id=faculty_id,
+        name=data.get("name") or "",
+        layout_description=data.get("layout_description") or "",
+        signers=data.get("signers") or "",
+        is_active=bool(data.get("is_active", False)),
+        created_by=user.user_id,
+    )
+    db.add(tpl)
+    await db.commit()
+    await db.refresh(tpl)
+    return FacultyCertTemplateOut.model_validate(tpl).model_dump(mode='json')
+
+
+@router.patch("/faculty-cert-templates/{template_id}")
+async def update_faculty_cert_template(
+    template_id: int,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    data: Annotated[dict, Body()],
+) -> dict:
+    """HOD update template trong khoa mình. Admin update bất kỳ."""
+    from app.models.certificate import FacultyCertTemplate
+    from app.models.master_data import DepartmentHead
+    from app.schemas.certificate import FacultyCertTemplateOut
+
+    tpl = await db.get(FacultyCertTemplate, template_id)
+    if tpl is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Template not found")
+
+    is_admin = "ADMIN" in user.role_codes
+    is_hod = "HOD" in user.role_codes
+    if not (is_admin or is_hod):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Cần role ADMIN hoặc HOD")
+
+    if is_hod and not is_admin:
+        dh = (await db.execute(
+            select(DepartmentHead).where(DepartmentHead.user_id == user.user_id)
+        )).scalar_one_or_none()
+        if dh is None or dh.faculty_id != tpl.faculty_id:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN,
+                "HOD chỉ sửa template của khoa mình")
+
+    for key in ("name", "layout_description", "signers", "is_active"):
+        if key in data and data[key] is not None:
+            setattr(tpl, key, data[key])
+    await db.commit()
+    await db.refresh(tpl)
+    return FacultyCertTemplateOut.model_validate(tpl).model_dump(mode='json')
+
+
+@router.delete("/faculty-cert-templates/{template_id}",
+               status_code=status.HTTP_204_NO_CONTENT)
+async def delete_faculty_cert_template(
+    template_id: int,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """HOD xóa template trong khoa mình. Admin xóa bất kỳ."""
+    from app.models.certificate import FacultyCertTemplate
+    from app.models.master_data import DepartmentHead
+
+    tpl = await db.get(FacultyCertTemplate, template_id)
+    if tpl is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Template not found")
+
+    is_admin = "ADMIN" in user.role_codes
+    is_hod = "HOD" in user.role_codes
+    if not (is_admin or is_hod):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Cần role ADMIN hoặc HOD")
+
+    if is_hod and not is_admin:
+        dh = (await db.execute(
+            select(DepartmentHead).where(DepartmentHead.user_id == user.user_id)
+        )).scalar_one_or_none()
+        if dh is None or dh.faculty_id != tpl.faculty_id:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN,
+                "HOD chỉ xóa template của khoa mình")
+
+    await db.delete(tpl)
+    await db.commit()
+    return None

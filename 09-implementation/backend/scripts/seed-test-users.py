@@ -1,11 +1,19 @@
 """Seed thêm test users để test E2E workflow QĐ1.
 
 Tạo:
-  - 1 ORGANIZER (GV. Nguyen Van A)  email gv@ptit.edu.vn    password abc123
+  - 1 GV/BTC    (GV. Nguyen Van A)  email gv@ptit.edu.vn    password abc123
+                → roles ORGANIZER + JUDGE (Sprint 15: KHÔNG có ADMIN, BTC thuần)
   - 1 HOD       (BCN. Tran Van B)   email bcn@ptit.edu.vn   password abc123
-                → gắn faculty_id của khoa CNTT (đã seed trong setup-dev.sh)
+                → role HOD + gắn faculty_id của khoa CNTT
   - 1 ADMIN     (Quản trị hệ thống) email admin@ptit.edu.vn password abc123
                 → chỉ assign role ADMIN, không cần profile riêng (Sprint 7 2026-05-07)
+
+Sprint 15 (2026-05-08): bỏ ADMIN role khỏi gv@ — trước đây multi-role
+[ADMIN,JUDGE,ORGANIZER] làm BTC thấy toàn bộ admin sidebar (Tài khoản, Configs,
+Audit log...) gây confused phân quyền. Strict separation:
+- GV/BTC → Cuộc thi + Chấm bài (KHÔNG admin features)
+- BCN → Phê duyệt + Giám sát
+- Admin → Tài khoản + Hệ thống (KHÔNG có Cuộc thi của tôi)
 
 Cách chạy:
     cd 09-implementation/backend
@@ -49,6 +57,23 @@ async def assign_role(db, user_id, role_code):
         print(f"    → gán role {role_code.value}")
 
 
+async def remove_role(db, user_id, role_code):
+    """Sprint 15 (2026-05-08): xóa role nếu user đang có.
+
+    Dùng cho cleanup gv@ptit.edu.vn — trước đây có ADMIN role gây confused
+    phân quyền (BTC thấy toàn bộ admin sidebar).
+    """
+    role = (await db.execute(select(Role).where(Role.role_code == role_code))).scalar_one()
+    existing = (await db.execute(
+        select(UserRole).where(
+            UserRole.user_id == user_id, UserRole.role_id == role.role_id
+        )
+    )).scalar_one_or_none()
+    if existing:
+        await db.delete(existing)
+        print(f"    − gỡ role {role_code.value} (cleanup)")
+
+
 async def main():
     async with AsyncSessionLocal() as db:
         # Find faculty CNTT
@@ -58,10 +83,13 @@ async def main():
             return
         print(f"Khoa CNTT id={faculty.faculty_id}")
 
-        # 1. Organizer
-        print("\n[1/3] Organizer (GV)")
+        # 1. GV/BTC — Sprint 15: ORGANIZER + JUDGE thuần, KHÔNG có ADMIN.
+        print("\n[1/3] GV/BTC (Organizer + Judge)")
         gv, created = await get_or_create_user(db, "gv@ptit.edu.vn", "GV. Nguyen Van A", "abc123")
         await assign_role(db, gv.user_id, RoleCode.ORGANIZER)
+        await assign_role(db, gv.user_id, RoleCode.JUDGE)
+        # Sprint 15 cleanup: nếu gv@ đang có ADMIN role (legacy seed) → gỡ.
+        await remove_role(db, gv.user_id, RoleCode.ADMIN)
         if created:
             db.add(Organizer(user_id=gv.user_id, organization_name="Khoa CNTT", faculty_id=faculty.faculty_id))
             print(f"    → tạo organizer profile")
@@ -89,11 +117,11 @@ async def main():
 
     await engine.dispose()
     print("\n✅ Seed test users OK")
-    print("\nLogin credentials:")
-    print("  GV    → gv@ptit.edu.vn    / abc123")
-    print("  BCN   → bcn@ptit.edu.vn   / abc123")
-    print("  ADMIN → admin@ptit.edu.vn / abc123")
-    print("  SV    → b22dccn001@ptit.edu.vn / abc123 (cần register trước qua /api/auth/register)")
+    print("\nLogin credentials (Sprint 15 strict roles):")
+    print("  GV/BTC → gv@ptit.edu.vn     / abc123  [ORGANIZER + JUDGE]")
+    print("  BCN    → bcn@ptit.edu.vn    / abc123  [HOD]")
+    print("  ADMIN  → admin@ptit.edu.vn  / abc123  [ADMIN]")
+    print("  SV     → b22dccn001@ptit.edu.vn / abc123 (cần register trước qua /api/auth/register)")
 
 
 if __name__ == "__main__":
