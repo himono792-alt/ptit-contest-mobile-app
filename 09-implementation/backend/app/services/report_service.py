@@ -999,22 +999,32 @@ async def btc_deltas(db: AsyncSession, user) -> dict:
     )
     ongoing_7d_ago = (await db.execute(ongoing_7d_stmt)).scalar_one()
 
-    # Submissions pending judge: count submissions của contests organizer status=ONGOING/REG_CLOSED
-    sub_stmt = select(func.count()).select_from(Submission).join(
-        Contest, Contest.contest_id == Submission.contest_id
-    ).where(
-        *base_where,
-        Submission.status == SubmissionStatus.SUBMITTED,
+    # Sprint 28 fix Sentry (2026-05-09): Submission KHÔNG có field contest_id
+    # (chỉ có entry_id + round_id). Join qua ContestEntry để lấy contest.
+    # Submissions pending judge: count submissions của contests organizer
+    sub_stmt = (
+        select(func.count())
+        .select_from(Submission)
+        .join(ContestEntry, ContestEntry.entry_id == Submission.entry_id)
+        .join(Contest, Contest.contest_id == ContestEntry.contest_id)
+        .where(
+            *base_where,
+            Submission.status == SubmissionStatus.SUBMITTED,
+        )
     )
     submissions_pending = (await db.execute(sub_stmt)).scalar_one()
 
     # Submissions judged 24h: status LOCKED (đã chấm xong) updated_at >= 24h ago
-    sub_24h_stmt = select(func.count()).select_from(Submission).join(
-        Contest, Contest.contest_id == Submission.contest_id
-    ).where(
-        *base_where,
-        Submission.updated_at >= h24_ago,
-        Submission.status == SubmissionStatus.LOCKED,
+    sub_24h_stmt = (
+        select(func.count())
+        .select_from(Submission)
+        .join(ContestEntry, ContestEntry.entry_id == Submission.entry_id)
+        .join(Contest, Contest.contest_id == ContestEntry.contest_id)
+        .where(
+            *base_where,
+            Submission.updated_at >= h24_ago,
+            Submission.status == SubmissionStatus.LOCKED,
+        )
     )
     submissions_judged_24h = (await db.execute(sub_24h_stmt)).scalar_one()
 
