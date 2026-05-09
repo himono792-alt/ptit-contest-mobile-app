@@ -1132,6 +1132,34 @@ async def activity_feed(db: AsyncSession, user, limit: int = 10) -> dict:
             "note": None,
         })
 
+    # Submissions (SV nộp bài) — actor = Submission.created_by user, contest qua entry→contest
+    sub_stmt = (
+        select(Submission, Contest, AppUser)
+        .join(ContestEntry,
+              ContestEntry.entry_id == Submission.entry_id)
+        .join(Contest, Contest.contest_id == ContestEntry.contest_id)
+        .join(AppUser, AppUser.user_id == Submission.created_by)
+        .where(*base_where_contest, Submission.created_by.isnot(None))
+        .order_by(Submission.updated_at.desc())
+        .limit(limit)
+    )
+    for submission, contest, actor in (await db.execute(sub_stmt)).all():
+        # Action: SUBMITTED → "submit_work", LOCKED → "judge_locked"
+        if submission.status == SubmissionStatus.LOCKED:
+            action = "judge_locked"
+            ts = submission.updated_at
+        else:
+            action = "submit_work"
+            ts = submission.created_at
+        items.append({
+            "timestamp": ts,
+            "action": action,
+            "actor_name": actor.full_name,
+            "contest_title": contest.title,
+            "contest_id": contest.contest_id,
+            "note": None,
+        })
+
     # Sort merged + limit
     items.sort(key=lambda x: x["timestamp"], reverse=True)
     items = items[:limit]
