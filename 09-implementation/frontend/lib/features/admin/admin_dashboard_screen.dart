@@ -16,6 +16,84 @@ import 'admin_contests_screen.dart' show adminContestsProvider;
 import 'approval_queue_screen.dart' show pendingApprovalsProvider;
 import 'create_contest_dialog.dart';
 
+// Sprint 28 hotfix #7 (2026-05-10): shared helpers cho header sinh động —
+// time-aware greeting + day name VN, dùng chung cho 3 actor (GV/BCN/Admin).
+({String greeting, String emoji}) _greetingByHour(int hour) {
+  if (hour >= 5 && hour < 11) return (greeting: 'Chào buổi sáng', emoji: '☀️');
+  if (hour >= 11 && hour < 14) return (greeting: 'Chào buổi trưa', emoji: '🌤️');
+  if (hour >= 14 && hour < 18) return (greeting: 'Chào buổi chiều', emoji: '🌇');
+  if (hour >= 18 && hour < 22) return (greeting: 'Chào buổi tối', emoji: '🌙');
+  return (greeting: 'Khuya rồi nhé', emoji: '🌌');
+}
+
+String _dayNameVi(int weekday) {
+  const names = [
+    'Thứ Hai',
+    'Thứ Ba',
+    'Thứ Tư',
+    'Thứ Năm',
+    'Thứ Sáu',
+    'Thứ Bảy',
+    'Chủ Nhật',
+  ];
+  return names[(weekday - 1).clamp(0, 6)];
+}
+
+/// Mini stat chip cho header — emoji + label bold + hint subtle.
+class _DashHeaderChip extends StatelessWidget {
+  final String icon;
+  final String label;
+  final String hint;
+  const _DashHeaderChip({
+    required this.icon,
+    required this.label,
+    required this.hint,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(icon, style: const TextStyle(fontSize: 12)),
+        const SizedBox(width: 4),
+        Text(label,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: context.textPrimary,
+            )),
+        const SizedBox(width: 4),
+        Text(hint,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: context.textMuted,
+            )),
+      ],
+    );
+  }
+}
+
+/// Background gradient subtle cho header (3 actor reuse cùng pattern).
+BoxDecoration _dashHeaderGradient(BuildContext context) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  return BoxDecoration(
+    gradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        ptitRed.withValues(alpha: isDark ? 0.10 : 0.06),
+        const Color(0xFF7C3AED).withValues(alpha: isDark ? 0.08 : 0.04),
+        Colors.transparent,
+      ],
+      stops: const [0.0, 0.55, 1.0],
+    ),
+    borderRadius: BorderRadius.circular(AppRadius.lg),
+    border: Border.all(color: context.cardBorder.withValues(alpha: 0.4)),
+  );
+}
+
 final systemSummaryProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
   final user = ref.read(authProvider).value;
   if (user == null || !user.isAdmin) return null;
@@ -128,60 +206,13 @@ class AdminDashboardScreen extends ConsumerWidget {
     return ColoredBox(
       color: context.appBg,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        // Top bar — ẩn user info + chỉ "Dashboard" trên mobile (đã có AppBar shell)
+        // Sprint 28 hotfix #7 (2026-05-10): admin top bar sinh động — time-aware
+        // greeting + sub-line stats từ systemSummaryProvider + gradient subtle.
+        // Mobile vẫn ẩn (đã có AppBar shell), wide ≥mobile mới render.
         if (!isMobile)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-            // 2026-05-07: theme-aware top bar — Colors.white hardcode khiến
-            // text 'Dashboard' (textPrimary=trắng trong dark) trắng-trên-trắng = invisible.
-            decoration: BoxDecoration(
-              color: context.cardBg,
-              border: Border(bottom: BorderSide(color: context.cardBorder)),
-            ),
-            child: Row(children: [
-              Expanded(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Trang chủ',
-                          style: TextStyle(color: context.textMuted, fontSize: 11)),
-                      SizedBox(height: 2),
-                      Text('Dashboard',
-                          style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              color: context.textPrimary)),
-                    ]),
-              ),
-              // Sprint 6 (2026-05-07): AD-05 — xuất báo cáo toàn hệ thống.
-              // Chỉ ADMIN thấy. BCN có nút riêng trong MonitorScreen.
-              if (user.isAdmin) ...[
-                FilledButton.icon(
-                  icon: const Icon(Icons.download, size: 16),
-                  label: const Text('Xuất Excel (AD-05)'),
-                  style: FilledButton.styleFrom(
-                    // 2026-05-07: minimumSize bắt buộc — tránh bug
-                    // text wrap dọc mỗi ký tự khi intrinsic missing.
-                    minimumSize: const Size(180, 40),
-                    backgroundColor: const Color(0xFF1E3A8A),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                  ),
-                  onPressed: () => exportXlsxFromEndpoint(
-                    context: context,
-                    dio: ref.read(apiClientProvider).dio,
-                    path: '/admin/reports/system-summary.xlsx',
-                    fallbackFilename:
-                        'bao-cao-he-thong-${DateTime.now().toIso8601String().substring(0, 10)}.xlsx',
-                  ),
-                ),
-                const SizedBox(width: 12),
-              ],
-              Text('${user.fullName} · ${user.roles.join(",")}',
-                  style: TextStyle(color: context.textMuted, fontSize: 12)),
-            ]),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+            child: _AdminTopBarRich(user: user),
           ),
         Expanded(
           child: SingleChildScrollView(
@@ -246,6 +277,115 @@ class AdminDashboardScreen extends ConsumerWidget {
           ),
         ),
       ]),
+    );
+  }
+}
+
+/// Sprint 28 hotfix #7 (2026-05-10): Admin top bar sinh động — time-aware
+/// greeting + sub-line stats từ systemSummaryProvider (users/contests/khoa) +
+/// gradient subtle. Replace plain top bar cũ chỉ "Dashboard" + breadcrumb.
+class _AdminTopBarRich extends ConsumerWidget {
+  final dynamic user;
+  const _AdminTopBarRich({required this.user});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = DateTime.now();
+    final g = _greetingByHour(now.hour);
+    final dayName = _dayNameVi(now.weekday);
+    final dateStr = DateFormat('dd/MM/yyyy').format(now);
+
+    // Short name 2 từ cuối cho greeting.
+    final fullName = (user.fullName as String?) ?? '';
+    final parts = fullName.trim().split(RegExp(r'\s+'));
+    final userName = parts.length >= 2
+        ? '${parts[parts.length - 2]} ${parts.last}'
+        : (parts.isNotEmpty ? parts.first : 'Admin');
+
+    // Stats real từ systemSummaryProvider.
+    final asyncSummary = ref.watch(systemSummaryProvider);
+    final usersCount = asyncSummary.maybeWhen(
+      data: (d) => (d?['total_users'] as int?) ?? 0,
+      orElse: () => 0,
+    );
+    final contestsCount = asyncSummary.maybeWhen(
+      data: (d) => (d?['total_contests'] as int?) ?? 0,
+      orElse: () => 0,
+    );
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      decoration: _dashHeaderGradient(context),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('QUẢN TRỊ HỆ THỐNG',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: ptitRed,
+                      letterSpacing: 1.2,
+                    )),
+                const SizedBox(height: 4),
+                Text('${g.greeting}, $userName ${g.emoji}',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      color: context.textPrimary,
+                      letterSpacing: -0.7,
+                      height: 1.1,
+                    )),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 4,
+                  children: [
+                    _DashHeaderChip(
+                      icon: '👥',
+                      label: '$usersCount tài khoản',
+                      hint: 'tổng hệ thống',
+                    ),
+                    _DashHeaderChip(
+                      icon: '🏆',
+                      label: '$contestsCount cuộc thi',
+                      hint: 'đã tạo',
+                    ),
+                    _DashHeaderChip(
+                      icon: '📅',
+                      label: dayName,
+                      hint: dateStr,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Sprint 6 (2026-05-07): AD-05 — xuất báo cáo toàn hệ thống. Admin only.
+          if (user.isAdmin)
+            FilledButton.icon(
+              icon: const Icon(Icons.download, size: 16),
+              label: const Text('Xuất Excel'),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(140, 40),
+                backgroundColor: const Color(0xFF1E3A8A),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              ),
+              onPressed: () => exportXlsxFromEndpoint(
+                context: context,
+                dio: ref.read(apiClientProvider).dio,
+                path: '/admin/reports/system-summary.xlsx',
+                fallbackFilename:
+                    'bao-cao-he-thong-${DateTime.now().toIso8601String().substring(0, 10)}.xlsx',
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -897,7 +1037,10 @@ class _BTCDashboardRich extends ConsumerWidget {
   }
 }
 
-class _BTCHeader extends StatelessWidget {
+/// Sprint 28 hotfix #7 (2026-05-10): GV header sinh động — time-aware greeting
+/// + sub-line stats (cuộc thi đang tổ chức + bài chờ chấm + thứ/tuần) +
+/// gradient subtle. Stats từ adminContestsProvider (Cuộc thi của tôi).
+class _BTCHeader extends ConsumerWidget {
   final String userName;
   final String dateStr;
   final int weekNo;
@@ -911,57 +1054,85 @@ class _BTCHeader extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Trang chủ',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: context.textMuted,
-                    letterSpacing: 0.4,
-                  )),
-              const SizedBox(height: AppSpacing.s4),
-              Text('Dashboard',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: isCompact ? 22 : 26,
-                    fontWeight: FontWeight.w800,
-                    color: context.textPrimary,
-                    letterSpacing: -0.6,
-                    height: 1.1,
-                  )),
-            ],
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = DateTime.now();
+    final g = _greetingByHour(now.hour);
+    final dayName = _dayNameVi(now.weekday);
+
+    final asyncContests = ref.watch(adminContestsProvider);
+    final activeCount = asyncContests.maybeWhen(
+      data: (list) => list.where((c) {
+        return c.status == 'REG_OPEN' ||
+            c.status == 'REG_CLOSED' ||
+            c.status == 'ONGOING';
+      }).length,
+      orElse: () => 0,
+    );
+    final draftCount = asyncContests.maybeWhen(
+      data: (list) => list
+          .where((c) => c.status == 'DRAFT' || c.status == 'PROPOSED')
+          .length,
+      orElse: () => 0,
+    );
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isCompact ? AppSpacing.s16 : AppSpacing.s24,
+        vertical: isCompact ? AppSpacing.s16 : AppSpacing.s20,
+      ),
+      decoration: _dashHeaderGradient(context),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('GV / BTC',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: ptitRed,
+                      letterSpacing: 1.2,
+                    )),
+                const SizedBox(height: AppSpacing.s4),
+                Text('${g.greeting}, $userName ${g.emoji}',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: isCompact ? 22 : 26,
+                      fontWeight: FontWeight.w800,
+                      color: context.textPrimary,
+                      letterSpacing: -0.7,
+                      height: 1.1,
+                    )),
+                const SizedBox(height: AppSpacing.s8),
+                Wrap(
+                  spacing: AppSpacing.s12,
+                  runSpacing: AppSpacing.s4,
+                  children: [
+                    _DashHeaderChip(
+                      icon: '🎯',
+                      label: '$activeCount cuộc thi',
+                      hint: 'đang tổ chức',
+                    ),
+                    _DashHeaderChip(
+                      icon: '📝',
+                      label: '$draftCount bản nháp',
+                      hint: draftCount > 0 ? 'chờ submit' : 'đã clear',
+                    ),
+                    _DashHeaderChip(
+                      icon: '📅',
+                      label: dayName,
+                      hint: '$dateStr · Tuần $weekNo',
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(width: AppSpacing.s12),
-        Container(
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.s12, vertical: AppSpacing.s8),
-          decoration: BoxDecoration(
-            color: context.cardBg,
-            border: Border.all(color: context.cardBorder),
-            borderRadius: BorderRadius.circular(AppRadius.md),
-          ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.calendar_today_outlined,
-                size: 13, color: context.textMuted),
-            const SizedBox(width: AppSpacing.s8),
-            Text('$dateStr  ·  Tuần $weekNo',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: context.textPrimary,
-                )),
-          ]),
-        ),
-        const SizedBox(width: AppSpacing.s8),
-        _CreateContestButton(),
-      ],
+          const SizedBox(width: AppSpacing.s12),
+          _CreateContestButton(),
+        ],
+      ),
     );
   }
 }
@@ -1682,6 +1853,14 @@ class _BCNDashboardRich extends ConsumerWidget {
         data: (d) => (d?['faculty_name'] as String?) ?? 'Khoa',
         orElse: () => 'Khoa');
 
+    // Sprint 28 hotfix #7: short name 2 từ cuối cho greeting (vd "Tran Van B"
+    // → "Văn B"). Fallback về full name nếu chỉ 1 từ.
+    final fullName = (user.fullName as String?) ?? '';
+    final parts = fullName.trim().split(RegExp(r'\s+'));
+    final userName = parts.length >= 2
+        ? '${parts[parts.length - 2]} ${parts.last}'
+        : (parts.isNotEmpty ? parts.first : '');
+
     return ColoredBox(
       color: context.appBg,
       child: ListView(
@@ -1694,6 +1873,7 @@ class _BCNDashboardRich extends ConsumerWidget {
         children: [
           _BCNHeader(
               facultyName: facultyName,
+              userName: userName,
               dateStr: dateStr,
               weekNo: weekNo,
               isCompact: isCompact),
@@ -1778,71 +1958,101 @@ int _isoWeekNumberHod(DateTime date) {
   return woy;
 }
 
-class _BCNHeader extends StatelessWidget {
+/// Sprint 28 hotfix #7 (2026-05-10): BCN header sinh động — time-aware
+/// greeting + sub-line stats (queue chờ duyệt + cuộc thi khoa + thứ/tuần) +
+/// gradient subtle. Stats từ pendingApprovalsProvider + hodFacultyStatsProvider.
+class _BCNHeader extends ConsumerWidget {
   final String facultyName;
+  final String userName;
   final String dateStr;
   final int weekNo;
   final bool isCompact;
 
   const _BCNHeader({
     required this.facultyName,
+    required this.userName,
     required this.dateStr,
     required this.weekNo,
     required this.isCompact,
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Trang chủ',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: context.textMuted,
-                    letterSpacing: 0.4,
-                  )),
-              const SizedBox(height: AppSpacing.s4),
-              Text('Dashboard — $facultyName',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: isCompact ? 22 : 26,
-                    fontWeight: FontWeight.w800,
-                    color: context.textPrimary,
-                    letterSpacing: -0.6,
-                    height: 1.1,
-                  )),
-            ],
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = DateTime.now();
+    final g = _greetingByHour(now.hour);
+    final dayName = _dayNameVi(now.weekday);
+
+    final asyncPending = ref.watch(pendingApprovalsProvider);
+    final pendingCount = asyncPending.maybeWhen(
+      data: (list) => list.length,
+      orElse: () => 0,
+    );
+    final asyncFaculty = ref.watch(hodFacultyStatsProvider);
+    final ongoingCount = asyncFaculty.maybeWhen(
+      data: (data) => (data?['contests_ongoing'] as int?) ?? 0,
+      orElse: () => 0,
+    );
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isCompact ? AppSpacing.s16 : AppSpacing.s24,
+        vertical: isCompact ? AppSpacing.s16 : AppSpacing.s20,
+      ),
+      decoration: _dashHeaderGradient(context),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('BCN · $facultyName',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: ptitRed,
+                      letterSpacing: 1.2,
+                    )),
+                const SizedBox(height: AppSpacing.s4),
+                Text('${g.greeting}, $userName ${g.emoji}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: isCompact ? 22 : 26,
+                      fontWeight: FontWeight.w800,
+                      color: context.textPrimary,
+                      letterSpacing: -0.7,
+                      height: 1.1,
+                    )),
+                const SizedBox(height: AppSpacing.s8),
+                Wrap(
+                  spacing: AppSpacing.s12,
+                  runSpacing: AppSpacing.s4,
+                  children: [
+                    _DashHeaderChip(
+                      icon: '⏰',
+                      label: '$pendingCount đề xuất',
+                      hint: pendingCount > 0 ? 'chờ duyệt' : 'queue trống',
+                    ),
+                    _DashHeaderChip(
+                      icon: '🏛',
+                      label: '$ongoingCount cuộc thi',
+                      hint: 'đang diễn ra',
+                    ),
+                    _DashHeaderChip(
+                      icon: '📅',
+                      label: dayName,
+                      hint: '$dateStr · Tuần $weekNo',
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(width: AppSpacing.s12),
-        Container(
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.s12, vertical: AppSpacing.s8),
-          decoration: BoxDecoration(
-            color: context.cardBg,
-            border: Border.all(color: context.cardBorder),
-            borderRadius: BorderRadius.circular(AppRadius.md),
-          ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.calendar_today_outlined,
-                size: 13, color: context.textMuted),
-            const SizedBox(width: AppSpacing.s8),
-            Text('$dateStr  ·  Tuần $weekNo',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: context.textPrimary,
-                )),
-          ]),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
