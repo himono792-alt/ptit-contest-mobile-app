@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import '../app_colors.dart';
 import '../theme.dart';
 
@@ -35,7 +36,12 @@ class MBottomNav extends StatelessWidget {
                 hint: active ? 'Đang ở tab này' : 'Chuyển sang tab ${item.label}',
                 child: InkWell(
                 excludeFromSemantics: true, // tránh nested-interactive — Semantics outer đã đủ
-                onTap: () => onChanged(i),
+                // Sprint 13 Batch B (2026-05-08): haptic light tap khi đổi tab
+                // (no-op trên web/desktop, only fires APK Android/iOS).
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  onChanged(i);
+                },
                 borderRadius: BorderRadius.circular(8),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),

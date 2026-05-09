@@ -12,6 +12,7 @@ import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
+import '../../core/widgets/m_shimmer.dart';
 import '../../core/widgets/pill.dart';
 
 final reviewModerationFilterProvider = StateProvider<bool>((_) => false);
@@ -127,8 +128,8 @@ class ReviewModerationScreen extends ConsumerWidget {
         ),
         Expanded(
           child: asyncList.when(
-            loading: () =>
-                const Center(child: CircularProgressIndicator(color: ptitRed)),
+            // Sprint 8c (2026-05-07): skeleton thay spinner.
+            loading: () => const MCardListSkeleton(count: 4),
             error: (e, _) => Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),

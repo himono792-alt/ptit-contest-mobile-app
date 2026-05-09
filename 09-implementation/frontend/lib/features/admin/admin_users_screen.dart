@@ -6,7 +6,9 @@ import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/empty_view.dart';
 import '../../core/widgets/m_card.dart';
+import '../../core/widgets/m_shimmer.dart';
 import '../../core/widgets/pill.dart';
 
 const _ALL_ROLES = ['ADMIN', 'ORGANIZER', 'JUDGE', 'HOD', 'STUDENT'];
@@ -195,8 +197,8 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
         ),
         Expanded(
           child: asyncList.when(
-            loading: () => const Center(
-                child: CircularProgressIndicator(color: ptitRed)),
+            // Sprint 8b (2026-05-07): skeleton thay spinner cho perceived perf.
+            loading: () => const MCardListSkeleton(count: 5),
             error: (e, _) => _ErrorView(
                 error: e, onRetry: () => ref.invalidate(usersListProvider)),
             data: (data) {
@@ -206,9 +208,11 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               return Padding(
                 padding: EdgeInsets.all(isMobile ? 14 : 24),
                 child: items.isEmpty
-                    ? Center(
-                        child: Text('Không có user',
-                            style: TextStyle(color: context.textMuted)))
+                    ? const EmptyView(
+                        icon: Icons.people_outline,
+                        title: 'Không có user nào',
+                        subtitle: 'Tạo user mới hoặc import từ CSV.',
+                      )
                     : MCard(
                         padding: EdgeInsets.zero,
                         margin: EdgeInsets.zero,
@@ -549,7 +553,7 @@ class _UserRowState extends ConsumerState<_UserRow> {
                     IconButton(
                       tooltip: isLocked ? 'Unlock' : 'Lock',
                       iconSize: 18,
-                      visualDensity: VisualDensity.compact,
+                      visualDensity: VisualDensity.compact, constraints: const BoxConstraints(minWidth: 44, minHeight: 44), // P0 #4 hit area ≥44 (WCAG 2.5.5)
                       onPressed: () => _action(
                           '/admin/users/${u['user_id']}/${isLocked ? 'unlock' : 'lock'}',
                           'POST',
@@ -561,7 +565,7 @@ class _UserRowState extends ConsumerState<_UserRow> {
                   IconButton(
                     tooltip: 'Đổi roles',
                     iconSize: 18,
-                    visualDensity: VisualDensity.compact,
+                    visualDensity: VisualDensity.compact, constraints: const BoxConstraints(minWidth: 44, minHeight: 44), // P0 #4 hit area ≥44 (WCAG 2.5.5)
                     onPressed: () async {
                       final roles =
                           await showDialog<List<String>>(
@@ -595,7 +599,7 @@ class _UserRowState extends ConsumerState<_UserRow> {
                     IconButton(
                       tooltip: 'Xóa',
                       iconSize: 18,
-                      visualDensity: VisualDensity.compact,
+                      visualDensity: VisualDensity.compact, constraints: const BoxConstraints(minWidth: 44, minHeight: 44), // P0 #4 hit area ≥44 (WCAG 2.5.5)
                       onPressed: () async {
                         final confirm = await showDialog<bool>(
                           context: context,

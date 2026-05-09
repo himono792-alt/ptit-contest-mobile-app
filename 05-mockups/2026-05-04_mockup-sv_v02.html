@@ -116,6 +116,12 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 function App() {
   const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
 
+  // Expose for in-screen widgets (e.g. dark-mode toggle nút trong Sidebar/AppBar)
+  useEffect(() => {
+    window.__setTweak = setTweak;
+    window.__darkMode = tweaks.darkMode;
+  }, [setTweak, tweaks.darkMode]);
+
   // Apply theme + accent to body
   useEffect(() => {
     document.body.dataset.theme = tweaks.darkMode ? "dark" : "light";

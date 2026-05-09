@@ -8,26 +8,24 @@ import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/empty_view.dart';
 import '../../core/widgets/m_card.dart';
+import '../../core/widgets/m_shimmer.dart';
 import '../../core/widgets/pill.dart';
 
 class _AuditParams {
   final String? actionType;
   final String? entityName;
   final int? userId;
-  const _AuditParams({this.actionType, this.entityName, this.userId});
-  _AuditParams copyWith(
-          {String? actionType,
-          String? entityName,
-          int? userId,
-          bool clearActionType = false,
-          bool clearEntity = false,
-          bool clearUserId = false}) =>
-      _AuditParams(
-        actionType: clearActionType ? null : (actionType ?? this.actionType),
-        entityName: clearEntity ? null : (entityName ?? this.entityName),
-        userId: clearUserId ? null : (userId ?? this.userId),
-      );
+  // Sprint 13 Batch C (2026-05-08): date range filter cho audit log.
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  const _AuditParams(
+      {this.actionType,
+      this.entityName,
+      this.userId,
+      this.dateFrom,
+      this.dateTo});
 }
 
 final auditParamsProvider =
@@ -42,6 +40,8 @@ final auditLogsProvider =
     if (p.actionType != null) 'action_type': p.actionType,
     if (p.entityName != null) 'entity_name': p.entityName,
     if (p.userId != null) 'user_id': p.userId,
+    if (p.dateFrom != null) 'date_from': p.dateFrom!.toUtc().toIso8601String(),
+    if (p.dateTo != null) 'date_to': p.dateTo!.toUtc().toIso8601String(),
   });
   return res.data as Map<String, dynamic>;
 });
@@ -65,13 +65,49 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
     super.dispose();
   }
 
+  // Sprint 13 Batch C (2026-05-08): date range state cho filter.
+  DateTime? _dateFrom;
+  DateTime? _dateTo;
+
   void _applyFilter() {
     final params = _AuditParams(
       actionType: _actionCtrl.text.isEmpty ? null : _actionCtrl.text.trim(),
       entityName: _entityCtrl.text.isEmpty ? null : _entityCtrl.text.trim(),
       userId: _userIdCtrl.text.isEmpty ? null : int.tryParse(_userIdCtrl.text),
+      dateFrom: _dateFrom,
+      dateTo: _dateTo,
     );
     ref.read(auditParamsProvider.notifier).state = params;
+  }
+
+  Future<void> _pickDate(bool isFrom) async {
+    final base = isFrom
+        ? (_dateFrom ?? DateTime.now().subtract(const Duration(days: 7)))
+        : (_dateTo ?? DateTime.now());
+    final d = await showDatePicker(
+      context: context,
+      initialDate: base,
+      firstDate: DateTime(2024),
+      lastDate: DateTime(2030),
+    );
+    if (d == null) return;
+    setState(() {
+      if (isFrom) {
+        _dateFrom = DateTime(d.year, d.month, d.day);
+      } else {
+        // Set to end of day for inclusive filter
+        _dateTo = DateTime(d.year, d.month, d.day, 23, 59, 59);
+      }
+    });
+    _applyFilter();
+  }
+
+  void _clearDates() {
+    setState(() {
+      _dateFrom = null;
+      _dateTo = null;
+    });
+    _applyFilter();
   }
 
   @override
@@ -112,64 +148,115 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
         ),
         Container(
           padding: EdgeInsets.fromLTRB(isMobile ? 14 : 32, isMobile ? 12 : 18, isMobile ? 14 : 32, 0),
-          child: Row(children: [
-            Expanded(
-              child: SizedBox(
+          child: Column(children: [
+            Row(children: [
+              Expanded(
+                child: SizedBox(
+                  height: 40,
+                  child: TextField(
+                    controller: _actionCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Action type',
+                      hintText: 'CREATE, UPDATE, DELETE...',
+                      isDense: true,
+                    ),
+                    onSubmitted: (_) => _applyFilter(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SizedBox(
+                  height: 40,
+                  child: TextField(
+                    controller: _entityCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Entity name',
+                      hintText: 'app_users, contests...',
+                      isDense: true,
+                    ),
+                    onSubmitted: (_) => _applyFilter(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 120,
                 height: 40,
                 child: TextField(
-                  controller: _actionCtrl,
+                  controller: _userIdCtrl,
                   decoration: const InputDecoration(
-                    labelText: 'Action type',
-                    hintText: 'CREATE, UPDATE, DELETE...',
+                    labelText: 'User ID',
                     isDense: true,
                   ),
+                  keyboardType: TextInputType.number,
                   onSubmitted: (_) => _applyFilter(),
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: SizedBox(
-                height: 40,
-                child: TextField(
-                  controller: _entityCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Entity name',
-                    hintText: 'app_users, contests...',
-                    isDense: true,
-                  ),
-                  onSubmitted: (_) => _applyFilter(),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                onPressed: _applyFilter,
+                icon: const Icon(Icons.filter_alt_outlined, size: 16),
+                label: const Text('Lọc'),
+                style: FilledButton.styleFrom(
+                    minimumSize: const Size(80, 40), backgroundColor: ptitRed),
+              ),
+            ]),
+            // Sprint 13 Batch C (2026-05-08): date range filter row.
+            const SizedBox(height: 8),
+            Row(children: [
+              Icon(Icons.date_range,
+                  size: 16, color: context.textMuted),
+              const SizedBox(width: 6),
+              Text('Từ ngày:',
+                  style: TextStyle(fontSize: 12, color: context.textMuted)),
+              const SizedBox(width: 6),
+              OutlinedButton(
+                onPressed: () => _pickDate(true),
+                style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(120, 36),
+                    padding: const EdgeInsets.symmetric(horizontal: 10)),
+                child: Text(
+                  _dateFrom == null
+                      ? 'Tất cả'
+                      : DateFormat('dd/MM/yyyy').format(_dateFrom!),
+                  style: const TextStyle(fontSize: 12),
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 120,
-              height: 40,
-              child: TextField(
-                controller: _userIdCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'User ID',
-                  isDense: true,
+              const SizedBox(width: 12),
+              Text('Đến ngày:',
+                  style: TextStyle(fontSize: 12, color: context.textMuted)),
+              const SizedBox(width: 6),
+              OutlinedButton(
+                onPressed: () => _pickDate(false),
+                style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(120, 36),
+                    padding: const EdgeInsets.symmetric(horizontal: 10)),
+                child: Text(
+                  _dateTo == null
+                      ? 'Tất cả'
+                      : DateFormat('dd/MM/yyyy').format(_dateTo!),
+                  style: const TextStyle(fontSize: 12),
                 ),
-                keyboardType: TextInputType.number,
-                onSubmitted: (_) => _applyFilter(),
               ),
-            ),
-            const SizedBox(width: 8),
-            FilledButton.icon(
-              onPressed: _applyFilter,
-              icon: const Icon(Icons.filter_alt_outlined, size: 16),
-              label: const Text('Lọc'),
-              style: FilledButton.styleFrom(
-                  minimumSize: const Size(80, 40), backgroundColor: ptitRed),
-            ),
+              if (_dateFrom != null || _dateTo != null) ...[
+                const SizedBox(width: 8),
+                IconButton(
+                  tooltip: 'Xóa filter ngày',
+                  onPressed: _clearDates,
+                  icon: Icon(Icons.clear, size: 16, color: context.textMuted),
+                  constraints: const BoxConstraints(
+                      minWidth: 36, minHeight: 36),
+                  padding: EdgeInsets.zero,
+                ),
+              ],
+            ]),
           ]),
         ),
         Expanded(
           child: asyncList.when(
-            loading: () => const Center(
-                child: CircularProgressIndicator(color: ptitRed)),
+            // Sprint 8b (2026-05-07): skeleton thay spinner.
+            loading: () => const MCardListSkeleton(count: 6),
             error: (e, _) => Center(
                 child: Text('Lỗi: ${_msg(e)}',
                     style: const TextStyle(color: ptitRed))),
@@ -180,9 +267,11 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
               return Padding(
                 padding: EdgeInsets.all(isMobile ? 14 : 24),
                 child: items.isEmpty
-                    ? Center(
-                        child: Text('Không có log nào',
-                            style: TextStyle(color: context.textMuted)))
+                    ? const EmptyView(
+                        icon: Icons.history,
+                        title: 'Không có log nào',
+                        subtitle: 'Audit log sẽ ghi nhận hành động admin/GV/BCN khi có thay đổi data.',
+                      )
                     : MCard(
                         padding: EdgeInsets.zero,
                         margin: EdgeInsets.zero,

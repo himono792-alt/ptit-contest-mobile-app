@@ -20,13 +20,36 @@ function Browser({ url, children }) {
 
 function Sidebar({ items, active, role, who }) {
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" data-sidebar-root>
       <div className="brand">
         <div className="logo">P</div>
         <div>
           <b>PTIT Contest</b>
           <div className="role">{role}</div>
         </div>
+        <button
+          className="dark-toggle"
+          onClick={(e) => {
+            const isDark = document.body.dataset.theme === 'dark';
+            const next = !isDark;
+            if (window.__setTweak) window.__setTweak('darkMode', next);
+            else document.body.dataset.theme = next ? 'dark' : 'light';
+            e.currentTarget.textContent = next ? '☀' : '🌙';
+          }}
+          title="Bật/tắt chế độ tối"
+          aria-label="Toggle dark mode"
+        >🌙</button>
+        <button
+          className="collapse-toggle"
+          onClick={(e) => {
+            const aside = e.currentTarget.closest('[data-sidebar-root]');
+            if (!aside) return;
+            const isCollapsed = aside.classList.toggle('collapsed');
+            e.currentTarget.textContent = isCollapsed ? '›' : '‹';
+          }}
+          title="Thu gọn / mở rộng menu"
+          aria-label="Toggle sidebar"
+        >‹</button>
       </div>
       <nav>
         {items.map((it, i) => it.section ? (

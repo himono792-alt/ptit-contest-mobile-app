@@ -6,23 +6,27 @@ import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
+import '../../core/widgets/m_shimmer.dart';
 
+// Sprint 13 Batch A (2026-05-08): bỏ autoDispose cho master data ít đổi
+// (faculties/majors/classes). Avoid re-fetch khi user nav qua-lại tab.
+// Admin invalidate sau create/edit/delete (đã có) → cache vẫn fresh.
 final facultiesProvider =
-    FutureProvider.autoDispose<List<dynamic>>((ref) async {
+    FutureProvider<List<dynamic>>((ref) async {
   final api = ref.watch(apiClientProvider);
   final res = await api.dio.get('/admin/faculties');
   return res.data as List<dynamic>;
 });
 
 final majorsProvider =
-    FutureProvider.autoDispose<List<dynamic>>((ref) async {
+    FutureProvider<List<dynamic>>((ref) async {
   final api = ref.watch(apiClientProvider);
   final res = await api.dio.get('/admin/majors');
   return res.data as List<dynamic>;
 });
 
 final classesProvider =
-    FutureProvider.autoDispose<List<dynamic>>((ref) async {
+    FutureProvider<List<dynamic>>((ref) async {
   final api = ref.watch(apiClientProvider);
   final res = await api.dio.get('/admin/classes');
   return res.data as List<dynamic>;
@@ -103,8 +107,8 @@ class _FacultiesTab extends ConsumerWidget {
       onRefresh: () => ref.invalidate(facultiesProvider),
       addLabel: 'Tạo khoa',
       child: asyncList.when(
-        loading: () =>
-            const Center(child: CircularProgressIndicator(color: ptitRed)),
+        // Sprint 8c (2026-05-07): skeleton thay spinner.
+        loading: () => const MCardListSkeleton(count: 4),
         error: (e, _) => _ErrorView(error: e),
         data: (items) => MCard(
           padding: EdgeInsets.zero,
@@ -255,8 +259,8 @@ class _MajorsTab extends ConsumerWidget {
       onRefresh: () => ref.invalidate(majorsProvider),
       addLabel: 'Tạo ngành',
       child: asyncList.when(
-        loading: () =>
-            const Center(child: CircularProgressIndicator(color: ptitRed)),
+        // Sprint 8c (2026-05-07): skeleton thay spinner.
+        loading: () => const MCardListSkeleton(count: 4),
         error: (e, _) => _ErrorView(error: e),
         data: (items) => MCard(
           padding: EdgeInsets.zero,
@@ -401,8 +405,8 @@ class _ClassesTab extends ConsumerWidget {
       onRefresh: () => ref.invalidate(classesProvider),
       addLabel: 'Tạo lớp',
       child: asyncList.when(
-        loading: () =>
-            const Center(child: CircularProgressIndicator(color: ptitRed)),
+        // Sprint 8c (2026-05-07): skeleton thay spinner.
+        loading: () => const MCardListSkeleton(count: 4),
         error: (e, _) => _ErrorView(error: e),
         data: (items) => MCard(
           padding: EdgeInsets.zero,
@@ -640,14 +644,14 @@ class _TableRow extends StatelessWidget {
             IconButton(
               tooltip: 'Sửa',
               iconSize: 18,
-              visualDensity: VisualDensity.compact,
+              visualDensity: VisualDensity.compact, constraints: const BoxConstraints(minWidth: 44, minHeight: 44), // P0 #4 hit area ≥44 (WCAG 2.5.5)
               onPressed: onEdit,
               icon: Icon(Icons.edit_outlined, color: context.infoBlue),
             ),
             IconButton(
               tooltip: 'Xóa',
               iconSize: 18,
-              visualDensity: VisualDensity.compact,
+              visualDensity: VisualDensity.compact, constraints: const BoxConstraints(minWidth: 44, minHeight: 44), // P0 #4 hit area ≥44 (WCAG 2.5.5)
               onPressed: onDelete,
               icon: const Icon(Icons.delete_outline, color: ptitRed),
             ),

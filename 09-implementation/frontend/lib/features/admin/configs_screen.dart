@@ -7,10 +7,13 @@ import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
+import '../../core/widgets/m_shimmer.dart';
 import '../../core/widgets/pill.dart';
 
+// Sprint 13 Batch A (2026-05-08): bỏ autoDispose cho configs ít đổi.
+// Admin invalidate sau PATCH (đã wire) → fresh cache automatic.
 final configsProvider =
-    FutureProvider.autoDispose<List<dynamic>>((ref) async {
+    FutureProvider<List<dynamic>>((ref) async {
   final api = ref.watch(apiClientProvider);
   final res = await api.dio.get('/admin/configs');
   return res.data as List<dynamic>;
@@ -56,23 +59,24 @@ class ConfigsScreen extends ConsumerWidget {
             ),
           ]),
         ),
-        // Sprint 6 (2026-05-07): AD-04 — Backup / Restore section.
-        // Đặt trên list configs vì là 2 action tĩnh, không cần scroll.
-        Padding(
-          padding: EdgeInsets.fromLTRB(
-              isMobile ? 14 : 24, isMobile ? 14 : 18, isMobile ? 14 : 24, 0),
-          child: _BackupRestoreCard(),
-        ),
+        // Sprint 14 P2.1 (2026-05-08): _BackupRestoreCard tách ra sidebar
+        // item riêng (Backup & Restore — slug=backup) trong admin_shell. Configs
+        // screen giờ chỉ list configs để IA cleaner.
         Expanded(
           child: asyncList.when(
-            loading: () => const Center(
-                child: CircularProgressIndicator(color: ptitRed)),
+            // Sprint 8c (2026-05-07): skeleton thay spinner.
+            loading: () => const MCardListSkeleton(count: 5),
             error: (e, _) => Center(
                 child: Text('Lỗi: ${_msg(e)}',
                     style: const TextStyle(color: ptitRed))),
-            data: (items) => Padding(
+            data: (items) => SingleChildScrollView(
               padding: EdgeInsets.all(isMobile ? 14 : 24),
-              child: items.isEmpty
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Sprint 21 hotfix (2026-05-09): maintenance utilities card.
+                    const _MaintenanceCard(),
+                    const SizedBox(height: 16),
+                    items.isEmpty
                   ? Center(
                       child: Text('Không có config nào',
                           style: TextStyle(color: context.textMuted)))
@@ -115,7 +119,93 @@ class ConfigsScreen extends ConsumerWidget {
                         ),
                       ]),
                     ),
+                  ]),
             ),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+/// Sprint 21 hotfix (2026-05-09): card maintenance utilities trong ConfigsScreen.
+/// Hiện tại có 1 button: backfill `host_faculty_id` cho contests legacy
+/// (BCN không thấy trong queue duyệt vì host_faculty_id NULL).
+class _MaintenanceCard extends ConsumerStatefulWidget {
+  const _MaintenanceCard();
+  @override
+  ConsumerState<_MaintenanceCard> createState() => _MaintenanceCardState();
+}
+
+class _MaintenanceCardState extends ConsumerState<_MaintenanceCard> {
+  bool _busy = false;
+
+  Future<void> _backfill() async {
+    setState(() => _busy = true);
+    try {
+      final api = ref.read(apiClientProvider);
+      final res = await api.dio.post('/admin/backfill-host-faculty');
+      final data = res.data as Map<String, dynamic>;
+      final updated = data['updated_count'] as int? ?? 0;
+      final skipped = data['skipped_count'] as int? ?? 0;
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(
+                '✓ Backfill xong: cập nhật $updated contests, bỏ qua $skipped')),
+      );
+    } on DioException catch (e) {
+      final msg = e.response?.data is Map
+          ? '${e.response?.data['detail']}'
+          : (e.message ?? '');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Lỗi: $msg')));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MCard(
+      padding: const EdgeInsets.all(16),
+      margin: EdgeInsets.zero,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(Icons.build_circle_outlined, size: 18, color: context.warnOrange),
+          const SizedBox(width: 8),
+          Text('Bảo trì dữ liệu',
+              style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: context.textPrimary,
+                  letterSpacing: -0.2)),
+        ]),
+        const SizedBox(height: 6),
+        Text(
+            'Backfill `host_faculty_id` cho cuộc thi legacy (NULL → faculty của creator). '
+            'Chạy 1 lần là đủ. BCN sau đó thấy được trong queue duyệt QĐ1.',
+            style: TextStyle(fontSize: 12, color: context.textMuted, height: 1.5)),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            icon: _busy
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.cleaning_services_outlined, size: 18),
+            label: Text(_busy
+                ? 'Đang chạy...'
+                : 'Backfill host_faculty_id cho contests'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(44),
+              backgroundColor: context.warnOrange,
+            ),
+            onPressed: _busy ? null : _backfill,
           ),
         ),
       ]),
@@ -201,7 +291,7 @@ class _ConfigRow extends ConsumerWidget {
           child: IconButton(
             tooltip: 'Sửa value',
             iconSize: 18,
-            visualDensity: VisualDensity.compact,
+            visualDensity: VisualDensity.compact, constraints: const BoxConstraints(minWidth: 44, minHeight: 44), // P0 #4 hit area ≥44 (WCAG 2.5.5)
             onPressed: () => _openEdit(context, ref),
             icon: Icon(Icons.edit_outlined, color: context.infoBlue),
           ),

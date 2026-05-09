@@ -89,6 +89,69 @@
 
 ---
 
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph Client
+        Web[Web Browser<br/>Cloudflare Pages]
+        APK[Android APK<br/>local install]
+    end
+
+    subgraph Edge
+        CF[Cloudflare<br/>Pages CDN]
+        R2[(Cloudflare R2<br/>Object Storage)]
+    end
+
+    subgraph Backend["Backend — Railway"]
+        API[FastAPI<br/>104 endpoints / 16 router]
+        Worker[Background<br/>Sentry + Email Brevo]
+    end
+
+    subgraph Storage
+        DB[(PostgreSQL<br/>25 tables / 17 ENUMs)]
+        Sentry[Sentry.io<br/>FE + BE error tracking]
+    end
+
+    Web -->|HTTPS| CF
+    CF -->|API calls + JWT| API
+    APK -->|HTTPS direct| API
+    API <-->|asyncpg| DB
+    API <-->|aiobotocore S3| R2
+    API -->|breadcrumbs| Sentry
+    Web -->|FE errors| Sentry
+    Worker -->|HTTP API port 443| Brevo[Brevo Email]
+
+    classDef external fill:#f9f,stroke:#333,stroke-width:1px
+    classDef storage fill:#bbf,stroke:#333,stroke-width:1px
+    class Sentry,Brevo,R2 external
+    class DB storage
+```
+
+### Workflow phê duyệt 3 cấp
+
+```mermaid
+flowchart TD
+    GV[GV/BTC tạo cuộc thi] -->|Submit QĐ1| BCN1{BCN duyệt<br/>cuộc thi}
+    BCN1 -->|APPROVED| OPEN[Mở đăng ký]
+    BCN1 -->|REVISION| GV
+    OPEN --> SV[SV đăng ký + nộp bài]
+    SV --> JUDGE[GV chấm bài]
+    JUDGE --> COMPUTE[Compute results]
+    COMPUTE -->|Submit QĐ2| BCN2{BCN duyệt<br/>kết quả}
+    BCN2 -->|APPROVED| PUB[Publish results]
+    BCN2 -->|REVISION| JUDGE
+    PUB --> CERT[Cấp chứng nhận]
+    CERT -->|Submit QĐ3| BCN3{BCN duyệt<br/>cert template}
+    BCN3 -->|APPROVED| ACT[Activate template]
+    ACT --> ISSUE[Cấp cert hàng loạt]
+
+    classDef bcn fill:#FEE5E9,stroke:#C8102E,stroke-width:2px
+    class BCN1,BCN2,BCN3 bcn
+```
+
+---
+
 ## Tech stack
 
 ### Backend (`09-implementation/backend/`)

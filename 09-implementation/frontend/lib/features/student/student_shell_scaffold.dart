@@ -1,35 +1,39 @@
-// Sprint 2 fix C3+M1 (2026-05-06): wrap sub-routes /contests/:slug,
-// /contests/:slug/register, /rounds/:roundId/submit vào StudentShell sidebar
-// trên desktop ≥900px. Mobile vẫn render child raw (existing behavior với
-// back arrow trong AppBar của child screen).
+// Sub-route wrapper — Sprint 20++ (2026-05-09):
+//   - Render sidebar grouped 3 nhóm + Pattern B collapse 240↔64 đồng bộ với
+//     student_shell.dart (cùng SharedPreferences key 'student.sidebar_collapsed')
+//   - Click sidebar item → setTab studentTabProvider + go('/') → quay về shell
 //
-// Tại sao tách file riêng (KHÔNG sửa student_shell.dart):
-// - student_shell.dart dùng IndexedStack 6 tabs hardcoded → refactor lớn risk cao
-// - File này tạo wrapper riêng, accept 1 child Widget → sub-route compose dễ
-// - Sidebar code duplicate ~100 LOC chấp nhận để giảm risk break shell chính
-//
-// Khi click sidebar item từ sub-route → set studentTabProvider + go('/') để
-// quay về tab tương ứng trong shell chính.
+// Dùng cho /contests/:slug, /contests/:slug/register, /rounds/:roundId/submit.
+// Mobile/APK: render child raw (existing behavior).
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
+import '../../core/spacing.dart';
 import '../../core/theme.dart';
-import 'notifications_screen.dart' show notificationsProvider;
-import 'student_shell.dart' show studentTabProvider;
+import '../../core/theme_provider.dart';
+import 'student_shell.dart'
+    show
+        studentTabProvider,
+        StudentNavItem,
+        buildStudentNavGroups;
+
+const String _kSidebarCollapsedKey = 'student.sidebar_collapsed';
+const double _kSidebarExpandedWidth = 240;
+const double _kSidebarRailWidth = 64;
+const Duration _kSidebarAnim = Duration(milliseconds: 220);
 
 class StudentShellScaffold extends ConsumerWidget {
   /// Child screen — full Scaffold của contest detail / register / submission.
-  /// Wrapper sẽ render sidebar bên trái (desktop) hoặc trả raw (mobile).
   final Widget child;
 
   /// Hint tab nào active trong sidebar khi user đang ở sub-route.
-  /// 1 = "Cuộc thi" (cho contest detail + register), 2 = "Của tôi" (cho submission).
-  /// Null = không highlight tab nào.
+  /// 1 = "Cuộc thi", 2 = "Đã đăng ký". Null = không highlight.
   final int? activeTabHint;
 
   const StudentShellScaffold({
@@ -43,21 +47,18 @@ class StudentShellScaffold extends ConsumerWidget {
     final width = MediaQuery.of(context).size.width;
     final useWideLayout = kIsWeb && width >= 900;
 
-    // Mobile / APK / web narrow: child render full screen (existing behavior).
-    // Child screen tự có AppBar với back arrow nên không cần thêm chrome.
     if (!useWideLayout) {
       return child;
     }
 
-    // Desktop ≥900px: sidebar 240px + main = child.
     return _SVSubRouteWideLayout(
-      child: child,
       activeTabHint: activeTabHint,
+      child: child,
     );
   }
 }
 
-class _SVSubRouteWideLayout extends ConsumerWidget {
+class _SVSubRouteWideLayout extends ConsumerStatefulWidget {
   final Widget child;
   final int? activeTabHint;
 
@@ -67,7 +68,40 @@ class _SVSubRouteWideLayout extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_SVSubRouteWideLayout> createState() =>
+      _SVSubRouteWideLayoutState();
+}
+
+class _SVSubRouteWideLayoutState
+    extends ConsumerState<_SVSubRouteWideLayout> {
+  bool _collapsed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCollapsedState();
+  }
+
+  Future<void> _loadCollapsedState() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() => _collapsed = prefs.getBool(_kSidebarCollapsedKey) ?? false);
+  }
+
+  void _toggleCollapsed() {
+    setState(() => _collapsed = !_collapsed);
+    SharedPreferences.getInstance()
+        .then((p) => p.setBool(_kSidebarCollapsedKey, _collapsed));
+  }
+
+  String _studentCodeFromEmail(String email) {
+    final localPart = email.split('@').first;
+    final match = RegExp(r'^[bB]\d{2}[a-zA-Z]+\d+$').hasMatch(localPart);
+    return match ? localPart.toUpperCase() : email;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(authProvider).value;
     if (user == null) {
       return const Scaffold(
@@ -77,53 +111,30 @@ class _SVSubRouteWideLayout extends ConsumerWidget {
     final initial = user.fullName.isNotEmpty
         ? user.fullName.split(' ').last.substring(0, 1).toUpperCase()
         : 'S';
+    final groups = buildStudentNavGroups();
 
-    final asyncNotifs = ref.watch(notificationsProvider);
-    final unread = asyncNotifs.maybeWhen(
-      data: (d) => d['unread_count'] as int? ?? 0,
-      orElse: () => 0,
-    );
-
-    final tabLabels = ['Trang chủ', 'Cuộc thi', 'Của tôi', 'Kết quả', 'Thông báo', 'Tôi'];
-    final tabIcons = [
-      Icons.home_outlined,
-      Icons.emoji_events_outlined,
-      Icons.list_alt_outlined,
-      Icons.workspace_premium_outlined,
-      Icons.notifications_outlined,
-      Icons.person_outline,
-    ];
-    final tabActiveIcons = [
-      Icons.home,
-      Icons.emoji_events,
-      Icons.list_alt,
-      Icons.workspace_premium,
-      Icons.notifications,
-      Icons.person,
-    ];
-
-    // Click sidebar item từ sub-route: set tab provider + quay về '/' shell.
-    void onSwitchTab(int i) {
-      ref.read(studentTabProvider.notifier).state = i;
+    void onClickItem(StudentNavItem item) {
+      ref.read(studentTabProvider.notifier).state = item.tabIndex;
       context.go('/');
     }
 
     return Scaffold(
       body: Row(children: [
-        // ============== Sidebar 240px ==============
-        Container(
-          width: 240,
+        AnimatedContainer(
+          duration: _kSidebarAnim,
+          curve: Curves.easeOut,
+          width: _collapsed ? _kSidebarRailWidth : _kSidebarExpandedWidth,
           decoration: BoxDecoration(
             color: Theme.of(context).cardColor,
-            border: Border(right: BorderSide(color: Theme.of(context).dividerColor)),
+            border: Border(
+                right: BorderSide(color: Theme.of(context).dividerColor)),
           ),
           child: Column(children: [
-            // Brand header
             Container(
-              padding: const EdgeInsets.fromLTRB(18, 22, 18, 18),
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: context.cardBorder)),
-              ),
+              height: 64,
+              padding: EdgeInsets.symmetric(
+                  horizontal: _collapsed ? AppSpacing.s12 : AppSpacing.s16,
+                  vertical: AppSpacing.s12),
               child: Row(children: [
                 Container(
                   width: 36,
@@ -140,143 +151,417 @@ class _SVSubRouteWideLayout extends ConsumerWidget {
                             fontSize: 15)),
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('PTIT Contest',
-                            style: TextStyle(
-                                color: context.textPrimary,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800)),
-                        Text('Sinh viên',
-                            style: TextStyle(color: context.textMuted, fontSize: 10)),
-                      ]),
-                ),
+                if (!_collapsed) ...[
+                  const SizedBox(width: AppSpacing.s12),
+                  Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('PTIT Contest',
+                              style: TextStyle(
+                                  color: context.textPrimary,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.2)),
+                          Text('SINH VIÊN',
+                              style: TextStyle(
+                                  color: context.textMuted,
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 1.2)),
+                        ]),
+                  ),
+                  _SidebarToggleButton(
+                      collapsed: _collapsed, onTap: _toggleCollapsed),
+                ],
               ]),
             ),
-            // Nav items
+            if (_collapsed)
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(vertical: AppSpacing.s8),
+                child: Center(
+                  child: _SidebarToggleButton(
+                      collapsed: _collapsed, onTap: _toggleCollapsed),
+                ),
+              ),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                children: List.generate(tabLabels.length, (i) {
-                  final isActive = i == activeTabHint;
-                  final showBadge = i == 4 && unread > 0;
-                  // Sprint 3 a11y (2026-05-07): wrap sidebar item bằng Semantics.
-                  final badgeText = showBadge ? ', $unread thông báo chưa đọc' : '';
-                  return Semantics(
-                    label: '${tabLabels[i]}$badgeText',
-                    button: true,
-                    selected: isActive,
-                    hint: isActive ? 'Đang ở mục này' : 'Chuyển sang mục ${tabLabels[i]}',
-                    child: InkWell(
-                    excludeFromSemantics: true,
-                    onTap: () => onSwitchTab(i),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 18, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: isActive ? context.ptitRedSoft : null,
-                        border: Border(
-                          left: BorderSide(
-                            color: isActive ? ptitRed : Colors.transparent,
-                            width: 3,
-                          ),
-                        ),
+                padding: const EdgeInsets.only(bottom: AppSpacing.s12),
+                children: [
+                  for (final g in groups) ...[
+                    if (!_collapsed)
+                      _GroupLabel(label: g.label)
+                    else
+                      _GroupDividerCollapsed(),
+                    for (final item in g.items)
+                      _SidebarItem(
+                        item: item,
+                        isActive: item.tabIndex == widget.activeTabHint,
+                        collapsed: _collapsed,
+                        onTap: () => onClickItem(item),
                       ),
-                      child: Row(children: [
-                        Icon(isActive ? tabActiveIcons[i] : tabIcons[i],
-                            size: 18, color: isActive ? ptitRed : context.textMuted),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(tabLabels[i],
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: isActive ? ptitRed : context.textPrimary,
-                                fontWeight: isActive
-                                    ? FontWeight.w700
-                                    : FontWeight.w500,
-                              )),
-                        ),
-                        if (showBadge)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: ptitRed,
-                              borderRadius: BorderRadius.circular(99),
-                            ),
-                            child: Text('$unread',
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700)),
-                          ),
-                      ]),
-                    ),
-                  ),
-                  );
-                }),
+                    const SizedBox(height: AppSpacing.s12),
+                  ],
+                ],
               ),
             ),
-            // Footer user
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: context.cardBorder)),
-              ),
-              child: Row(children: [
-                Container(
-                  width: 32,
-                  height: 32,
+            _SidebarFooter(
+              collapsed: _collapsed,
+              initial: initial,
+              fullName: user.fullName,
+              studentCode: _studentCodeFromEmail(user.email),
+              onLogout: () => ref.read(authProvider.notifier).logout(),
+            ),
+          ]),
+        ),
+        Expanded(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1100),
+              child: widget.child,
+            ),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+// ============== Reusable widgets (duplicate from student_shell.dart) ==============
+
+class _GroupLabel extends StatelessWidget {
+  final String label;
+  const _GroupLabel({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.s16, AppSpacing.s12, AppSpacing.s16, AppSpacing.s4),
+      child: Text(label,
+          style: TextStyle(
+            color: context.textMuted,
+            fontSize: 9.5,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.2,
+          )),
+    );
+  }
+}
+
+class _GroupDividerCollapsed extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.s12, vertical: AppSpacing.s8),
+      child: Container(
+        height: 1,
+        color: context.cardBorder.withValues(alpha: 0.6),
+      ),
+    );
+  }
+}
+
+class _SidebarItem extends ConsumerWidget {
+  final StudentNavItem item;
+  final bool isActive;
+  final bool collapsed;
+  final VoidCallback onTap;
+  const _SidebarItem({
+    required this.item,
+    required this.isActive,
+    required this.collapsed,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final badge = item.badgeBuilder?.call(ref) ?? 0;
+    final showBadge = badge > 0;
+    final isNotif = item.tabIndex == 4;
+    final badgeText = showBadge
+        ? ', $badge ${isNotif ? "thông báo chưa đọc" : "mục"}'
+        : '';
+
+    final inkContent = InkWell(
+      excludeFromSemantics: true,
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(
+            horizontal: collapsed ? 0 : AppSpacing.s16,
+            vertical: AppSpacing.s8),
+        decoration: BoxDecoration(
+          color: isActive ? context.ptitRedSoft : null,
+          border: Border(
+            left: BorderSide(
+              color: isActive ? ptitRed : Colors.transparent,
+              width: 3,
+            ),
+          ),
+        ),
+        child: collapsed
+            ? Center(
+                child: Stack(clipBehavior: Clip.none, children: [
+                  Icon(isActive ? item.activeIcon : item.icon,
+                      size: 19, color: isActive ? ptitRed : context.textMuted),
+                  if (showBadge)
+                    Positioned(
+                      right: -6,
+                      top: -4,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: isNotif ? ptitRed : context.cardBorder,
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                          border: Border.all(
+                              color: Theme.of(context).cardColor, width: 1.5),
+                        ),
+                        constraints: const BoxConstraints(minWidth: 14),
+                        child: Text('$badge',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: isNotif
+                                  ? Colors.white
+                                  : context.textMuted,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              height: 1.1,
+                            )),
+                      ),
+                    ),
+                ]),
+              )
+            : Row(children: [
+                Icon(isActive ? item.activeIcon : item.icon,
+                    size: 17, color: isActive ? ptitRed : context.textMuted),
+                const SizedBox(width: AppSpacing.s12),
+                Expanded(
+                  child: Text(item.label,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isActive ? ptitRed : context.textPrimary,
+                        fontWeight:
+                            isActive ? FontWeight.w700 : FontWeight.w500,
+                        letterSpacing: -0.1,
+                      )),
+                ),
+                if (showBadge)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 7, vertical: 1.5),
+                    decoration: BoxDecoration(
+                      color: isNotif
+                          ? ptitRed
+                          : context.cardBorder.withValues(alpha: 0.55),
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                    child: Text('$badge',
+                        style: TextStyle(
+                          color: isNotif ? Colors.white : context.textMuted,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        )),
+                  ),
+              ]),
+      ),
+    );
+
+    final wrapped = collapsed
+        ? Tooltip(
+            message: item.label + (showBadge ? ' ($badge)' : ''),
+            preferBelow: false,
+            child: inkContent,
+          )
+        : inkContent;
+
+    return Semantics(
+      label: '${item.label}$badgeText',
+      button: true,
+      selected: isActive,
+      hint: isActive ? 'Đang ở mục này' : 'Chuyển sang mục ${item.label}',
+      child: wrapped,
+    );
+  }
+}
+
+class _SidebarFooter extends ConsumerWidget {
+  final bool collapsed;
+  final String initial;
+  final String fullName;
+  final String studentCode;
+  final VoidCallback onLogout;
+
+  const _SidebarFooter({
+    required this.collapsed,
+    required this.initial,
+    required this.fullName,
+    required this.studentCode,
+    required this.onLogout,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(themeProvider);
+    final platformDark =
+        MediaQuery.platformBrightnessOf(context) == Brightness.dark;
+    final isDark =
+        mode == ThemeMode.dark || (mode == ThemeMode.system && platformDark);
+    void toggleTheme() {
+      ref
+          .read(themeProvider.notifier)
+          .setMode(isDark ? ThemeMode.light : ThemeMode.dark);
+    }
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+          horizontal: collapsed ? AppSpacing.s8 : AppSpacing.s12,
+          vertical: AppSpacing.s12),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: context.cardBorder)),
+      ),
+      child: collapsed
+          ? Column(children: [
+              Tooltip(
+                message: '$fullName · $studentCode',
+                child: Container(
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
                       color: context.ptitRedSoft, shape: BoxShape.circle),
                   child: Center(
                     child: Text(initial,
                         style: const TextStyle(
                             color: ptitRed,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w800,
                             fontSize: 13)),
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(user.fullName,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                color: context.textPrimary,
-                                fontSize: 12, fontWeight: FontWeight.w700)),
-                        Text(user.email,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                color: context.textMuted, fontSize: 10)),
-                      ]),
+              ),
+              const SizedBox(height: AppSpacing.s4),
+              Tooltip(
+                message: isDark ? 'Chế độ sáng' : 'Chế độ tối',
+                child: IconButton(
+                  icon: Icon(
+                      isDark
+                          ? Icons.light_mode_outlined
+                          : Icons.dark_mode_outlined,
+                      size: 16,
+                      color: context.textMuted),
+                  visualDensity: VisualDensity.compact,
+                  constraints:
+                      const BoxConstraints(minWidth: 32, minHeight: 32),
+                  onPressed: toggleTheme,
                 ),
-                IconButton(
-                  icon: Icon(Icons.logout, size: 16, color: context.textMuted),
-                  tooltip: 'Đăng xuất',
-                  onPressed: () => ref.read(authProvider.notifier).logout(),
+              ),
+              Tooltip(
+                message: 'Đăng xuất',
+                child: IconButton(
+                  icon: Icon(Icons.power_settings_new,
+                      size: 16, color: context.textMuted),
+                  visualDensity: VisualDensity.compact,
+                  constraints:
+                      const BoxConstraints(minWidth: 32, minHeight: 32),
+                  onPressed: onLogout,
                 ),
-              ]),
-            ),
-          ]),
-        ),
-        // ============== Main content = child screen ==============
-        // Center align với max-width để không quá rộng (sub-route content
-        // thường là form/detail panel, không cần full-width).
-        Expanded(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 900),
-              child: child,
+              ),
+            ])
+          : Row(children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                    color: context.ptitRedSoft, shape: BoxShape.circle),
+                child: Center(
+                  child: Text(initial,
+                      style: const TextStyle(
+                          color: ptitRed,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13)),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s8),
+              Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(fullName,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: context.textPrimary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.2)),
+                      const SizedBox(height: 1),
+                      Text(studentCode,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: context.textMuted,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: 0.2)),
+                    ]),
+              ),
+              IconButton(
+                icon: Icon(
+                    isDark
+                        ? Icons.light_mode_outlined
+                        : Icons.dark_mode_outlined,
+                    size: 16,
+                    color: context.textMuted),
+                tooltip: isDark ? 'Chế độ sáng' : 'Chế độ tối',
+                visualDensity: VisualDensity.compact,
+                constraints:
+                    const BoxConstraints(minWidth: 32, minHeight: 32),
+                onPressed: toggleTheme,
+              ),
+              IconButton(
+                icon: Icon(Icons.power_settings_new,
+                    size: 16, color: context.textMuted),
+                tooltip: 'Đăng xuất',
+                visualDensity: VisualDensity.compact,
+                constraints:
+                    const BoxConstraints(minWidth: 32, minHeight: 32),
+                onPressed: onLogout,
+              ),
+            ]),
+    );
+  }
+}
+
+class _SidebarToggleButton extends StatelessWidget {
+  final bool collapsed;
+  final VoidCallback onTap;
+
+  const _SidebarToggleButton({required this.collapsed, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: collapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar',
+      preferBelow: false,
+      child: Material(
+        color: context.cardBorder.withValues(alpha: 0.4),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.tight)),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.tight),
+          child: SizedBox(
+            width: 28,
+            height: 28,
+            child: Center(
+              child: Icon(
+                collapsed ? Icons.chevron_right : Icons.chevron_left,
+                color: context.textMuted,
+                size: 18,
+              ),
             ),
           ),
         ),
-      ]),
+      ),
     );
   }
 }

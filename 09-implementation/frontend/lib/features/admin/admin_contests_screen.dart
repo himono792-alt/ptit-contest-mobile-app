@@ -8,6 +8,7 @@ import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/models/contest.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/empty_view.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/pill.dart';
 import 'create_contest_dialog.dart';
@@ -198,9 +199,11 @@ class _AdminContestsScreenState extends ConsumerState<AdminContestsScreen> {
             data: (data) => Padding(
               padding: EdgeInsets.all(isMobile ? 14 : 24),
               child: data.items.isEmpty
-                  ? Center(
-                      child: Text('Không có cuộc thi nào',
-                          style: TextStyle(color: context.textMuted)))
+                  ? const EmptyView(
+                      icon: Icons.emoji_events_outlined,
+                      title: 'Chưa có cuộc thi nào',
+                      subtitle: 'Tạo cuộc thi đầu tiên để bắt đầu workflow phê duyệt.',
+                    )
                   : MCard(
                       padding: EdgeInsets.zero,
                       margin: EdgeInsets.zero,
@@ -400,7 +403,7 @@ class _ContestRowState extends ConsumerState<_ContestRow> {
                     : IconButton(
                         tooltip: 'Submit cho BCN duyệt',
                         iconSize: 18,
-                        visualDensity: VisualDensity.compact,
+                        visualDensity: VisualDensity.compact, constraints: const BoxConstraints(minWidth: 44, minHeight: 44), // P0 #4 hit area ≥44 (WCAG 2.5.5)
                         icon: const Icon(Icons.send, color: ptitRed),
                         onPressed: _submitForApproval,
                       ))

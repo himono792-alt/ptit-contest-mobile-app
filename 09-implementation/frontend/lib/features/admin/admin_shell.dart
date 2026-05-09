@@ -23,6 +23,8 @@ import '../../core/widgets/m_card.dart';
 import 'admin_contests_screen.dart';
 import 'admin_dashboard_screen.dart';
 import 'anomaly_reports_screen.dart';
+import 'bcn_extra_screens.dart';
+import 'gv_extra_screens.dart';
 import 'approval_queue_screen.dart';
 import 'admin_users_screen.dart';
 import 'audit_log_screen.dart';
@@ -69,34 +71,82 @@ class _AdminShellState extends ConsumerState<AdminShell> {
       _NavItem('dashboard', 'Dashboard', Icons.dashboard_outlined,
           const AdminDashboardScreen()),
     ];
-    // GV/BTC scope — chỉ ORGANIZER (KHÔNG check ADMIN). Admin có riêng module.
+    // Sprint 21 (2026-05-09): GV/BTC sidebar grouped 3 nhóm theo mockup.
+    // TỔNG QUAN có thêm "Lịch & deadline", CUỘC THI gộp Chấm bài + Kết quả,
+    // section "BÁO CÁO" mới với Thống kê + Xuất báo cáo (placeholders).
     if (user.isOrganizer) {
+      // Thêm "Lịch & deadline" vào section TỔNG QUAN.
+      items.add(_NavItem('gv-calendar', 'Lịch & deadline',
+          Icons.event_note_outlined, const GvCalendarDeadlineScreen()));
       items.add(_NavItem.section('Cuộc thi'));
       items.add(_NavItem('contests', 'Cuộc thi của tôi',
           Icons.emoji_events_outlined, const AdminContestsScreen()));
       items.add(_NavItem('contests-new', 'Tạo cuộc thi',
           Icons.add_circle_outline, const _NewContestQuickScreen()));
+      // Chấm bài đưa lên trong nhóm CUỘC THI (mockup mockup không tách "Chấm điểm").
+      // Chỉ thêm khi user là Judge — pure Organizer không Judge thì skip.
+      if (user.isJudge) {
+        items.add(_NavItem('judge', 'Chấm bài',
+            Icons.rate_review_outlined, const JudgeScreen()));
+      }
+      items.add(_NavItem('gv-results', 'Kết quả',
+          Icons.workspace_premium_outlined, const GvResultsScreen()));
+      items.add(_NavItem.section('Báo cáo'));
+      items.add(_NavItem('gv-stats', 'Thống kê',
+          Icons.bar_chart_outlined, const GvStatsScreen()));
+      items.add(_NavItem('gv-export', 'Xuất báo cáo',
+          Icons.file_download_outlined, const GvExportReportScreen()));
     }
-    // BCN scope — chỉ HOD.
+    // Sprint 21+ (2026-05-09): BCN sidebar grouped 3 nhóm theo mockup.
+    // PHÊ DUYỆT có thêm "Mẫu chứng nhận" placeholder. THEO DÕI thêm
+    // "Thống kê khoa" + "Báo cáo BGH" placeholders.
     if (user.isHod) {
       items.add(_NavItem.section('Phê duyệt'));
-      items.add(_NavItem('approvals-q1', 'Đề xuất cuộc thi (QĐ1)',
-          Icons.fact_check_outlined,
-          const ApprovalQueueScreen(lockedType: 'CONTEST_PROPOSAL')));
-      items.add(_NavItem('approvals-q2', 'Kết quả cuộc thi (QĐ2)',
-          Icons.emoji_events_outlined,
-          const ApprovalQueueScreen(lockedType: 'CONTEST_RESULT')));
+      // Sprint 24 (2026-05-09): badge live count cho 2 lane QĐ1/QĐ2.
+      items.add(_NavItem(
+        'approvals-q1',
+        'Đề xuất cuộc thi',
+        Icons.fact_check_outlined,
+        const ApprovalQueueScreen(lockedType: 'CONTEST_PROPOSAL'),
+        badgeBuilder: (ref) {
+          final list = ref.watch(pendingApprovalsProvider);
+          return list.maybeWhen(
+              data: (d) => d
+                  .where((ap) => ap['target_type'] == 'CONTEST_PROPOSAL')
+                  .length,
+              orElse: () => 0);
+        },
+      ));
+      items.add(_NavItem(
+        'approvals-q2',
+        'Kết quả cuộc thi',
+        Icons.emoji_events_outlined,
+        const ApprovalQueueScreen(lockedType: 'CONTEST_RESULT'),
+        badgeBuilder: (ref) {
+          final list = ref.watch(pendingApprovalsProvider);
+          return list.maybeWhen(
+              data: (d) => d
+                  .where((ap) => ap['target_type'] == 'CONTEST_RESULT')
+                  .length,
+              orElse: () => 0);
+        },
+      ));
+      items.add(_NavItem('bcn-cert-templates', 'Mẫu chứng nhận',
+          Icons.workspace_premium_outlined,
+          const BcnCertTemplatesScreen()));
       items.add(_NavItem.section('Theo dõi'));
       items.add(_NavItem('monitor', 'Giám sát',
           Icons.visibility_outlined, const MonitorScreen()));
+      items.add(_NavItem('bcn-stats', 'Thống kê khoa',
+          Icons.bar_chart_outlined, const BcnFacultyStatsScreen()));
+      items.add(_NavItem('bcn-report-bgh', 'Báo cáo BGH',
+          Icons.description_outlined, const BcnReportBghScreen()));
     }
-    // Judge scope — chỉ JUDGE (thường gắn với GV/BTC).
-    if (user.isJudge) {
-      // Section "Chấm điểm" chỉ thêm nếu CHƯA có "Cuộc thi" section ở trên
-      // (tức user là JUDGE thuần, không Organizer). Pure judge sẽ rất hiếm.
-      if (!user.isOrganizer) {
-        items.add(_NavItem.section('Chấm điểm'));
-      }
+    // Judge scope — chỉ JUDGE thuần (không Organizer). Pure judge rất hiếm.
+    // Sprint 21: nếu user là Organizer → "Chấm bài" đã thêm trong section
+    // CUỘC THI ở block isOrganizer trên. Block này chỉ chạy khi judge thuần.
+    if (user.isJudge && !user.isOrganizer) {
+      items.add(_NavItem.section('Chấm điểm'));
       items.add(_NavItem('judge', 'Chấm bài',
           Icons.rate_review_outlined, const JudgeScreen()));
     }
@@ -412,14 +462,28 @@ class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
                       ),
                     ),
                     child: _collapsed
-                        // Rail icon-only — center vertical
-                        ? Center(
-                            child: Icon(item.icon,
-                                size: 20,
-                                color: isActive
-                                    ? Colors.white
-                                    : const Color(0xFFD1D5DB)),
-                          )
+                        // Rail icon-only — center vertical với badge dot khi có
+                        ? Stack(clipBehavior: Clip.none, children: [
+                            Center(
+                              child: Icon(item.icon,
+                                  size: 20,
+                                  color: isActive
+                                      ? Colors.white
+                                      : const Color(0xFFD1D5DB)),
+                            ),
+                            if ((item.badgeBuilder?.call(ref) ?? 0) > 0)
+                              Positioned(
+                                right: 14,
+                                top: -2,
+                                child: Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                      color: ptitRed,
+                                      shape: BoxShape.circle),
+                                ),
+                              ),
+                          ])
                         : Row(children: [
                             Icon(item.icon,
                                 size: 18,
@@ -427,16 +491,33 @@ class _WideAdminLayoutState extends ConsumerState<_WideAdminLayout> {
                                     ? Colors.white
                                     : const Color(0xFFD1D5DB)),
                             const SizedBox(width: 10),
-                            Text(item.label,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: isActive
-                                      ? Colors.white
-                                      : const Color(0xFFD1D5DB),
-                                  fontWeight: isActive
-                                      ? FontWeight.w600
-                                      : FontWeight.normal,
-                                )),
+                            Expanded(
+                              child: Text(item.label,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: isActive
+                                        ? Colors.white
+                                        : const Color(0xFFD1D5DB),
+                                    fontWeight: isActive
+                                        ? FontWeight.w600
+                                        : FontWeight.normal,
+                                  )),
+                            ),
+                            // Sprint 24 (2026-05-09): badge count khi BE trả > 0
+                            if ((item.badgeBuilder?.call(ref) ?? 0) > 0)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: ptitRed,
+                                  borderRadius: BorderRadius.circular(99),
+                                ),
+                                child: Text('${item.badgeBuilder!(ref)}',
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700)),
+                              ),
                           ]),
                   ),
                 ),
@@ -902,7 +983,10 @@ class _NavItem {
   final Widget? screen;
   /// True nếu là section divider (label uppercase nhỏ, không tap được).
   final bool isSection;
-  _NavItem(this.slug, this.label, this.icon, this.screen)
+  /// Sprint 24 (2026-05-09): badge count live builder. Trả 0 = không show badge.
+  final int Function(WidgetRef ref)? badgeBuilder;
+  _NavItem(this.slug, this.label, this.icon, this.screen,
+      {this.badgeBuilder})
       : isSection = false;
   /// Sprint 14 factory: section divider trong sidebar (label hoặc placeholder).
   /// Pattern Linear/Notion: "TỔNG QUAN", "PHÊ DUYỆT", "THEO DÕI".
@@ -910,7 +994,8 @@ class _NavItem {
       : slug = null,
         icon = null,
         screen = null,
-        isSection = true;
+        isSection = true,
+        badgeBuilder = null;
 }
 
 /// Sprint 14 P2.2 (2026-05-08): wrapper screen cho sidebar item "Tạo cuộc thi".
@@ -1133,3 +1218,6 @@ class _BackupRestoreScreen extends ConsumerWidget {
     );
   }
 }
+
+// Sprint 23 Step 4 (2026-05-09): _ComingSoonScreen đã thay bằng 7 screens
+// thật trong gv_extra_screens.dart + bcn_extra_screens.dart.

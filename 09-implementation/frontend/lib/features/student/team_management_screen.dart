@@ -17,6 +17,7 @@ import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
+import '../../core/widgets/m_shimmer.dart';
 import '../../core/widgets/m_top_bar.dart';
 import '../../core/widgets/pill.dart';
 
@@ -55,8 +56,8 @@ class TeamManagementScreen extends ConsumerWidget {
         ),
       ),
       body: asyncTeams.when(
-        loading: () =>
-            const Center(child: CircularProgressIndicator(color: ptitRed)),
+        // Sprint 13 Batch B (2026-05-08): skeleton thay spinner cho team list.
+        loading: () => const MCardListSkeleton(count: 3),
         error: (e, _) {
           final msg = e is DioException
               ? (e.response?.data is Map

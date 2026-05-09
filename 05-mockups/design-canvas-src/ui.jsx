@@ -317,6 +317,41 @@ function IconBtn({ name, accent, onClick }) {
   );
 }
 
+/* ───────── Dark mode toggle nhỏ — dùng trong AppBar trailing ───────── */
+function DarkModeBtn() {
+  const [isDark, setIsDark] = React.useState(
+    typeof document !== "undefined" && document.body.dataset.theme === "dark"
+  );
+  React.useEffect(() => {
+    const sync = () => setIsDark(document.body.dataset.theme === "dark");
+    const obs = new MutationObserver(sync);
+    obs.observe(document.body, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => obs.disconnect();
+  }, []);
+  const toggle = () => {
+    const next = !isDark;
+    if (window.__setTweak) window.__setTweak("darkMode", next);
+    else document.body.dataset.theme = next ? "dark" : "light";
+  };
+  return (
+    <button
+      onClick={toggle}
+      title={isDark ? "Chuyển sáng" : "Chuyển tối"}
+      aria-label="Bật/tắt chế độ tối"
+      style={{
+        width: 36, height: 36, borderRadius: 99,
+        border: "1px solid var(--border)",
+        background: "var(--bg-elev)",
+        color: "var(--fg)",
+        cursor: "pointer",
+        display: "grid", placeItems: "center",
+        fontSize: 15,
+        boxShadow: "var(--shadow-xs)",
+      }}
+    >{isDark ? "☀" : "🌙"}</button>
+  );
+}
+
 /* ───────── Phone shell ───────── */
 function Phone({ children, dark = false, width = 320, height = 660 }) {
   return (
@@ -458,6 +493,6 @@ function ScreenMeta({ code, type, children }) { return children; }
 
 Object.assign(window, {
   Icon, Badge, Card, Btn, Field, Input, Avatar, Segmented,
-  StatusBar, NavBar, AppBar, IconBtn, Phone, Body,
+  StatusBar, NavBar, AppBar, IconBtn, DarkModeBtn, Phone, Body,
   SectionHead, ChipRow, Progress, Stat, ListRow, IconTile, ScreenMeta,
 });

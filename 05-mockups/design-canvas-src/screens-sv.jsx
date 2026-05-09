@@ -1,5 +1,5 @@
 /* global React, Phone, AppBar, Body, NavBar, Card, Btn, Field, Input, Badge,
-   Avatar, Icon, IconBtn, IconTile, ListRow, SectionHead, ChipRow, Progress,
+   Avatar, Icon, IconBtn, DarkModeBtn, IconTile, ListRow, SectionHead, ChipRow, Progress,
    Stat, Segmented */
 // ============================================================
 // STUDENT SCREENS — 16 màn
@@ -179,6 +179,7 @@ const sv_screens = [
             <div style={{ fontSize: 11.5, color: "var(--fg-muted)" }}>Xin chào,</div>
             <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: "-0.02em" }}>Nguyễn Văn An</div>
           </div>
+          <DarkModeBtn/>
           <button style={{ width: 38, height: 38, borderRadius: 99, border: "1px solid var(--border)", background: "var(--bg-elev)", color: "var(--fg)", display: "grid", placeItems: "center", position: "relative" }}>
             <Icon name="bell" size={18}/>
             <span style={{ position: "absolute", top: 8, right: 9, width: 7, height: 7, borderRadius: 99, background: "var(--accent)", border: "1.5px solid var(--bg-elev)" }}/>

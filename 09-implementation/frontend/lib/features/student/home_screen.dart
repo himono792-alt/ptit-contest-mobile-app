@@ -1,3 +1,15 @@
+// Sprint 20 (2026-05-09) — Home redesign theo mockup:
+//   - Header: greeting + date + bell button
+//   - 3 hero gradient cards (red/blue/green) horizontal, click → contest detail
+//   - 2-column layout:
+//     * Left "Sắp diễn ra" timeline list 4 contests (date pill + title + tag)
+//     * Right "Của tôi" stats panel 3 cards (participating / top rank / certificates)
+//
+// Responsive:
+//   - ≥1100 wide: full 2-col layout với hero row
+//   - 900-1100: hero row + 2-col stack tighter
+//   - <900: hero stack vertical + sections stack
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,11 +18,13 @@ import 'package:intl/intl.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
+import '../../core/models/contest.dart';
+import '../../core/models/result.dart';
+import '../../core/spacing.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
-import '../../core/widgets/m_shimmer.dart';
-import '../../core/widgets/pill.dart';
 import 'contest_list_screen.dart';
+import 'my_registrations_screen.dart';
 import 'my_results_screen.dart';
 import 'notifications_screen.dart';
 
@@ -19,151 +33,651 @@ class HomeScreen extends ConsumerWidget {
   final ValueChanged<int>? onSwitchTab;
   const HomeScreen({super.key, this.onSwitchTab});
 
+  /// Parse tên ngắn từ fullName (chữ cuối — vd "Phạm Minh Anh" → "Minh Anh"
+  /// nếu có space, hoặc full nếu chỉ 1 từ). Heuristic VN: lấy 2 từ cuối.
+  String _shortGreetingName(String fullName) {
+    final parts = fullName.trim().split(RegExp(r'\s+'));
+    if (parts.length >= 2) {
+      return '${parts[parts.length - 2]} ${parts.last}';
+    }
+    return parts.first;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authProvider).value;
     if (user == null) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: ptitRed)));
+          body: Center(child: CircularProgressIndicator(color: ptitRed)));
     }
-    final initial = user.fullName.isNotEmpty
-        ? user.fullName.split(' ').last.substring(0, 1).toUpperCase()
-        : 'U';
+
+    final width = MediaQuery.of(context).size.width;
+    final isWide = width >= 900;
+    final today = DateTime.now();
+    final dateStr = DateFormat('dd/MM/yyyy').format(today);
 
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: Column(children: [
-          // ============== Header: avatar + greeting + bell ==============
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 14, 18, 4),
-            child: Row(children: [
-              // Avatar + greeting đều click được → switch sang tab Tôi (index 5)
-              Expanded(
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                  onTap: () => onSwitchTab?.call(5),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: context.ptitRedSoft,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            initial,
-                            style: GoogleFonts.plusJakartaSans(
-                              color: ptitRed,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
+        child: RefreshIndicator(
+          color: ptitRed,
+          onRefresh: () async {
+            ref.invalidate(contestListProvider);
+            ref.invalidate(myResultsProvider);
+            ref.invalidate(myEntriesProvider);
+          },
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(
+              isWide ? AppSpacing.s32 : AppSpacing.s16,
+              AppSpacing.s16,
+              isWide ? AppSpacing.s32 : AppSpacing.s16,
+              AppSpacing.s32,
+            ),
+            children: [
+              // ========= Header: breadcrumb + greeting + date + bell =========
+              _HomeHeader(
+                userName: _shortGreetingName(user.fullName),
+                dateStr: dateStr,
+                isWide: isWide,
+              ),
+              const SizedBox(height: AppSpacing.s24),
+
+              // ========= 3 hero gradient cards =========
+              const _HeroRow(),
+              const SizedBox(height: AppSpacing.s32),
+
+              // ========= 2-column: Sắp diễn ra + Của tôi =========
+              if (isWide)
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Xin chào,',
-                                style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11.5,
-                                    color: context.textMuted,
-                                    fontWeight: FontWeight.w500)),
-                            Text(
-                              user.fullName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -0.3,
-                              ),
-                            ),
-                          ],
-                        ),
+                        flex: 7,
+                        child: _UpcomingSection(onSwitchTab: onSwitchTab),
                       ),
-                    ]),
+                      const SizedBox(width: AppSpacing.s24),
+                      Expanded(
+                        flex: 4,
+                        child: _MyStatsPanel(onSwitchTab: onSwitchTab),
+                      ),
+                    ],
+                  ),
+                )
+              else ...[
+                _UpcomingSection(onSwitchTab: onSwitchTab),
+                const SizedBox(height: AppSpacing.s24),
+                _MyStatsPanel(onSwitchTab: onSwitchTab),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ============== Header ==============
+
+class _HomeHeader extends StatelessWidget {
+  final String userName;
+  final String dateStr;
+  final bool isWide;
+  const _HomeHeader({
+    required this.userName,
+    required this.dateStr,
+    required this.isWide,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Trang chủ',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: context.textMuted,
+                    letterSpacing: 0.4,
+                  )),
+              const SizedBox(height: AppSpacing.s4),
+              Text('Chào, $userName 👋',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: isWide ? 24 : 20,
+                    fontWeight: FontWeight.w800,
+                    color: context.textPrimary,
+                    letterSpacing: -0.6,
+                    height: 1.1,
+                  )),
+            ],
+          ),
+        ),
+        const SizedBox(width: AppSpacing.s12),
+        // Date chip
+        Container(
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.s12, vertical: AppSpacing.s8),
+          decoration: BoxDecoration(
+            color: context.cardBg,
+            border: Border.all(color: context.cardBorder),
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.calendar_today_outlined,
+                size: 13, color: context.textMuted),
+            const SizedBox(width: AppSpacing.s8),
+            Text(dateStr,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: context.textPrimary,
+                )),
+          ]),
+        ),
+        const SizedBox(width: AppSpacing.s8),
+        const _NotificationButton(),
+      ],
+    );
+  }
+}
+
+// ============== Notification button ==============
+
+class _NotificationButton extends ConsumerWidget {
+  const _NotificationButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncData = ref.watch(notificationsProvider);
+    final unread = asyncData.maybeWhen(
+      data: (d) => d['unread_count'] as int? ?? 0,
+      orElse: () => 0,
+    );
+    final hint = unread > 0
+        ? 'Mở thông báo, $unread chưa đọc'
+        : 'Mở thông báo';
+    return Semantics(
+      label: hint,
+      button: true,
+      excludeSemantics: true,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.s12, vertical: AppSpacing.s8),
+          decoration: BoxDecoration(
+            color: context.cardBg,
+            border: Border.all(color: context.cardBorder),
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+          child: Stack(clipBehavior: Clip.none, children: [
+            Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.notifications_outlined,
+                  size: 14, color: context.textPrimary),
+              const SizedBox(width: AppSpacing.s8),
+              Text('Thông báo',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: context.textPrimary,
+                  )),
+            ]),
+            if (unread > 0)
+              Positioned(
+                right: -4,
+                top: -3,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: ptitRed,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: context.cardBg, width: 1.5),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              _BellButton(),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+// ============== 3 Hero gradient cards ==============
+
+/// Palette 3 gradient theo mockup (red / blue / green-orange).
+const _heroGradients = <List<Color>>[
+  // Red: ptitRed → pink (HOT card)
+  [Color(0xFFE63946), Color(0xFFFF6B7E)],
+  // Blue: indigo → purple (Khoa cơ bản)
+  [Color(0xFF4361EE), Color(0xFF7B2CBF)],
+  // Green-orange: emerald → orange (Đa khoa)
+  [Color(0xFF2A9D8F), Color(0xFFE76F51)],
+];
+
+const _heroLabels = <String>['CNTT · HOT', 'KHOA CƠ BẢN', 'ĐA KHOA'];
+
+class _HeroRow extends ConsumerWidget {
+  const _HeroRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncList = ref.watch(contestListProvider);
+    final width = MediaQuery.of(context).size.width;
+    final isCompact = width < 900;
+
+    return asyncList.when(
+      loading: () => SizedBox(
+        height: isCompact ? 180 : 200,
+        child: Row(
+          children: List.generate(3, (i) {
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(right: i < 2 ? AppSpacing.s16 : 0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: context.cardBg,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+      ),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (data) {
+        if (data.items.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(AppSpacing.s24),
+            decoration: BoxDecoration(
+              color: context.cardBg,
+              border: Border.all(color: context.cardBorder),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+            ),
+            child: Center(
+              child: Text('Chưa có cuộc thi nổi bật',
+                  style: TextStyle(color: context.textMuted, fontSize: 13)),
+            ),
+          );
+        }
+
+        // Sort theo priority: REG_OPEN > ONGOING > PUBLISHED.
+        // Sprint 20 fix (2026-05-09): loại FINISHED khỏi hero pool để
+        // 3 card luôn highlight contests "đang nóng" — nếu data thiếu thì
+        // fallback show ít card hơn 3 thay vì điền FINISHED cũ.
+        final eligible =
+            data.items.where((c) => c.status != 'FINISHED').toList();
+        if (eligible.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(AppSpacing.s24),
+            decoration: BoxDecoration(
+              color: context.cardBg,
+              border: Border.all(color: context.cardBorder),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+            ),
+            child: Center(
+              child: Text('Chưa có cuộc thi đang mở',
+                  style: TextStyle(color: context.textMuted, fontSize: 13)),
+            ),
+          );
+        }
+        final sorted = [...eligible]
+          ..sort((a, b) {
+            int score(String s) => switch (s) {
+                  'REG_OPEN' => 0,
+                  'ONGOING' => 1,
+                  'PUBLISHED' => 2,
+                  _ => 9,
+                };
+            return score(a.status).compareTo(score(b.status));
+          });
+        final featured = sorted.take(3).toList();
+
+        // Stack vertical khi compact, row horizontal khi wide.
+        // Sprint 21 hotfix (2026-05-09): Column default crossAxisAlignment.center
+        // khiến mỗi card width tự shrink theo content → render lệch trục.
+        // Stretch để các card đều cùng full width.
+        if (isCompact) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: List.generate(featured.length, (i) {
+              return Padding(
+                padding: EdgeInsets.only(
+                    bottom: i < featured.length - 1 ? AppSpacing.s12 : 0),
+                child: SizedBox(
+                  height: 150,
+                  child: _HeroCard(
+                    contest: featured[i],
+                    gradient: _heroGradients[i % _heroGradients.length],
+                    tagLabel: _heroLabels[i % _heroLabels.length],
+                  ),
+                ),
+              );
+            }),
+          );
+        }
+        return SizedBox(
+          height: 195,
+          child: Row(
+            children: List.generate(featured.length, (i) {
+              return Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                      right: i < featured.length - 1 ? AppSpacing.s16 : 0),
+                  child: _HeroCard(
+                    contest: featured[i],
+                    gradient: _heroGradients[i % _heroGradients.length],
+                    tagLabel: _heroLabels[i % _heroLabels.length],
+                  ),
+                ),
+              );
+            }),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _HeroCard extends StatelessWidget {
+  final ContestSummary contest;
+  final List<Color> gradient;
+  final String tagLabel;
+  const _HeroCard({
+    required this.contest,
+    required this.gradient,
+    required this.tagLabel,
+  });
+
+  String _statusSubtitle() {
+    final now = DateTime.now();
+    switch (contest.status) {
+      case 'REG_OPEN':
+        if (contest.registrationCloseAt != null) {
+          final daysLeft =
+              contest.registrationCloseAt!.difference(now).inDays;
+          if (daysLeft >= 0) return 'Đăng ký mở · còn $daysLeft ngày';
+        }
+        return 'Đăng ký mở';
+      case 'ONGOING':
+        return 'Đang diễn ra';
+      case 'PUBLISHED':
+        final fmt = DateFormat('dd/MM');
+        if (contest.registrationOpenAt != null) {
+          return 'ĐK bắt đầu ${fmt.format(contest.registrationOpenAt!)}';
+        }
+        return 'Vòng loại ${fmt.format(contest.startAt)}';
+      case 'REG_CLOSED':
+        return 'Đã đóng đăng ký';
+      case 'FINISHED':
+        return 'Đã kết thúc';
+      default:
+        return contest.status;
+    }
+  }
+
+  String _modeLabel() {
+    return contest.participationMode == 'TEAM' ? 'nhóm' : 'thí sinh';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        onTap: () => context.push('/contests/${contest.slug}'),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(
+              AppSpacing.s20, AppSpacing.s16, AppSpacing.s20, AppSpacing.s16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: gradient,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x22000000),
+                blurRadius: 14,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(tagLabel,
+                  style: GoogleFonts.plusJakartaSans(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.4,
+                  )),
+              const SizedBox(height: AppSpacing.s12),
+              Text(contest.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.plusJakartaSans(
+                    color: Colors.white,
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.4,
+                    height: 1.2,
+                  )),
+              const SizedBox(height: AppSpacing.s8),
+              Text(_statusSubtitle(),
+                  style: GoogleFonts.plusJakartaSans(
+                    color: Colors.white.withValues(alpha: 0.92),
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500,
+                  )),
+              const Spacer(),
+              Text(
+                  '${contest.entriesCount} ${_modeLabel()}'
+                  '${contest.maxEntries != null ? " · tối đa ${contest.maxEntries}" : ""}',
+                  style: GoogleFonts.jetBrainsMono(
+                    color: Colors.white.withValues(alpha: 0.88),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.3,
+                  )),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ============== Sắp diễn ra section ==============
+
+class _UpcomingSection extends ConsumerWidget {
+  final ValueChanged<int>? onSwitchTab;
+  const _UpcomingSection({this.onSwitchTab});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncList = ref.watch(contestListProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHead(
+          title: 'Sắp diễn ra',
+          actionLabel: 'Xem tất cả →',
+          onAction: () => onSwitchTab?.call(1),
+        ),
+        const SizedBox(height: AppSpacing.s12),
+        asyncList.when(
+          loading: () => Column(
+            children: List.generate(
+              4,
+              (_) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.s8),
+                child: Container(
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: context.cardBg,
+                    border: Border.all(color: context.cardBorder),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          error: (_, __) => MCard(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.s16),
+              child: Text('Không tải được lịch',
+                  style: TextStyle(color: context.textMuted, fontSize: 12)),
+            ),
+          ),
+          data: (data) {
+            // Lấy contests sắp diễn ra: status REG_OPEN/PUBLISHED sort by startAt asc.
+            final upcoming = [...data.items]
+                .where((c) =>
+                    c.status == 'REG_OPEN' ||
+                    c.status == 'PUBLISHED' ||
+                    c.status == 'REG_CLOSED' ||
+                    c.status == 'ONGOING')
+                .toList()
+              ..sort((a, b) => a.startAt.compareTo(b.startAt));
+            final list = upcoming.take(4).toList();
+            if (list.isEmpty) {
+              return MCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.s16),
+                  child: Text('Chưa có sự kiện sắp diễn ra',
+                      style:
+                          TextStyle(color: context.textMuted, fontSize: 12)),
+                ),
+              );
+            }
+            return Column(
+              children: list
+                  .map((c) => Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.s8),
+                        child: _UpcomingItem(contest: c),
+                      ))
+                  .toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _UpcomingItem extends StatelessWidget {
+  final ContestSummary contest;
+  const _UpcomingItem({required this.contest});
+
+  String _tagLabel() {
+    // Suy ra tag từ participationMode + deliveryMode.
+    if (contest.participationMode == 'TEAM') return 'Nhóm';
+    return contest.deliveryMode == 'ONLINE'
+        ? 'Online'
+        : contest.deliveryMode == 'OFFLINE'
+            ? 'Offline'
+            : 'Hybrid';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final day = DateFormat('dd').format(contest.startAt);
+    final monthShort = 'THG ${contest.startAt.month}';
+    final timeStr = DateFormat('HH:mm').format(contest.startAt);
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      onTap: () => context.push('/contests/${contest.slug}'),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.s12, vertical: AppSpacing.s12),
+        decoration: BoxDecoration(
+          color: context.cardBg,
+          border: Border.all(color: context.cardBorder),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        child: Row(children: [
+          // Date pill
+          Container(
+            width: 44,
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s4, vertical: AppSpacing.s8),
+            decoration: BoxDecoration(
+              color: context.ptitRedSoft,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            child: Column(children: [
+              Text(day,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: ptitRed,
+                    letterSpacing: -0.4,
+                    height: 1,
+                  )),
+              const SizedBox(height: 2),
+              Text(monthShort,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 8.5,
+                    fontWeight: FontWeight.w700,
+                    color: ptitRed,
+                    letterSpacing: 1,
+                  )),
             ]),
           ),
-
-          // ============== Search bar (placeholder hiện tại) ==============
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
-            child: GestureDetector(
-              onTap: () => onSwitchTab?.call(1),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                decoration: BoxDecoration(
-                  color: context.cardBg,
-                  border: Border.all(color: context.cardBorder),
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                ),
-                child: Row(children: [
-                  Icon(Icons.search, size: 17, color: context.textFaint),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text('Tìm cuộc thi, BTC...',
-                        style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13, color: context.textFaint)),
-                  ),
-                  // Sprint 18 (2026-05-08) S18-4: ⌘K kbd hint chỉ hiện ở web ≥768
-                  if (MediaQuery.of(context).size.width >= 768)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: context.appBg,
-                        border: Border.all(color: context.cardBorder),
-                        borderRadius: BorderRadius.circular(AppRadius.tight),
-                      ),
-                      child: Text('⌘K',
-                          style: GoogleFonts.jetBrainsMono(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700,
-                              color: context.textMuted,
-                              letterSpacing: 0.4)),
-                    ),
-                ]),
-              ),
+          const SizedBox(width: AppSpacing.s12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(contest.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: context.textPrimary,
+                      letterSpacing: -0.2,
+                    )),
+                const SizedBox(height: 3),
+                Text(
+                    '${contest.deliveryMode == "ONLINE" ? "Online" : "Offline"} · $timeStr',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: context.textMuted,
+                    )),
+              ],
             ),
           ),
-
-          // ============== Body scrollable: stats + featured ==============
-          Expanded(
-            child: RefreshIndicator(
-              color: ptitRed,
-              onRefresh: () async {
-                ref.invalidate(contestListProvider);
-                ref.invalidate(myResultsProvider);
-              },
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
-                children: [
-                  // Sprint 17 (2026-05-08) S17-1: Featured contest hero
-                  // theo design sv-05 + SVW-02. Show contest top REG_OPEN/ONGOING.
-                  const _FeaturedHero(),
-                  _StatsRow(onSwitchTab: onSwitchTab),
-                  const SizedBox(height: 22),
-                  _SectionHead(
-                    title: 'Cuộc thi nổi bật',
-                    actionLabel: 'Xem tất cả',
-                    onAction: () => onSwitchTab?.call(1),
-                  ),
-                  const SizedBox(height: 10),
-                  const _FeaturedContests(),
-                ],
-              ),
+          const SizedBox(width: AppSpacing.s8),
+          // Tag pill
+          Container(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s8, vertical: 3),
+            decoration: BoxDecoration(
+              border: Border.all(color: context.cardBorder),
+              borderRadius: BorderRadius.circular(AppRadius.tight),
             ),
+            child: Text(_tagLabel(),
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: context.textMuted,
+                  letterSpacing: 0.2,
+                )),
           ),
         ]),
       ),
@@ -171,147 +685,147 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-// ===================== Stats row =====================
+// ============== Của tôi stats panel ==============
 
-class _StatsRow extends ConsumerWidget {
+class _MyStatsPanel extends ConsumerWidget {
   final ValueChanged<int>? onSwitchTab;
-  const _StatsRow({this.onSwitchTab});
+  const _MyStatsPanel({this.onSwitchTab});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final results = ref.watch(myResultsProvider);
-    final contests = ref.watch(contestListProvider);
+    final asyncEntries = ref.watch(myEntriesProvider);
+    final asyncResults = ref.watch(myResultsProvider);
 
-    final completed = results.maybeWhen(data: (r) => r.length, orElse: () => 0);
-    final awarded = results.maybeWhen(
-      data: (r) => r.where((x) => (x.awardTitle ?? '').isNotEmpty).length,
-      orElse: () => 0,
-    );
-    final ongoing = contests.maybeWhen(
-      data: (d) => d.items.where((c) =>
-          c.status == 'PUBLISHED' ||
-          c.status == 'REG_OPEN' ||
-          c.status == 'REG_CLOSED' ||
-          c.status == 'ONGOING').length,
-      orElse: () => 0,
-    );
+    final participating = asyncEntries.maybeWhen(
+        data: (d) => d.length, orElse: () => 0);
+    final results = asyncResults.maybeWhen(
+        data: (r) => r, orElse: () => <MyResultModel>[]);
 
-    return Row(children: [
-      Expanded(
-        child: _StatCard(
-          value: '$ongoing',
-          label: 'Đang diễn ra',
-          tone: _StatTone.brand,
-          // Sprint 18 (2026-05-08) S18-1: icon prop visual richness.
-          icon: Icons.local_fire_department_outlined,
-          onTap: () => onSwitchTab?.call(1),
-        ),
-      ),
-      const SizedBox(width: 10),
-      Expanded(
-        child: _StatCard(
-          value: '$completed',
-          label: 'Đã hoàn thành',
-          tone: _StatTone.neutral,
-          icon: Icons.check_circle_outline,
+    final certCount =
+        results.where((r) => (r.awardTitle ?? '').isNotEmpty).length;
+
+    // Top rank: min rankNo trong results (loại null).
+    MyResultModel? topRank;
+    int? bestRank;
+    for (final r in results) {
+      if (r.rankNo == null) continue;
+      if (bestRank == null || r.rankNo! < bestRank) {
+        bestRank = r.rankNo;
+        topRank = r;
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHead(title: 'Của tôi'),
+        const SizedBox(height: AppSpacing.s12),
+        _MyStatCard(
+          label: 'CUỘC THI ĐANG THAM GIA',
+          value: '$participating',
+          hint: participating > 0
+              ? '$participating đăng ký active'
+              : 'Đăng ký cuộc thi để bắt đầu',
+          hintIcon: participating > 0 ? Icons.trending_up : null,
           onTap: () => onSwitchTab?.call(2),
         ),
-      ),
-      const SizedBox(width: 10),
-      Expanded(
-        child: _StatCard(
-          value: '$awarded',
-          label: 'Giải thưởng',
-          // Sprint 2 fix M3 (2026-05-06): tone gold thay vì warn để tránh
-          // dark mode render brown lệch palette (warnSoftDark = amber-900).
-          tone: _StatTone.gold,
-          icon: Icons.emoji_events_outlined,
-          onTap: () => onSwitchTab?.call(2),
+        const SizedBox(height: AppSpacing.s12),
+        _MyStatCard(
+          label: 'XẾP HẠNG CAO NHẤT',
+          value: bestRank != null ? '#$bestRank' : '—',
+          hint: topRank != null
+              ? topRank.contestTitle
+              : 'Hoàn thành cuộc thi để có rank',
+          onTap: () => onSwitchTab?.call(3),
         ),
-      ),
-    ]);
+        const SizedBox(height: AppSpacing.s12),
+        _MyStatCard(
+          label: 'CHỨNG NHẬN',
+          value: '$certCount',
+          hint: certCount > 0
+              ? 'Sẵn sàng tải xuống'
+              : 'Chưa có chứng nhận',
+          onTap: () => onSwitchTab?.call(3),
+        ),
+      ],
+    );
   }
 }
 
-enum _StatTone { brand, neutral, warn, gold }
-
-class _StatCard extends StatelessWidget {
-  final String value;
+class _MyStatCard extends StatelessWidget {
   final String label;
-  final _StatTone tone;
+  final String value;
+  final String hint;
+  final IconData? hintIcon;
   final VoidCallback? onTap;
-  // Sprint 18 (2026-05-08) S18-1: optional icon prop.
-  final IconData? icon;
-  const _StatCard({
-    required this.value,
+  const _MyStatCard({
     required this.label,
-    required this.tone,
+    required this.value,
+    required this.hint,
+    this.hintIcon,
     this.onTap,
-    this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Sprint 18 fix dark mode (2026-05-08): _StatTone.neutral trước đây hard-code
-    // `Color(0xFFF1ECE5)` cream sáng → dark mode render trắng quá, text muted
-    // không đọc được. Đổi sang `cardBg` (theme-aware Material surface) — auto
-    // switch sang dark surface trong dark mode.
-    final colors = switch (tone) {
-      _StatTone.brand => (bg: context.ptitRedSoft, fg: ptitRed),
-      _StatTone.warn => (bg: context.warnSoft, fg: context.warnOrange),
-      _StatTone.gold => (bg: context.achievementGoldSoft, fg: context.achievementGold),
-      _StatTone.neutral => (bg: context.cardBg, fg: context.textPrimary),
-    };
-    return InkWell(
-      onTap: onTap,
+    return Material(
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(AppRadius.md),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
-        decoration: BoxDecoration(
-          color: colors.bg,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Sprint 18 S18-1: icon top-right floating
-            if (icon != null) ...[
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.s16),
+          decoration: BoxDecoration(
+            color: context.cardBg,
+            border: Border.all(color: context.cardBorder),
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: context.textMuted,
+                    letterSpacing: 1.1,
+                  )),
+              const SizedBox(height: AppSpacing.s12),
+              Text(value,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
+                    color: context.textPrimary,
+                    letterSpacing: -0.9,
+                    height: 1,
+                  )),
+              const SizedBox(height: AppSpacing.s8),
               Row(children: [
-                Container(
-                  padding: const EdgeInsets.all(5),
-                  decoration: BoxDecoration(
-                    color: colors.fg.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(AppRadius.tight),
-                  ),
-                  child: Icon(icon, size: 14, color: colors.fg),
+                if (hintIcon != null) ...[
+                  Icon(hintIcon, size: 12, color: ptitRed),
+                  const SizedBox(width: AppSpacing.s4),
+                ],
+                Expanded(
+                  child: Text(hint,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: context.textMuted,
+                      )),
                 ),
-                const Spacer(),
               ]),
-              const SizedBox(height: 8),
             ],
-            Text(value,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
-                  color: colors.fg,
-                  letterSpacing: -0.78,
-                  height: 1,
-                )),
-            const SizedBox(height: 6),
-            Text(label,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: colors.fg.withValues(alpha: 0.85),
-                )),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-// ===================== Section head =====================
+// ============== Section head ==============
 
 class _SectionHead extends StatelessWidget {
   final String title;
@@ -335,7 +849,8 @@ class _SectionHead extends StatelessWidget {
         TextButton(
           onPressed: onAction,
           style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.s8, vertical: 0),
               minimumSize: const Size(0, 28),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap),
           child: Text(actionLabel!,
@@ -345,303 +860,6 @@ class _SectionHead extends StatelessWidget {
                 color: ptitRed,
               )),
         ),
-    ]);
-  }
-}
-
-// ===================== Featured contests =====================
-
-class _FeaturedContests extends ConsumerWidget {
-  const _FeaturedContests();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final asyncList = ref.watch(contestListProvider);
-    return asyncList.when(
-      // Phase 2 step 5: skeleton 3 contest cards thay spinner
-      loading: () => const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: MCardListSkeleton(
-          count: 3,
-          textLines: 2,
-          padding: EdgeInsets.zero,
-        ),
-      ),
-      error: (e, _) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Center(
-            child: Text('Không tải được cuộc thi',
-                style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12, color: context.textMuted))),
-      ),
-      data: (data) {
-        // Lấy 3 contests đầu tiên (priority: REG_OPEN > PUBLISHED > others)
-        final sorted = [...data.items]
-          ..sort((a, b) {
-            int score(String s) => switch (s) {
-                  'REG_OPEN' => 0,
-                  'ONGOING' => 1,
-                  'PUBLISHED' => 2,
-                  'REG_CLOSED' => 3,
-                  _ => 4,
-                };
-            return score(a.status).compareTo(score(b.status));
-          });
-        final featured = sorted.take(3).toList();
-        if (featured.isEmpty) {
-          return MCard(
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Text(
-                  'Chưa có cuộc thi nào.',
-                  style: GoogleFonts.plusJakartaSans(
-                      color: context.textMuted, fontSize: 13),
-                ),
-              ),
-            ),
-          );
-        }
-        return Column(
-            children: featured.map((c) => _FeaturedCard(contest: c)).toList());
-      },
-    );
-  }
-}
-
-class _FeaturedCard extends StatelessWidget {
-  final dynamic contest;
-  const _FeaturedCard({required this.contest});
-
-  @override
-  Widget build(BuildContext context) {
-    final fmt = DateFormat('dd/MM');
-    return MCard(
-      onTap: () => context.push('/contests/${contest.slug}'),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Cover stripe
-          Container(
-            height: 6,
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: ptitGradientHeroColors),
-              borderRadius: BorderRadius.circular(AppRadius.tight),
-            ),
-          ),
-          Row(children: [
-            Expanded(
-              child: Text(contest.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.2,
-                    color: context.textPrimary,
-                    height: 1.3,
-                  )),
-            ),
-            const SizedBox(width: 8),
-            Pill.status(contest.status),
-          ]),
-          const SizedBox(height: 8),
-          Row(children: [
-            Icon(Icons.calendar_today_outlined, size: 13, color: context.textFaint),
-            const SizedBox(width: 4),
-            Text('${fmt.format(contest.startAt)} – ${fmt.format(contest.endAt)}',
-                style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11, color: context.textMuted, fontWeight: FontWeight.w500)),
-            const SizedBox(width: 14),
-            Icon(Icons.location_on_outlined, size: 13, color: context.textFaint),
-            const SizedBox(width: 4),
-            Text(_modeLabel(contest.deliveryMode),
-                style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11, color: context.textMuted, fontWeight: FontWeight.w500)),
-          ]),
-        ],
-      ),
-    );
-  }
-
-  String _modeLabel(String m) =>
-      m == 'ONLINE' ? 'Online' : (m == 'OFFLINE' ? 'Offline' : 'Hybrid');
-}
-
-// ===================== Sprint 17 S17-1: Featured hero =====================
-
-/// Hero card "SỰ KIỆN NỔI BẬT" theo design sv-05 + SVW-02.
-/// Chọn contest theo priority REG_OPEN > ONGOING > PUBLISHED, hiển thị
-/// gradient red với CTA "Đăng ký ngay →". Tap → /contests/:slug.
-class _FeaturedHero extends ConsumerWidget {
-  const _FeaturedHero();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final asyncList = ref.watch(contestListProvider);
-    return asyncList.when(
-      loading: () => const SizedBox(height: 110),
-      error: (_, __) => const SizedBox.shrink(),
-      data: (data) {
-        if (data.items.isEmpty) return const SizedBox.shrink();
-        // Priority: REG_OPEN nhất (CTA "Đăng ký ngay" mạnh nhất)
-        final sorted = [...data.items]
-          ..sort((a, b) {
-            int score(String s) => switch (s) {
-                  'REG_OPEN' => 0,
-                  'ONGOING' => 1,
-                  'PUBLISHED' => 2,
-                  _ => 9,
-                };
-            return score(a.status).compareTo(score(b.status));
-          });
-        final hot = sorted.first;
-        final isRegOpen = hot.status == 'REG_OPEN';
-        final ctaLabel = isRegOpen ? 'Đăng ký ngay' : 'Xem chi tiết';
-
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 18),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            onTap: () => context.push('/contests/${hot.slug}'),
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-              decoration: BoxDecoration(
-                gradient: ptitGradientHero,
-                borderRadius: BorderRadius.circular(AppRadius.lg),
-                boxShadow: const [
-                  BoxShadow(
-                      color: Color(0x1F000000),
-                      blurRadius: 14,
-                      offset: Offset(0, 4)),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(children: [
-                    const Icon(Icons.bolt, color: Colors.white, size: 16),
-                    const SizedBox(width: 6),
-                    Text('SỰ KIỆN NỔI BẬT',
-                        style: GoogleFonts.plusJakartaSans(
-                            color: Colors.white,
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.4)),
-                  ]),
-                  const SizedBox(height: 8),
-                  Text(hot.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.plusJakartaSans(
-                          color: Colors.white,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.3,
-                          height: 1.25)),
-                  const SizedBox(height: 12),
-                  Row(children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(AppRadius.tight),
-                      ),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Text(ctaLabel,
-                            style: GoogleFonts.plusJakartaSans(
-                                color: ptitRed,
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w800)),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.arrow_forward,
-                            color: ptitRed, size: 14),
-                      ]),
-                    ),
-                    const SizedBox(width: 10),
-                    if (isRegOpen)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(99),
-                        ),
-                        child: Text('Đang mở ĐK',
-                            style: GoogleFonts.plusJakartaSans(
-                                color: Colors.white,
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w700)),
-                      ),
-                  ]),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-// ===================== Bell button (with badge) =====================
-
-class _BellButton extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final asyncData = ref.watch(notificationsProvider);
-    final unread = asyncData.maybeWhen(
-      data: (d) => d['unread_count'] as int? ?? 0,
-      orElse: () => 0,
-    );
-    // Sprint 3 a11y (2026-05-07): wrap notification bell với Semantics rõ hơn
-    // (IconButton có tooltip default nhưng không nói số unread).
-    final unreadHint = unread > 0
-        ? 'Mở thông báo, $unread thông báo chưa đọc'
-        : 'Mở thông báo';
-    return Stack(clipBehavior: Clip.none, children: [
-      Container(
-        decoration: BoxDecoration(
-          color: context.cardBg,
-          border: Border.all(color: context.cardBorder),
-          borderRadius: BorderRadius.circular(99),
-        ),
-        child: Semantics(
-          label: unreadHint,
-          button: true,
-          excludeSemantics: true, // tránh nested với IconButton inner
-          child: IconButton(
-          iconSize: 18,
-          visualDensity: VisualDensity.compact, constraints: const BoxConstraints(minWidth: 44, minHeight: 44), // P0 #4 hit area ≥44 (WCAG 2.5.5)
-          icon: Icon(Icons.notifications_outlined, color: context.textPrimary),
-          onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const NotificationsScreen())),
-          ),
-        ),
-      ),
-      // Sprint 13 Batch A (2026-05-08): badge có animated scale + pulse
-      // khi unread > 0. ScaleTransition 250ms khi scale từ 0 → 1 (xuất hiện),
-      // 1 → 0 (biến mất). User chú ý hơn khi noti mới đến.
-      Positioned(
-        right: 6,
-        top: 6,
-        child: AnimatedScale(
-          scale: unread > 0 ? 1.0 : 0.0,
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.elasticOut,
-          child: Container(
-            width: 9,
-            height: 9,
-            decoration: BoxDecoration(
-              color: ptitRed,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 1.5),
-            ),
-          ),
-        ),
-      ),
     ]);
   }
 }

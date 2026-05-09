@@ -5,6 +5,32 @@ allprojects {
     }
 }
 
+// Sprint 7 fix APK build (2026-05-07): align JVM target 17 + force language 1.8
+// cho TẤT CẢ subprojects (sentry_flutter, package_info_plus, shared_preferences, ...).
+// Lý do:
+// - KGP 2.2.0 drop support languageVersion 1.6 → plugins cũ fail. Force 1.8.
+// - AGP 8 default Java compile target 17 → Kotlin phải match 17.
+// - Áp dụng cả qua AGP DSL (android.compileOptions) + Kotlin tasks.
+subprojects {
+    afterEvaluate {
+        if (project.hasProperty("android")) {
+            project.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+                kotlinOptions {
+                    jvmTarget = "17"
+                    languageVersion = "1.8"
+                    apiVersion = "1.8"
+                }
+            }
+            project.android {
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
+            }
+        }
+    }
+}
+
 rootProject.buildDir = "../build"
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"

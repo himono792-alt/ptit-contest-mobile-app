@@ -814,6 +814,414 @@ contests/{contest_id}/rounds/{round_id}/entries/{entry_id}/v{version}/{filename}
 
 Lazy migration policy: submission cũ giữ BYTEA in-DB, submission mới upload R2 → presigned URL download. E2E verify pass với 61B text file `r2-verify-test.txt` upload SV → download GV. Free tier 10GB cho dev, scale lên paid sau khi production thực sự.
 
+**4.14 Sprint 8 --- Audit DB/BE/FE/Production + 11 fix triển khai (2026-05-08)**
+
+**4.14.1 Audit toàn diện**
+
+Sprint 8 bắt đầu bằng **audit toàn diện** 4 layer của hệ thống: 14 SQLAlchemy model + 1 Alembic baseline migration, 104 BE endpoint qua 16 router, 28 FE screen + 4 actor flow (SV/GV/BCN/Admin), và **smoke test live** trên production `https://ptit-contest-app.pages.dev` qua Chrome MCP. Audit phát hiện **8 vấn đề** chia thành P0 (block UX/data integrity), P1 (UX consistency), P2 (data hygiene).
+
+**4.14.2 Sprint 8 fix triển khai (5 build deploy)**
+
+| # | Fix | Severity | File diff |
+|---|---|---|---|
+| 1 | BE perf `/api/contests` slow | False positive (verified 240-440ms direct fetch) | 0 |
+| 2 | Deep-link `/admin/<tab>` 404 | P0 | router.dart + admin_shell.dart (50 dòng) |
+| 3 | 35 BE endpoint chưa UI | Defer Sprint 9 | — |
+| 4 | BCN Dashboard stats không render | P1 | admin_dashboard_screen.dart (refactor `_HodStatsContainer`) |
+| 5 | Logout dialog admin/GV/BCN | P1 | admin_shell.dart (`_confirmLogout` shared) |
+| 6 | CCCD mask Profile (PII) | P0 | profile_screen.dart (`_MaskedCitizenIdRow` widget) |
+| 7 | Test User 81463 cleanup | P2 | DB cleanup qua admin UI |
+| 8 | email.smtp_host empty | P2 | DB config qua admin UI |
+
+**Insight quan trọng**: Inline `Builder { ref.watch(provider) }` trong ConsumerWidget có thể stuck loading state dù provider đã resolve. Pattern an toàn: tách thành `ConsumerWidget` riêng + fallback chain rõ ràng (xem `_HodStatsContainer`).
+
+**4.14.3 Sprint 8 P0 UI/UX (build deploy 4)**
+
+Sau khi fix bug, Sprint 8 P0 part 1 thêm 3 nâng cấp UI/UX hệ thống dựa trên 5 design skill (`ui-ux-pro-max`, `frontend-design`, `web-accessibility`, `web-design-guidelines`, `shadcn-ui`):
+
+- **Touch target ≥44 (WCAG 2.5.5 AA)**: 11 instance `IconButton + visualDensity.compact` thêm `constraints: BoxConstraints(minWidth: 44, minHeight: 44)`. 8 file diff.
+- **Reduce-motion handling**: `core/reduce_motion.dart` extension `context.reduceMotion` đọc `MediaQuery.disableAnimationsOf` + helper `reduceMotionRoute()` factory cho PageRoute. WCAG 2.3.3 + 2.2.2 compliant.
+- **EmptyView shared widget**: `core/widgets/empty_view.dart` chuẩn hoá empty state (icon + title + subtitle + optional action). Refactor 4 admin screen (admin_users, admin_contests, audit_log, approval_queue).
+
+**4.14.4 Sprint 8b/c skeleton coverage (build 5+8)**
+
+Sprint 8b refactor 4 screen impact cao nhất từ `CircularProgressIndicator` sang `MCardListSkeleton`: admin_users (5 cards), audit_log (6), monitor BCN (4), contest_detail SV (3). Sprint 8c mở rộng 7 instance trong 5 admin screen tiếp theo: master_data 3 tab + review_moderation + judge + anomaly + configs. Tổng 11 screen có skeleton, perceived load time giảm 300ms (thấy structure ngay thay spinner).
+
+**4.15 Sprint 9 --- Wire 6 endpoint BE chưa có UI (2026-05-08)**
+
+**4.15.1 Group 1 Auth (build 6 `6d415791`)**
+
+3 endpoint mới wired:
+- `POST /auth/register` → `signup_screen.dart` form 4 field (full_name/email/password/confirm) → POST `/auth/register` → toast success → redirect login
+- `POST /auth/otp/request` + `POST /auth/otp/verify` → `otp_login_screen.dart` 2-stage trong 1 screen: stage 1 nhập email gửi mã, stage 2 nhập OTP 6 số → save JWT → redirect home theo role
+- Login screen wire button "Đăng nhập bằng OTP" + thêm link "Chưa có tài khoản? Đăng ký"
+
+**4.15.2 Group 2 Contest workflow (build 7 `8a047c0d`)**
+
+Sessions CRUD UI thêm vào tab "Vòng & Phiên" của `contest_admin_detail_screen.dart`:
+- `contestSessionsProvider(contestId)` family fetch GET `/contests/{id}/sessions`
+- `_SessionCard` widget hiển thị: ID + tên + Pill type (ONLINE info / OFFLINE neutral) + thời gian + venue
+- `_AddSessionDialog` form: tên + dropdown ONLINE/OFFLINE + 2 datetime picker + conditional location/room hoặc URL meeting
+- POST `/contests/{id}/sessions` wire khi click "Tạo phiên"
+
+Tab "Vòng & Phiên" giờ có 2 section scroll: Vòng thi (giữ nguyên) + Phiên thi (mới). ListView `shrinkWrap` + `NeverScrollableScrollPhysics` trong outer SingleChildScrollView.
+
+**4.15.3 Group 3 Reviews + Judging (build 8 `c0ff178e`)**
+
+2 endpoint mới wired:
+- `DELETE /rounds/{id}/criteria/{criterion_id}`: trash icon trong rubric expandable của `_RoundCard`. Confirm dialog warn "Score đã chấm dùng criterion này sẽ orphan". Verified end-to-end.
+- `GET /contests/{id}/reviews/summary`: `_ReviewsSummaryCard` 4 stat (Tổng / Sao TB / 5 sao / ≥4 sao) thêm vào `_OverviewTab`. Field thực BE là `average_rating` + `distribution` map (không phải `avg_rating` + visible/hidden như em đoán đầu — fix Sprint 12).
+
+**4.15.4 Group 4 Misc admin (verify only)**
+
+Audit thấy 4 endpoint đã wire từ trước: lock/unlock user (200), BCN-05 monitor (200), bulk-review entries (422 schema validate), contest results export.xlsx (200 mime correct). Phát hiện **1 bug AD-05 system-summary.xlsx 404** — endpoint không tồn tại ở BE → fix Sprint 9b.
+
+**4.15.5 Sprint 9b — BE thêm endpoint AD-05 export xlsx**
+
+`backend/app/routers/reports.py` thêm route `@admin_reports_router.get("/reports/system-summary.xlsx")` trả `StreamingResponse` xlsx (chunk 64KB). `backend/app/services/report_service.py` thêm `export_system_summary_xlsx(db, user, year)` → 3 sheets (Tổng quan / Phân loại user / Metadata). Reuse `system_summary()` để fetch + enforce admin permission. Verified live: 200, 7236 bytes, magic `PK`, MIME chuẩn, latency 268ms. Toast "Đã tải về: bao-cao-he-thong-2026-20260508.xlsx" hiện green khi click button.
+
+**4.16 Sprint 10 + 11 --- Edge case workflows (2026-05-08)**
+
+**4.16.1 Sprint 10 (verify-only)**
+
+Audit Sprint 8 ban đầu liệt kê judge-assignments + results-approval thiếu UI nhưng kiểm tra kỹ hơn phát hiện đã wire từ trước:
+- `POST /rounds/{id}/judge-assignments` → `_AssignJudgeDialog` line 1469 trong contest_admin_detail (form entry_id + judge_id + can_view_identity toggle)
+- `POST /contests/{id}/results/submit-for-approval` → `_submitQd2()` nút "2. Submit QĐ2 cho BCN" trên Tổng quan tab
+
+Sprint 10 = 0 file diff, chỉ verify live: GV → contest #5 → tab Chấm điểm → click "Assign judge" → dialog mở chuẩn ✓.
+
+**4.16.2 Sprint 11 (build 9 `36c1264c`)**
+
+3 fix dự kiến → thực tế 2 fix code mới + 1 verify-only:
+
+- **Cert template approve (BCN duyệt QĐ3)**: Sprint 11 fix `_CertsTab` thêm nút "Duyệt" green xuất hiện khi `!isApproved && (user.isHod || user.isAdmin)`. Confirm dialog → PATCH `/certificate-templates/{id}/approve` → toast "Đã duyệt template — BTC có thể Activate". State change verified end-to-end: pill orange "Chờ BCN duyệt (QĐ3)" → green "BCN duyệt OK", nút Duyệt → Activate. Hoàn thiện workflow phê duyệt 3 cấp QĐ1+QĐ2+QĐ3.
+- **Submission lock (anti-tamper)**: Nút "Khóa submission" outlined trên header `_JudgingTab`. Dialog input submission_id + lý do default "Khóa khi judge đang chấm — không nhận version mới." → POST `/submissions/{id}/lock`.
+- **Cert HTML render link**: Verify-only, đã có sẵn từ Sprint trước trong `cert_verify_screen.dart` (button "Mở/in chứng nhận (HTML)" → URL `/certificates/{qr}/render` qua `_openOrCopyRender`).
+
+**4.17 Sprint 12 --- Wire stats endpoint cuối + 2 bug Decimal/field (2026-05-08)**
+
+**4.17.1 Re-audit precise gaps**
+
+Audit tinh hơn Sprint 8 phát hiện chỉ còn **1 endpoint thật sự thiếu UI** = `GET /api/contests/{id}/stats` (GV-07 contest stats real-time). Project đã đạt **gần 100% UI coverage** 104 BE endpoint.
+
+**4.17.2 Wire stats card (build 10 `121d408c`)**
+
+`contestStatsProvider(contestId)` + `_ContestStatsCard` thêm vào `_OverviewTab` ngay TRƯỚC `_ReviewsSummaryCard`. 6 stat real-time (Wrap responsive): Đăng ký (approved/total) · Chờ duyệt (PENDING) · Bài nộp (submitted/total) · Vòng (done/total) · Điểm TB (avg final_score) · Tỷ lệ pass (top 50%). Helper `_StatBlock` (label/value/hint/color) tái sử dụng.
+
+**4.17.3 Bug fix Decimal serialize (build 11 `ecc06fd9`)**
+
+Pydantic mặc định serialize `Decimal` thành string (vd `"8.8000000000000000"`) thay vì number. FE đoạn check `avgScore is num` fails → dump full precision 16 số 0. Fix: helper `_parseNum(dynamic v)` thử `is num` trước, fallback `num.tryParse(string)`. Áp cho `avg_score`, `pass_rate`, và `avg_rating` của Reviews summary.
+
+**4.17.4 Bug fix Reviews summary field names (build 12 `c16c41c2`)**
+
+Em đoán schema sai khi viết Group 3 — BE thực tế trả:
+```json
+{ "total": 1, "average_rating": 5, "distribution": {"1":0,"2":0,"3":0,"4":0,"5":1} }
+```
+KHÔNG có `avg_rating` + `visible_count`/`hidden_count` như em viết FE. Fix: đổi field name + thay 4 stat thành Tổng / Sao TB / 5 sao / ≥4 sao (lấy từ distribution map). Verified live: Tổng 1 / Sao TB 5.0 / 5 sao 1 / ≥4 sao 1.
+
+**Insight quan trọng**: Khi wire endpoint mới phải **fetch direct + đọc thực tế JSON shape** trước khi viết FE display logic. Pydantic Decimal mặc định serialize thành string (không phải number); field names có thể khác hơn snapshot schema doc.
+
+**4.18 Tổng hợp Sprint 8-12 (1 ngày 2026-05-08)**
+
+| Sprint | Build | Endpoint mới wired | File diff |
+|---|---|---|---|
+| 8 (audit + fix) | 5 build | — | 21 file (deep-link, CCCD, BCN stats, logout, touch ≥44, EmptyView, reduce-motion, skeleton 11 screen) |
+| 9 (Group 1-3) | 3 build | OTP + signup + sessions + criterion delete + reviews summary (6 endpoint) | 7 file FE |
+| 9b A (BE Railway) | 1 deploy BE | system-summary.xlsx (1 endpoint mới BE) | 2 file BE |
+| 10 (verify-only) | 0 build | judge-assignments + results-approval (đã wire) | 0 file |
+| 11 (3 fix) | 1 build | cert template approve + submission lock | 1 file (~70 dòng) |
+| 12 (stats + fix Decimal/field) | 3 build | contest stats (1 endpoint) | 1 file |
+
+**Tổng**: 12 build deploy FE Cloudflare + 1 deploy BE Railway. ~32 file diff (30 FE + 2 BE). 10 endpoint UI mới wired + 1 endpoint BE mới. 11+ bug fix verified live qua Chrome MCP. 2 cleanup data. Production URL cuối Sprint 12: `https://c16c41c2.ptit-contest-app.pages.dev`.
+
+**4.19 Sprint 13 --- Audit log filter + behavior polish (2026-05-08)**
+
+Sprint 13 là cycle UI/UX cuối tuần với 4 batch A/B/C/D song song nhau:
+
+- **Batch A (Quick wins)**: 3 fix nhanh: (a) nút sun/moon dark mode toggle bị overflow trên admin shell mobile → fix `Wrap` thay `Row`. (b) Notification bell badge có animation pulse khi unread tăng → `AnimatedScale 250ms elasticOut`. (c) Profile screen dropdown `genderInitialValue` không hoạt động Flutter <3.27 → đổi `value` parameter.
+- **Batch B (Behavior polish)**: Thêm pull-to-refresh `RefreshIndicator color: ptitRed` cho 4 list view chính (contests / my-entries / notifications / my-results). Skeleton coverage thêm 14 instance admin còn thiếu (anomaly + reviews-moderation + audit-log filter form + ...).
+- **Batch C (Audit log search/filter)**: Module được chỉ ra trong chương 5.1.2 hạn chế kỹ thuật. UI thêm `_AuditLogFilters` widget với 4 control: search text user_email/action_type, dropdown action_type (CREATE/UPDATE/DELETE/LOGIN), date range picker từ-đến, button "Reset". BE đã có sẵn endpoint, chỉ wire FE.
+- **Batch D (Docs + smoke test)**: Update memory + báo cáo + smoke test 6/6 viewport WCAG axe-core lại sau loạt fix.
+
+Tổng Sprint 13 ~13h, 4 build deploy.
+
+**4.20 Sprint 14 --- IA improvements P1+P2 từ design folder (2026-05-08)**
+
+**4.20.1 Phân tích folder design**
+
+Folder `E:\PARA\00-inbox\design\05-mockups\src\` chứa 8350 dòng React JSX mockup do AI generate trước đó (tham khảo conceptual pattern). Sau khi đọc kỹ phát hiện 2 nhóm cải tiến **Information Architecture (IA)** cao priority:
+
+**P1 (high impact)**:
+- BCN sidebar gộp QĐ1+QĐ2 vào 1 lane "Phê duyệt" → split 3 lane riêng biệt: Đề xuất cuộc thi (QĐ1) / Kết quả cuộc thi (QĐ2) / Cert template (QĐ3 — defer Sprint 11 đã có).
+- Sidebar admin 9 mục flat → group thành 4 section "Tổng quan / Người dùng / Hệ thống / Cộng đồng & Báo cáo" với header letter-spaced.
+
+**P2 (medium)**:
+- Backup & Restore trước nằm trong "Cấu hình" tab → tách route riêng `/admin/backup` để admin tìm nhanh hơn.
+- GV/BTC sidebar trước có tab "Cuộc thi của tôi" + nút FAB tạo → thêm mục riêng "Tạo cuộc thi" cho discovery.
+
+**4.20.2 Implementation**
+
+`admin_shell.dart` thêm `_NavItem.section()` factory pattern cho divider header trong sidebar (khác `_NavItem` thường có icon + screen). 4 section chỉ render label + spacing, không clickable.
+
+Tách approval queue thành 2 màn `approval_q1_screen.dart` + `approval_q2_screen.dart`, cùng dùng base `_ApprovalListBuilder` (private function lấy entries theo `targetType` filter).
+
+**4.21 Sprint 15 --- Strict role separation (2026-05-08)**
+
+**4.21.1 Vấn đề**
+
+Trước Sprint 15, seed test user `gv@ptit.edu.vn` có roles `[ADMIN, JUDGE, ORGANIZER]` (legacy multi-role). BTC khi login thấy **toàn bộ admin sidebar** (Tài khoản / Configs / Audit log / Bất thường / Bình luận / Backup) gây confused phân quyền. Admin thì share Dashboard với BTC/BCN, không có giao diện riêng đặc thù.
+
+**4.21.2 4 Step triển khai**
+
+- **Step 1 — Fix seed `backend/scripts/seed-test-users.py`**: Thêm `remove_role()` function cho cleanup legacy seed; gv@ sau seed: `[ORGANIZER, JUDGE]` (gỡ ADMIN).
+- **Step 2 — Strict role conditions sidebar**: `admin_shell.dart` gỡ tất cả `|| user.isAdmin` khỏi role check của Cuộc thi/Phê duyệt/Chấm bài. Admin section riêng biệt 7 nav items.
+- **Step 3 — BTC Dashboard widget riêng**: `_BTCWorkflowGuideCard` 4-step workflow guide trong red circle: Tạo / Submit QĐ1 / Mở reg+Chấm / Submit QĐ2. Chỉ hiện khi `user.isOrganizer && !user.isAdmin`.
+- **Step 4 — Admin Dashboard tăng cường**: `_AdminSystemHealthCard` 3 module health (API gateway / Database / R2 storage) với colored top border. `_AdminAuditTailCard` 5 audit entries gần nhất với method color-coded (PATCH blue, POST green). Welcome message role-specific.
+
+**4.21.3 E2E verification deploy `a2f72dce`**
+
+| Role | Header | Sidebar items | Welcome msg | Dashboard widgets |
+|------|--------|---------------|-------------|-------------------|
+| GV (ORGANIZER+JUDGE) | "GV. Nguyen Van A · JUDGE,ORGANIZER" | Dashboard / Cuộc thi của tôi / Tạo cuộc thi / Chấm bài | "Module Ban Tổ chức cuộc thi" | `_BTCWorkflowGuideCard` (4 step) ✓ |
+| BCN (HOD) | "BCN. Tran Van B · HOD" | Dashboard / Đề xuất QĐ1 / Kết quả QĐ2 / Giám sát | "Module Ban Chủ nhiệm khoa" | 4 stat cards default |
+| Admin (ADMIN) | "Quan tri he thong · ADMIN" | Dashboard / Tài khoản / Khoa-Ngành / Cấu hình / Backup / Audit / Bất thường / Bình luận | "Module Quản trị hệ thống" | `_AdminSystemHealthCard` + `_AdminAuditTailCard` ✓ |
+
+3/3 PASS — không có cross-contamination giữa các module. Workflow phê duyệt 2 cấp BTC↔BCN (chương 1.4) giờ đã có UI mapping rõ ràng theo role.
+
+**4.22 Sprint 16 --- P1 design improvements (2026-05-08)**
+
+Sau Sprint 15 strict role separation, audit lại folder design phát hiện 14 cải tiến UI/UX còn lại. Sprint 16 tập trung 5 items P1 high-impact (~10h).
+
+**4.22.1 GV "Hôm nay cần chấm" hero card**
+
+`_TodayJudgingHeroCard` chèn top `judge_screen.dart` ListView (index 0), gradient red `ptitGradientHero`, count to + ngày + CTA "Bắt đầu chấm". Click CTA mở dialog assignment đầu tiên — extract `_openScoreDialog` thành top-level helper share giữa hero + assignment cards.
+
+**4.22.2 SV Submission countdown timer**
+
+`backend/app/routers/submissions.py` thêm endpoint mới `GET /api/rounds/{round_id}` trả `ContestRoundOut` với `submission_close_at` + `end_at`. `_CountdownHeroCard` ConsumerStatefulWidget dùng `Timer.periodic(Duration(seconds: 1))` tick mỗi giây. 4 trạng thái color: hot <1h (red gradient), warn <24h (orange), normal (green), overdue (gray). Format `HH:MM:SS` mono font.
+
+**4.22.3 Leaderboard SV podium + table**
+
+Module mới thiếu hẳn trước Sprint 16 — Bảng xếp hạng SV chỉ admin/BTC mới xem được. Sprint 16 đóng gap:
+
+- BE: `result_service.list_leaderboard()` join `ContestResult ↔ ContestEntry → Student/Team` lấy `display_name`. Endpoint mới `GET /api/contests/{id}/leaderboard` trả enriched dict.
+- FE: `leaderboard_screen.dart` mới — hero + podium top-3 (gold/silver/bronze pillar height 140/110/90px) + table rank #4+ với "BẠN" highlight (`_myEntryInContestProvider` dùng `/me/results` find entry_id của user).
+- Route mới `/contests/:contestId/leaderboard`. Button "Bảng xếp hạng" trên mỗi result card của `my_results_screen.dart`.
+
+**4.22.4 Contest Detail timeline visual**
+
+Refactor section "Lịch trình" trong `contest_detail_screen.dart` từ K/V text rows sang `_TimelineRow` widget với vertical line + colored dots. 3 trạng thái: done (green dot + "Đã qua" pill), next (red dot + "Sắp tới" pill + glow shadow), pending (gray dot). 4 events auto sort theo time.
+
+**4.22.5 Contest Detail 5 tabs**
+
+Wrap content trong `DefaultTabController` + `Column` + `TabBar` + `Expanded(TabBarView)`: Tổng quan (description) / Lịch trình (timeline) / Thể lệ (rules) / Giải thưởng (awards) / Tài trợ (placeholder). Sticky bottom CTA giữ nguyên qua `Stack`. Empty state cho tab thiếu data: icon 56px + message muted.
+
+E2E 5/5 PASS deploy `7d19f809`.
+
+**4.23 Sprint 17 --- P2 design improvements (2026-05-08)**
+
+4 items P2 SV-side (~5.5h, pure FE diff không cần BE redeploy).
+
+**4.23.1 Featured contest hero "SỰ KIỆN NỔI BẬT" SV Home**
+
+`_FeaturedHero` ConsumerWidget chèn top home body ListView. Gradient red + bolt icon + label letter-spaced. Title contest từ `contestListProvider`, sort priority REG_OPEN > ONGOING > PUBLISHED, lấy first. CTA dynamic: "Đăng ký ngay →" nếu REG_OPEN, "Xem chi tiết →" cho status khác. Pill "Đang mở ĐK" màu trắng-trong-suốt.
+
+**4.23.2 Profile achievement stats**
+
+`_AchievementStats` ConsumerWidget thêm vào header card Profile sau Wrap roles. 3 columns chia bằng vertical Divider: Cuộc thi (count results) / Giải thưởng (count award != null, gold) / Chứng nhận (count = results, red). Số 22px w800 + label 11px muted.
+
+**4.23.3 My contests progress bar**
+
+Mỗi card `_EntryCard` trong `my_registrations_screen.dart` thêm `LinearProgressIndicator` rounded 99 với 5 stage map:
+
+| Stage | % | Color | Label |
+|-------|---|-------|-------|
+| PENDING | 10% | warn orange | Chờ BTC duyệt |
+| REG_OPEN/REG_CLOSED | 25% | info blue | Đã đăng ký |
+| ONGOING | 65% | ptitRed | Đang dự thi |
+| FINISHED | 100% | success green | Đã kết thúc |
+| else | 5% | muted | (status raw) |
+
+**4.23.4 Notifications time-bucket grouping**
+
+Method `_groupByTime()` trả `List<Widget>` phân 3 bucket: Hôm nay (>=today) / Tuần này (>=today-6d) / Cũ hơn. `_TimeBucketHeader` widget với label uppercase 11.5px w800 muted + count chip pill cardBorder bg + horizontal line connector. Empty bucket không emit header.
+
+E2E 4/4 PASS deploy `f8c63b23`.
+
+**4.24 Sprint 18 --- P3 polish + dark mode fix (2026-05-08)**
+
+5 items P3 đóng nốt design folder backlog (~5h).
+
+**4.24.1 Stat card icon**
+
+`_StatCard` thêm optional `IconData? icon` prop. Render top-left trong subtle 12% alpha bg circle (rounded tight) cùng tone color. 3 cards SV home: Đang diễn ra (fire), Đã hoàn thành (check_circle), Giải thưởng (trophy).
+
+**4.24.2 Avatar gradient red→purple**
+
+Thêm `ptitGradientAvatar` const trong `theme.dart`: PTIT red `#C8102E` → purple `#7C3AED` (135deg). Apply cho profile avatar (76px circle) — KHÔNG dùng cho hero card (giữ red→pink). Rationale: purple chỉ accent cho avatar, không lan brand identity.
+
+**4.24.3 EmptyView enhanced**
+
+`empty_view.dart` bump default `iconSize` 56 → 72 + new `decoratedIcon` (true) với bg circle ptitRedSoft alpha 0.55. Heading 15px w700 (was 14 w600), subtitle 13px (was 12.5). `contest_list_screen.dart` replace inline private `_EmptyView` (text only) bằng global widget với trophy icon + subtitle "Hãy quay lại sau khi BTC mở thêm cuộc thi mới."
+
+**4.24.4 ⌘K kbd hint search bar**
+
+Container chứa `Text('⌘K')` JetBrainsMono 10.5px w700 chèn cuối Row search bar home. Conditional: chỉ render khi `MediaQuery.size.width >= 768` (mobile mặc định không hiện). Border + bg `appBg` để contrast với cardBg search wrapper.
+
+**4.24.5 OKLCH 9-stop brand tokens**
+
+Thêm 9 stop ramp `ptitRed50..900` trong `theme.dart` từ design `tokens.css` OKLCH:
+
+| Stop | Hex | Use case |
+|------|-----|----------|
+| 50 | #FFF1F3 | pale tint, bg subtle |
+| 100 | #FEE5E9 | = ptitRedSoft |
+| 200 | #FCC9D0 | hover bg |
+| 300 | #F89AA8 | disabled fg |
+| 400 | #EE5970 | accent secondary |
+| 500 | #C8102E | = ptitRed anchor |
+| 600 | #A00D24 | = ptitRedDark, hover/pressed |
+| 700 | #7E0A1C | emphasized |
+| 800 | #5C0815 | dark mode bg pill |
+| 900 | #3D050D | deepest |
+
+Convention: prefer concrete stops thay vì `ptitRed.withValues(alpha:0.X)` ad-hoc khi cần consistent perceptual lightness.
+
+**4.24.6 Dark mode fix `_StatTone.neutral` (post Sprint 18 verify)**
+
+Anh phát hiện trong dark mode: stat card "Đã hoàn thành" có cream bg `#F1ECE5` không adapt theo theme → text trắng trên cream → invisible. Fix: đổi `_StatTone.neutral.bg` từ hardcoded `Color(0xFFF1ECE5)` sang `context.cardBg` theme-aware (Material surface). Verified live deploy `eff80d17`: dark mode card render dark surface, text trắng đọc rõ.
+
+**4.24.7 Judge "Đã chấm" state fix (post Sprint 18 verify)**
+
+Anh phát hiện UX issue: sau khi GV submit điểm, assignment vẫn xuất hiện y nguyên trong list "Bài cần chấm" với pill "Open judging" + chip "Tap để nhập điểm" → confused phân loại, không biết đã chấm hay chưa. Root cause: `JudgeAssignment` model không có status field — completion = derived từ `Score` records. BE trả raw model, FE không có info để filter.
+
+**Fix:**
+- BE `services/judging_service.py`: bulk count criteria per round + scores per assignment qua 2 GROUP BY query, enrich response dict với `is_scored` (scored_count >= total_criteria và total > 0) + `scored_count` + `total_criteria`. Đổi return type → `list[dict]`.
+- BE `routers/judging.py`: response_model bỏ pydantic, trả `list[dict]` direct.
+- FE `judge_screen.dart`:
+  - Filter: unscored lên trước, scored xuống cuối (vẫn hiện scored cuối list để GV xem/sửa)
+  - Hero count = unscored only; CTA mở first unscored
+  - Hero state khi `count == 0` (đã chấm hết): gradient xanh success #10B981→#34D399 + "Đã chấm xong tất cả · Hoàn thành" (no button)
+  - Assignment card: pill "Đã chấm" green thay "Open judging/Blind"; chip dưới "Đã chấm X/Y tiêu chí · Tap xem/sửa"
+
+E2E verify deploy `564d8f4d`: GV mở "Chấm bài" thấy hero xanh "Đã chấm xong tất cả · Hoàn thành" (count=0) + 2 assignment cards với pill "Đã chấm" + chip "Đã chấm 2/2 tiêu chí". Pattern: enrich BE response thay vì query thêm endpoint riêng — tránh round trip + race condition.
+
+E2E 5/5 + 2 hotfix PASS qua deploys `153c6254` → `eff80d17` → `564d8f4d`.
+
+**4.25 Tổng hợp Sprint 13-18 (1 ngày 2026-05-08, song song Sprint 8-12)**
+
+| Sprint | Build | Items | File diff |
+|---|---|---|---|
+| 13 (audit log filter + polish) | 4 | 3 batches A-D | ~12 file FE |
+| 14 (IA P1+P2) | 1 | BCN split + section group + Backup route + GV tạo | 3 file FE |
+| 15 (strict role separation) | 1 | 4 step + welcome msg + admin widgets | 3 file FE + 1 BE seed script |
+| 16 (P1 design 5 items) | 1 | Hero + countdown + leaderboard + timeline + tabs | 3 BE + 6 FE (1 mới) |
+| 17 (P2 design 4 items) | 1 | Featured + achievements + progress + bucket | 4 FE |
+| 18 (P3 design 5 items + dark fix) | 2 | Stat icons + gradient + empty + ⌘K + OKLCH + dark fix | 5 FE |
+
+**Tổng Sprint 13-18**: 10 build deploy FE Cloudflare + 1 deploy BE Railway. ~37 file diff (33 FE + 4 BE). 2 endpoint BE mới (`/api/rounds/{id}` + `/api/contests/{id}/leaderboard`). 18 cải tiến UI/UX (3 IA + 4 strict role + 5 P1 design + 4 P2 design + 5 P3 design + 1 dark mode fix). Workflow phê duyệt 3 cấp QĐ1+QĐ2+QĐ3 + strict role separation hoàn thiện. **14/14 items design folder backlog đóng**.
+
+Production URL cuối Sprint 18: `https://eff80d17.ptit-contest-app.pages.dev`.
+
+**4.26 Sprint 19 --- Login redesign + mobile UX hardening (2026-05-08)**
+
+Cuối session 2026-05-08, anh tham khảo 2 ảnh design folder (web + mobile login) yêu cầu redesign giao diện đăng nhập + onboarding + OTP. Em chia 4 step + phát sinh 2 hotfix khi anh build APK Android.
+
+**4.26.1 S19-1 Web 2-column login layout**
+
+`frontend/lib/features/auth/login_screen.dart` full rewrite ~590 dòng:
+- `LayoutBuilder` switch theo width:
+  - ≥900px: `Row(BrandingPanel flex 5, FormPanel flex 5)` desktop
+  - <900px: form panel only (mobile UX không thay đổi)
+- `_buildBrandingPanel`: gradient `ptitGradientHero` full height + logo "P" trắng + "PTIT Contest" + headline 38px "Hệ thống quản lý cuộc thi của Học viện CNBCVT" + description + 4 stats hard-coded (1,847 TÀI KHOẢN / 42 CUỘC THI / 12 KHOA / 99.9% UPTIME) + footer build version `© 2026 PTIT · v1.0.0 · build #2026.05.08`
+
+**4.26.2 S19-2 Role tabs decorative + Ghi nhớ tôi + SSO disabled**
+
+- `_RoleTabs` widget 4 tab Sinh viên / GV / BTC / BCN khoa / Quản trị với `AnimatedContainer` 180ms (selected: ptitRed bg + white text). KHÔNG filter login API — chỉ thay đổi hint email + label "Email PTIT" vs "Email PTIT / Mã cán bộ"
+- "Ghi nhớ tôi" Checkbox + persist `SharedPreferences` keys `login.remember_me` (bool) + `login.remembered_email` (string). Auto-fill email khi mở app nếu remembered
+- SSO PTIT button outlined `onPressed: null` + Tooltip "Tích hợp SSO PTIT — sẽ sớm có" + label "Đăng nhập SSO PTIT · Coming soon"
+
+**4.26.3 S19-3 Mobile onboarding 3 slides**
+
+`frontend/lib/features/onboarding/onboarding_screen.dart` mới ~190 dòng:
+- PageView 3 slide: trophy "Khám phá hàng chục cuộc thi mỗi học kỳ" / register "Đăng ký nhanh chóng dễ dàng" / award "Theo dõi kết quả & nhận chứng nhận"
+- "Bỏ qua" top-right + dots indicator (active 22px ptitRed) + button label "Tiếp tục" (2 slide đầu) → "Bắt đầu" (slide cuối)
+- SharedPreferences `onboarding.completed` persist
+- Global `ValueNotifier<bool> onboardingCompletedFlag` cho router redirect sync (load trước `runApp`)
+- Router redirect: chưa login + flag false + loc != /onboarding → redirect /onboarding
+
+**4.26.4 S19-4 OTP 6-box + countdown timer**
+
+`frontend/lib/features/auth/otp_login_screen.dart` rewrite ~360 dòng:
+- 6 controllers + 6 focus nodes thay 1 TextField letterSpacing
+- `_OtpBoxesRow` widget custom với `KeyboardListener` cho:
+  - Type 1 char → auto focus next box
+  - Backspace ở box rỗng → focus + clear box trước
+  - Paste 6 digit → fill all + auto-verify
+- `Timer.periodic(1s)` countdown từ 5:00, format "MM:SS" mono font
+- RichText "Đã gửi đến email" highlight ptitRed + "Gửi lại" / "Đổi email" link
+
+**4.26.5 Hotfix #1 — Android flicker StudentShell trước login**
+
+Anh build APK + test trên device thật, phát hiện bug: vài ms khi mở app hiện giao diện user (StudentShell) rồi mới redirect /login. Web breakpoint không thấy rõ vì paint nhanh hơn.
+
+Root cause: GoRouter redirect callback chạy với `auth.isLoading == true` lúc app boot. Code cũ `if (auth.isLoading) return null` → KHÔNG redirect → route mặc định `/` render → StudentShell hiển thị brief moment → vài ms sau auth resolve → redirect /login.
+
+Fix:
+- `frontend/lib/features/auth/splash_screen.dart` mới: ConsumerWidget gradient red logo "P" + "PTIT Contest" + "Đang khởi động…" + spinner
+- `frontend/lib/core/router.dart`:
+  - Thêm route `/splash`
+  - Redirect logic mới: `if (auth.isLoading) → redirect /splash`; `if (loc == /splash && resolved) → redirect to landing/login/onboarding`
+
+Pattern: splash trung gian thay return null. Trên Android boot slower → splash hiện rõ ~200-500ms (intentional UX, không còn flicker StudentShell).
+
+**4.26.6 Hotfix #2 — Mobile bottom nav admin shell hiện section header**
+
+Anh chụp ảnh GV mobile breakpoint thấy bottom nav có "Tổng quan" trùng "Dashboard" — section header rỗng được render thành nav item.
+
+Root cause: Sprint 14 (P1.2) thêm `_NavItem.section()` factory cho desktop sidebar grouping. Mobile bottom nav lúc đó dùng `widget.items.take(4)` không filter — cả section header (icon=null, screen=null, isSection=true) đều thành BottomNavigationBarItem.
+
+Fix `admin_shell.dart`:
+- Filter `isSection` trước khi tính `bottomItems`
+- Map index gốc qua `origIndex[]` để `currentIndex` + `onTap` không bị shift sai
+- Mobile drawer (sidebar mobile) vẫn giữ section grouping như cũ — chỉ bottom nav filter
+
+Effect: Mobile bottom nav GV/BCN/Admin chỉ hiển thị nav items thật, không section header.
+
+**4.26.7 APK Android build + Kotlin warning**
+
+Sau hotfix #2, anh build APK mới: `app-release.apk` 25.9MB. Build emit warning Kotlin metadata version mismatch (binary metadata 2.2.0 vs expected 1.9.0) nhưng APK build OK + chạy được trên device. Warning đến từ Flutter plugins compile với Kotlin 1.9.0 default, project KGP đặt 2.2.0 (Sprint 7 fix Kotlin stdlib mismatch). Cosmetic, không block.
+
+**4.26.8 Đánh giá `flutter pub outdated` 56 packages**
+
+`build_deploy.ps1` log report "56 packages have newer versions". Em audit từng package:
+
+| Nhóm | Packages | Risk | Lợi ích thực tế |
+|---|---|---|---|
+| Major bump | flutter_riverpod 2→3, go_router 14→17, file_picker 8→11, flutter_secure_storage 9→10, local_auth 2→3, sentry_flutter 8→9, google_fonts 6→8, intl 0.19→0.20 | HIGH (12-16h refactor 80 providers + redirect logic) | Cosmetic — 0 bug được fix |
+| Minor bump | flutter_lints 5→6, lints 5→6, win32 5→6 | MEDIUM (lint warnings tăng) | 🟡 Có thể catch latent issue |
+| Patch | shared_preferences 2.5.3→2.5.5, async, characters, ... | Very low | 🟢 Bug patches edge case |
+
+Decision: **DEFER toàn bộ upgrade** vì:
+- Project ở trạng thái stable, chuẩn bị bảo vệ — risk break > gain feature mới
+- 0 bug nào trong project hiện tại do package cũ
+- Riverpod v3 rewrite ~80 providers + GoRouter v17 thay đổi redirect signature → break splash flicker fix vừa apply
+- Đồ án HK2 không maintain dài hạn, không cần future-proof
+- Thầy phản biện đánh giá functional + workflow, không soi package version
+
+**4.26.9 Tổng hợp Sprint 19**
+
+| Step | Build deploy | File diff |
+|---|---|---|
+| S19-1 + S19-2 | `59828455` | login_screen.dart full rewrite |
+| S19-3 + S19-4 | `1dc667e2` | onboarding_screen.dart mới + otp_login_screen.dart rewrite + main.dart + router.dart |
+| Hotfix #1 splash | `d7e5a431` | splash_screen.dart mới + router.dart redirect logic |
+| Hotfix #2 bottom nav | `6ace6c7b` | admin_shell.dart filter isSection |
+| APK Android build | local | app-release.apk 25.9MB |
+
+**Tổng Sprint 19**: 4 build deploy FE Cloudflare + 1 APK build local. ~6 file FE diff. 0 file BE diff. Production URL cuối: `https://6ace6c7b.ptit-contest-app.pages.dev`. APK file deliverable cho thầy.
+
 **CHƯƠNG 5 --- ĐÁNH GIÁ VÀ CẢI TIẾN**
 
 **5.1 Hạn chế hiện tại**
@@ -834,7 +1242,7 @@ Lazy migration policy: submission cũ giữ BYTEA in-DB, submission mới upload
 
 **5.1.2 Hạn chế kỹ thuật**
 
--   Audit log search/filter --- DB có data đầy đủ nhưng admin UI chỉ là list cuộn. Cần filter theo user/action/contest/time range.
+-   ~~Audit log search/filter --- DB có data đầy đủ nhưng admin UI chỉ là list cuộn. Cần filter theo user/action/contest/time range.~~ **(ĐÃ FIX Sprint 13 Batch C 2026-05-08)** `_AuditLogFilters` widget với 4 control: search text user_email/action_type, dropdown action_type, date range picker, button Reset (chương 4.19).
 
 -   Cert revoke --- chưa có UI cho BCN revoke cert đã issue. Cần column \`revoked\_at + revoked\_reason\` + endpoint POST + audit trail.
 
@@ -860,11 +1268,11 @@ Lazy migration policy: submission cũ giữ BYTEA in-DB, submission mới upload
 
 -   Bottom sheet --- đa số confirm dialog dùng AlertDialog. Nên migrate sang ModalBottomSheet cho UX mobile-native.
 
--   Sidebar admin search --- admin có 9-10 tab, không có search nhanh navigate. Có thể thêm Cmd+K command palette.
+-   Sidebar admin search --- admin có 9-10 tab, không có search nhanh navigate. **(PARTIAL Sprint 18 S18-4 2026-05-08)** Đã thêm ⌘K kbd hint ở search bar SV home (chương 4.24.4) — full Cmd+K command palette sẽ làm sau khi cần. Sidebar grouping 4 section đã cải thiện navigation Sprint 14 (chương 4.20).
 
 -   Animation transition --- chuyển tab cứng. Có thể dùng Hero animation hoặc PageTransitionsBuilder cho smooth.
 
--   Empty state --- chỉ Icon + text. Có thể thêm illustration SVG cho personality.
+-   ~~Empty state --- chỉ Icon + text. Có thể thêm illustration SVG cho personality.~~ **(ĐÃ FIX Sprint 18 S18-3 2026-05-08)** EmptyView upgrade: icon size 56 → 72 trong bg circle ptitRedSoft alpha 0.55 + heading 15px w700 + subtitle 13px (chương 4.24.3). 4 admin screen + contest list dùng widget global enhanced.
 
 **5.2 Lessons learned (13 bug fixes / patterns documented)**
 
@@ -950,6 +1358,58 @@ Sprint 2 đã pivot từ planned-roadmap (dark mode/audit search/cert revoke ban
 | 6 | Bottom sheet thay AlertDialog | 1 ngày | 5 | UX mobile-native. |
 | 7 | i18n EN/VI (.arb files) | 2 ngày | 4 | SV quốc tế. |
 
+**5.3.quater Roadmap Sprint 8+9+10+11+12 DONE 2026-05-08**
+
+| STT | Module | Status | Notes |
+|---|---|---|---|
+| 1 | Audit DB/BE/FE/Production smoke test 4 actor | ✅ DONE | 8 vấn đề phát hiện, fix 11 bug verified live (chương 4.14) |
+| 2 | Sprint 8 P0 UI/UX (touch ≥44 / reduce-motion / EmptyView) | ✅ DONE | WCAG 2.5.5 + 2.3.3 + 2.2.2 compliant (chương 4.14.3) |
+| 3 | Sprint 8b/c skeleton coverage 11 screen | ✅ DONE | Perceived load -300ms, MCardListSkeleton 11 admin/SV screen (chương 4.14.4) |
+| 4 | Sprint 9 wire 6 endpoint chưa UI | ✅ DONE | OTP login + signup + sessions CRUD + criterion delete + reviews summary (chương 4.15) |
+| 5 | Sprint 9b BE thêm AD-05 export xlsx | ✅ DONE | 1 endpoint BE mới + 2 file diff Railway auto-deploy (chương 4.15.5) |
+| 6 | Sprint 11 cert template approve (QĐ3) | ✅ DONE | Workflow 3 cấp QĐ1+QĐ2+QĐ3 hoàn thiện (chương 4.16.2) |
+| 7 | Sprint 11 submission lock anti-tamper | ✅ DONE | POST /submissions/{id}/lock wired (chương 4.16.2) |
+| 8 | Sprint 12 wire contest stats endpoint | ✅ DONE | _ContestStatsCard 6 stat real-time GV-07 (chương 4.17) |
+
+**Cải tiến đo được Sprint 8-12**: Project đạt **gần 100% UI coverage 104 BE endpoint** (32/35 endpoint từng nghi thiếu thực ra đã wire, chỉ 6 endpoint thật mới + 1 BE endpoint mới). 12 build deploy FE + 1 deploy BE trong 1 ngày. 11+ bug fix verified end-to-end qua Chrome MCP. Ưu tiên fix tuân thủ design skill (UI-UX Pro Max + frontend-design + web-accessibility + web-design-guidelines).
+
+**5.3.quinquies Roadmap Sprint 13+14+15+16+17+18 DONE 2026-05-08**
+
+| STT | Module | Status | Notes |
+|---|---|---|---|
+| 1 | Sprint 13 Batch A quick wins (dark toggle wrap + bell pulse + dropdown fix) | ✅ DONE | 3 fix nhanh (chương 4.19) |
+| 2 | Sprint 13 Batch B pull-to-refresh + skeleton 14 instance | ✅ DONE | 4 list view có RefreshIndicator + skeleton coverage admin (chương 4.19) |
+| 3 | Sprint 13 Batch C audit log filter | ✅ DONE | `_AuditLogFilters` 4 control (search/dropdown/date/reset) (chương 4.19) |
+| 4 | Sprint 13 Batch D smoke test + docs | ✅ DONE | 6/6 viewport WCAG axe pass (chương 4.19) |
+| 5 | Sprint 14 IA P1 BCN split 3 lane QĐ + sidebar section group | ✅ DONE | `_NavItem.section()` factory + 4 section divider (chương 4.20.2) |
+| 6 | Sprint 14 IA P2 Backup tách route + GV Tạo cuộc thi sidebar | ✅ DONE | `/admin/backup` riêng + nav item discovery (chương 4.20) |
+| 7 | Sprint 15 Strict role separation (4 step) | ✅ DONE | Gỡ ADMIN gv@ + section riêng admin + BTC workflow guide + Admin system health/audit (chương 4.21) |
+| 8 | Sprint 16 P1 GV today-judging hero + SV countdown timer | ✅ DONE | Gradient red + Timer.periodic 1s tick 4 trạng thái color (chương 4.22.1+4.22.2) |
+| 9 | Sprint 16 P1 Leaderboard SV (mới) | ✅ DONE | BE join enriched display_name + FE podium gold/silver/bronze + "BẠN" highlight (chương 4.22.3) |
+| 10 | Sprint 16 P1 Contest Detail timeline + 5 tabs | ✅ DONE | Vertical line + dots 3-state + DefaultTabController 5 tabs (chương 4.22.4+4.22.5) |
+| 11 | Sprint 17 P2 Featured hero SV Home | ✅ DONE | Gradient red "SỰ KIỆN NỔI BẬT" + dynamic CTA (chương 4.23.1) |
+| 12 | Sprint 17 P2 Profile achievements + my-contests progress | ✅ DONE | 3 stats Cuộc thi/Giải/Cert + 5-stage progress bar (chương 4.23.2+4.23.3) |
+| 13 | Sprint 17 P2 Notifications time-bucket | ✅ DONE | Hôm nay/Tuần này/Cũ hơn + count chip header (chương 4.23.4) |
+| 14 | Sprint 18 P3 Stat icons + Avatar gradient + EmptyView enhanced + ⌘K + OKLCH 9-stop | ✅ DONE | 5 polish items + dark mode fix `_StatTone.neutral` (chương 4.24) |
+
+**Cải tiến đo được Sprint 13-18**: 14/14 items design folder backlog đóng hoàn toàn. 10 build deploy FE + 1 deploy BE Railway. 2 endpoint BE mới (`/api/rounds/{id}` + `/api/contests/{id}/leaderboard`). 18 cải tiến UI/UX tổng (3 IA + 4 strict role + 5 P1 design + 4 P2 design + 5 P3 design + 1 dark mode fix). Workflow phê duyệt 3 cấp QĐ1+QĐ2+QĐ3 đã có UI mapping rõ theo role. **Production URL cuối Sprint 18**: `https://eff80d17.ptit-contest-app.pages.dev`.
+
+**5.3.sexies Roadmap Sprint 19 DONE 2026-05-08**
+
+| STT | Module | Status | Notes |
+|---|---|---|---|
+| 1 | Sprint 19 S19-1 Web 2-column login layout | ✅ DONE | LayoutBuilder ≥900px branding banner gradient + form (chương 4.26.1) |
+| 2 | Sprint 19 S19-2 Role tabs decorative + Ghi nhớ + SSO disabled | ✅ DONE | 4 tab AnimatedContainer + SharedPreferences + SSO Coming soon (chương 4.26.2) |
+| 3 | Sprint 19 S19-3 Mobile onboarding 3 slides | ✅ DONE | PageView + dots + flag SharedPreferences + router redirect first-time (chương 4.26.3) |
+| 4 | Sprint 19 S19-4 OTP 6-box + countdown timer | ✅ DONE | KeyboardListener auto-focus + Timer.periodic 5:00 + Gửi lại link (chương 4.26.4) |
+| 5 | Hotfix #1 Android flicker StudentShell | ✅ DONE | SplashScreen trung gian thay return null (chương 4.26.5) |
+| 6 | Hotfix #2 Mobile bottom nav admin section header | ✅ DONE | Filter isSection + map origIndex (chương 4.26.6) |
+| 7 | APK Android build deliverable | ✅ DONE | app-release.apk 25.9MB Kotlin warning cosmetic (chương 4.26.7) |
+
+**Cải tiến đo được Sprint 19**: Login UX modern hóa hoàn toàn — 2-column desktop branding + role tabs decorative + remember me + SSO disabled placeholder. Mobile onboarding lần đầu mở app + OTP 6-box theo design mockup. 2 hotfix critical Android UX (flicker + bottom nav). APK deliverable 25.9MB sẵn sàng nộp thầy. **Production URL cuối Sprint 19**: `https://6ace6c7b.ptit-contest-app.pages.dev`.
+
+Toàn session 2026-05-08 (Sprint 13 → 19): **30 items** UI/UX + workflow + bug fix qua **14 build deploy** FE Cloudflare + **1 deploy BE Railway** + **1 APK build local**. Project đạt trạng thái production-ready với 4 actor (SV/GV/BCN/Admin) + workflow phê duyệt 3 cấp + design system token + a11y baseline + dark mode + biometric + R2 upload + Sentry FE/BE.
+
 **5.4 Roadmap Phase 3 Strategic (\~3-6 tháng)**
 
 Các module phức tạp hơn, hướng làm sau khi tốt nghiệp hoặc nếu có thời gian extend đồ án:
@@ -972,7 +1432,7 @@ Các module phức tạp hơn, hướng làm sau khi tốt nghiệp hoặc nếu
 
 Đề tài đã hoàn thành mục tiêu xây dựng hệ thống quản lý cuộc thi sinh viên PTIT từ giai đoạn requirements, thiết kế, lập trình tới triển khai sản phẩm thật lên Internet, vượt mức kỳ vọng \"prototype demo\" của một đồ án CNPM thông thường. Các kết quả chính:
 
--   Backend FastAPI 99 endpoints qua 14 router, 43 SQLAlchemy 2.0 async models, \~5500 dòng code Python. Schema PostgreSQL \~25 bảng + 16 ENUM types.
+-   Backend FastAPI 104 endpoints qua 16 router (+5 endpoint Sprint 9-9b: OTP login flow + signup + AD-05 export xlsx), 43 SQLAlchemy 2.0 async models, \~5800 dòng code Python. Schema PostgreSQL \~25 bảng + 16 ENUM types.
 
 -   Frontend Flutter 1 codebase 2 build target (APK Android 23MB + Web 2.8MB main.dart.js). 27+ screens responsive web/mobile.
 

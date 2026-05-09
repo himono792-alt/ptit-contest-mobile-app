@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/empty_view.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/pill.dart';
 
@@ -22,14 +23,39 @@ final pendingApprovalsProvider =
   return res.data as List<dynamic>;
 });
 
-class ApprovalQueueScreen extends ConsumerWidget {
-  const ApprovalQueueScreen({super.key});
+class ApprovalQueueScreen extends ConsumerStatefulWidget {
+  /// Sprint 14 P1.1 (2026-05-08): khi sidebar split 2 lane QĐ1+QĐ2, mỗi
+  /// instance hardcode lockedType và ẩn dropdown. Null = lane chính (Admin)
+  /// có dropdown chọn type.
+  final String? lockedType;
+  const ApprovalQueueScreen({super.key, this.lockedType});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ApprovalQueueScreen> createState() => _ApprovalQueueScreenState();
+}
+
+class _ApprovalQueueScreenState extends ConsumerState<ApprovalQueueScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Sprint 14: nếu lockedType set, override filter provider lúc mount.
+    // Dùng addPostFrameCallback vì initState chưa được phép modify provider.
+    if (widget.lockedType != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ref.read(approvalTypeFilterProvider.notifier).state =
+            widget.lockedType;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final asyncList = ref.watch(pendingApprovalsProvider);
     final type = ref.watch(approvalTypeFilterProvider);
     final isMobile = MediaQuery.of(context).size.width < 768;
+    // Sprint 14 P1.1: ẩn dropdown filter khi locked, hiện title đặc thù lane.
+    final lockedType = widget.lockedType;
 
     return Scaffold(
       backgroundColor: context.appBg,
@@ -48,7 +74,13 @@ class ApprovalQueueScreen extends ConsumerWidget {
                 children: [
                   Text('BCN', style: TextStyle(color: context.textMuted, fontSize: 11)),
                   SizedBox(height: 2),
-                  Text('Phê duyệt đề xuất',
+                  Text(
+                      // Sprint 14 P1.1: title đặc thù theo lockedType.
+                      lockedType == 'CONTEST_PROPOSAL'
+                          ? 'Đề xuất cuộc thi (QĐ1)'
+                          : lockedType == 'CONTEST_RESULT'
+                              ? 'Kết quả cuộc thi (QĐ2)'
+                              : 'Phê duyệt đề xuất',
                       style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
@@ -58,8 +90,8 @@ class ApprovalQueueScreen extends ConsumerWidget {
             ),
           ]),
         ),
-        // Filter
-        Container(
+        // Filter — Sprint 14 P1.1: ẩn dropdown khi locked (sidebar đã chọn lane).
+        if (lockedType == null) Container(
           padding: EdgeInsets.fromLTRB(isMobile ? 14 : 32, isMobile ? 12 : 18, isMobile ? 14 : 32, 0),
           child: Row(children: [
             SizedBox(
@@ -452,19 +484,14 @@ class _ApprovalDetailDialogState
       );
 }
 
+// Sprint 8 P0 #1 (2026-05-07): _EmptyView local thay bằng EmptyView shared
+// trong core/widgets/empty_view.dart cho consistency 28 screen.
 class _EmptyView extends StatelessWidget {
   const _EmptyView();
   @override
-  Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.inbox_outlined, size: 56, color: context.textMuted),
-            SizedBox(height: 12),
-            Text('Không có đề xuất nào đang chờ duyệt',
-                style: TextStyle(color: context.textMuted, fontSize: 13)),
-          ]),
-        ),
+  Widget build(BuildContext context) => const EmptyView(
+        icon: Icons.inbox_outlined,
+        title: 'Không có đề xuất nào đang chờ duyệt',
       );
 }
 

@@ -26,7 +26,7 @@ class ProfileScreen extends ConsumerWidget {
     }
     final initial = user.fullName.split(' ').last.substring(0, 1).toUpperCase();
     return Scaffold(
-      appBar: const MTopBar(title: 'Tôi'),
+      appBar: const MTopBar(title: 'Cài đặt'),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

@@ -58,11 +58,47 @@ final contestRoundsProvider = FutureProvider.autoDispose
   return res.data as List<dynamic>;
 });
 
+/// Sprint 9 Group 2 (2026-05-07): sessions list cho contest_admin_detail.
+/// /api/contests/{id}/sessions trả ContestSessionOut (session_name, type, start_at,
+/// end_at, location_text, room_text, online_meeting_url).
+final contestSessionsProvider = FutureProvider.autoDispose
+    .family<List<dynamic>, int>((ref, contestId) async {
+  final api = ref.watch(apiClientProvider);
+  final res = await api.dio.get('/contests/$contestId/sessions');
+  return res.data as List<dynamic>;
+});
+
 final contestEntriesProvider = FutureProvider.autoDispose
     .family<List<dynamic>, int>((ref, contestId) async {
   final api = ref.watch(apiClientProvider);
   final res = await api.dio.get('/contests/$contestId/entries');
   return res.data as List<dynamic>;
+});
+
+/// Sprint 9 Group 3 (2026-05-07): reviews summary cho 1 contest.
+/// Endpoint trả total/avg_rating/visible_count/hidden_count.
+final contestReviewsSummaryProvider = FutureProvider.autoDispose
+    .family<Map<String, dynamic>?, int>((ref, contestId) async {
+  final api = ref.watch(apiClientProvider);
+  try {
+    final res = await api.dio.get('/contests/$contestId/reviews/summary');
+    return res.data as Map<String, dynamic>;
+  } catch (_) {
+    return null;
+  }
+});
+
+/// Sprint 12 (2026-05-08): contest stats real-time (GV-07 endpoint).
+/// Trả entries by status, submissions, rounds progress, avg score, review rate.
+final contestStatsProvider = FutureProvider.autoDispose
+    .family<Map<String, dynamic>?, int>((ref, contestId) async {
+  final api = ref.watch(apiClientProvider);
+  try {
+    final res = await api.dio.get('/contests/$contestId/stats');
+    return res.data as Map<String, dynamic>;
+  } catch (_) {
+    return null;
+  }
 });
 
 final roundResultsProvider = FutureProvider.autoDispose
@@ -436,6 +472,12 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
             _InfoRow('Owner user_id', '#${c['created_by'] ?? '—'}'),
           ]),
         ),
+        // Sprint 12 (2026-05-08): real-time contest stats từ /contests/{id}/stats.
+        const SizedBox(height: 12),
+        _ContestStatsCard(contestId: widget.contestId),
+        // Sprint 9 Group 3 (2026-05-07): reviews summary từ SV-11.
+        const SizedBox(height: 12),
+        _ReviewsSummaryCard(contestId: widget.contestId),
       ]),
     );
   }
@@ -531,12 +573,42 @@ class _RoundsTabState extends ConsumerState<_RoundsTab> {
     }
   }
 
+  /// Sprint 9 Group 2 (2026-05-07): thêm session vào contest.
+  Future<void> _addSession() async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => const _AddSessionDialog(),
+    );
+    if (result == null) return;
+    final api = ref.read(apiClientProvider);
+    try {
+      await api.dio.post('/contests/${widget.contestId}/sessions',
+          data: result);
+      ref.invalidate(contestSessionsProvider(widget.contestId));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã tạo phiên thi')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi tạo phiên: ${_msgOf(e)}')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final asyncRounds = ref.watch(contestRoundsProvider(widget.contestId));
-    return Padding(
+    final asyncSessions =
+        ref.watch(contestSessionsProvider(widget.contestId));
+    // Sprint 9 Group 2: SingleChildScrollView wrap để có thể scroll cả 2 section
+    // (rounds + sessions). Mỗi ListView dùng shrinkWrap + NeverScrollableScrollPhysics
+    // để không conflict với outer scroll.
+    return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // ===== Section 1: Vòng thi =====
         Row(children: [
           const Expanded(
             child: Text('Vòng thi & Rubric chấm điểm',
@@ -552,23 +624,66 @@ class _RoundsTabState extends ConsumerState<_RoundsTab> {
           ),
         ]),
         const SizedBox(height: 12),
-        Expanded(
-          child: asyncRounds.when(
-            loading: () =>
-                const Center(child: CircularProgressIndicator(color: ptitRed)),
-            error: (e, _) => Center(
-                child: Text('Lỗi: ${_msgOf(e)}',
-                    style: const TextStyle(color: ptitRed))),
-            data: (rounds) => rounds.isEmpty
-                ? const _Empty('Chưa có vòng nào. Thêm round đầu tiên để judge chấm.')
-                : ListView.builder(
-                    itemCount: rounds.length,
-                    itemBuilder: (_, i) => _RoundCard(
-                      contestId: widget.contestId,
-                      round: rounds[i] as Map<String, dynamic>,
-                    ),
-                  ),
+        asyncRounds.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: CircularProgressIndicator(color: ptitRed)),
           ),
+          error: (e, _) => Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text('Lỗi: ${_msgOf(e)}',
+                style: const TextStyle(color: ptitRed)),
+          ),
+          data: (rounds) => rounds.isEmpty
+              ? const _Empty(
+                  'Chưa có vòng nào. Thêm round đầu tiên để judge chấm.')
+              : ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: rounds.length,
+                  itemBuilder: (_, i) => _RoundCard(
+                    contestId: widget.contestId,
+                    round: rounds[i] as Map<String, dynamic>,
+                  ),
+                ),
+        ),
+        const SizedBox(height: 24),
+        // ===== Section 2: Phiên thi =====
+        Row(children: [
+          const Expanded(
+            child: Text('Phiên thi & lịch trình',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+          ),
+          FilledButton.icon(
+            onPressed: _addSession,
+            icon: const Icon(Icons.add, size: 16),
+            label: const Text('Thêm phiên'),
+            style: FilledButton.styleFrom(
+                minimumSize: const Size(0, 36),
+                padding: const EdgeInsets.symmetric(horizontal: 14)),
+          ),
+        ]),
+        const SizedBox(height: 12),
+        asyncSessions.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: CircularProgressIndicator(color: ptitRed)),
+          ),
+          error: (e, _) => Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text('Lỗi: ${_msgOf(e)}',
+                style: const TextStyle(color: ptitRed)),
+          ),
+          data: (sessions) => sessions.isEmpty
+              ? const _Empty(
+                  'Chưa có phiên thi. Thêm phiên để định lịch trình + check-in.')
+              : ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: sessions.length,
+                  itemBuilder: (_, i) =>
+                      _SessionCard(session: sessions[i] as Map<String, dynamic>),
+                ),
         ),
       ]),
     );
@@ -620,6 +735,43 @@ class _RoundCardState extends ConsumerState<_RoundCard> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Lỗi: ${_msgOf(e)}')),
+      );
+    }
+  }
+
+  /// Sprint 9 Group 3 (2026-05-07): xóa criterion khỏi rubric.
+  Future<void> _deleteCriterion(int criterionId, String name) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xóa criterion?'),
+        content: Text('Sẽ xóa "$name" khỏi rubric. Score đã chấm dùng criterion này sẽ orphan.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Hủy')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: ptitRed),
+            child: const Text('Xóa'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    final api = ref.read(apiClientProvider);
+    try {
+      await api.dio.delete(
+          '/rounds/${widget.round['round_id']}/criteria/$criterionId');
+      _loadCriteria();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã xóa criterion')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi xóa: ${_msgOf(e)}')),
       );
     }
   }
@@ -702,6 +854,18 @@ class _RoundCardState extends ConsumerState<_RoundCard> {
                         Text('Max ${m['max_score']} · ${m['weight_percent'] ?? 0}%',
                             style: TextStyle(
                                 fontSize: 11, color: context.textMuted)),
+                        // Sprint 9 Group 3 (2026-05-07): xóa criterion.
+                        IconButton(
+                          icon: Icon(Icons.delete_outline,
+                              size: 16, color: context.warnOrange),
+                          tooltip: 'Xóa criterion',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                              minWidth: 44, minHeight: 44),
+                          onPressed: () => _deleteCriterion(
+                              m['criterion_id'] as int,
+                              m['criterion_name'] as String),
+                        ),
                       ]),
                     );
                   }),
@@ -1264,14 +1428,104 @@ class _JudgingTabState extends ConsumerState<_JudgingTab> {
     }
   }
 
+  /// Sprint 11 #2 (2026-05-08): Khóa submission — ngăn SV nộp version mới
+  /// trong khi judge đang chấm. POST /submissions/{id}/lock. Reason là note
+  /// audit log (vd: "Đang chấm vòng 1, không nhận thêm version").
+  Future<void> _lockSubmission() async {
+    final ctrl = TextEditingController();
+    final reasonCtrl = TextEditingController(
+        text: 'Khóa khi judge đang chấm — không nhận version mới.');
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Khóa submission?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+                'Sau khi khóa, SV không thể nộp version mới cho submission này. Audit log sẽ ghi reason.',
+                style: TextStyle(fontSize: 12)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Submission ID *',
+                helperText: 'Lấy từ judge view hoặc audit log',
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: reasonCtrl,
+              maxLines: 2,
+              decoration: const InputDecoration(labelText: 'Lý do khóa'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Hủy')),
+          FilledButton(
+            onPressed: () {
+              final id = int.tryParse(ctrl.text.trim());
+              if (id == null) return;
+              Navigator.pop(ctx, {
+                'submission_id': id,
+                'reason': reasonCtrl.text.trim(),
+              });
+            },
+            style: FilledButton.styleFrom(backgroundColor: ptitRed),
+            child: const Text('Khóa'),
+          ),
+        ],
+      ),
+    );
+    if (result == null) return;
+    final api = ref.read(apiClientProvider);
+    try {
+      await api.dio.post(
+          '/submissions/${result['submission_id']}/lock',
+          data: {
+            if ((result['reason'] as String).isNotEmpty)
+              'reason': result['reason'],
+          });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content:
+                Text('Đã khóa submission #${result['submission_id']}')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi khóa: ${_msgOf(e)}')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final asyncRounds = ref.watch(contestRoundsProvider(widget.contestId));
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Phân công Judge cho từng round',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+        Row(children: [
+          const Expanded(
+            child: Text('Phân công Judge cho từng round',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+          ),
+          // Sprint 11 #2 (2026-05-08): admin/BTC khóa submission anti-tamper.
+          OutlinedButton.icon(
+            onPressed: _lockSubmission,
+            icon: const Icon(Icons.lock_outline, size: 16),
+            label: const Text('Khóa submission'),
+            style: OutlinedButton.styleFrom(
+                minimumSize: const Size(0, 36),
+                padding: const EdgeInsets.symmetric(horizontal: 12)),
+          ),
+        ]),
         const SizedBox(height: 4),
         Text(
             'Mỗi assignment = 1 judge chấm 1 entry trong 1 round. Cần entry_id (ID đăng ký SV) + judge_id (ID judge từ tab Quản lý user).',
@@ -1723,6 +1977,43 @@ class _CertsTabState extends ConsumerState<_CertsTab> {
     }
   }
 
+  /// Sprint 11 #1 (2026-05-08): BCN/Admin duyệt cert template (QĐ3 workflow).
+  /// Sau approve → BTC mới có thể Activate. Permission BE check qua role HOD/ADMIN.
+  Future<void> _approve(int templateId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Duyệt template?'),
+        content: const Text(
+            'Sau khi duyệt, BTC sẽ có thể Activate template để cấp chứng nhận. Quyết định này sẽ ghi vào audit log.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Hủy')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Duyệt'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    final api = ref.read(apiClientProvider);
+    try {
+      await api.dio.patch('/certificate-templates/$templateId/approve');
+      ref.invalidate(certTemplatesProvider(widget.contestId));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã duyệt template — BTC có thể Activate')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi duyệt: ${_msgOf(e)}')),
+      );
+    }
+  }
+
   Future<void> _issueCerts(bool onlyAward) async {
     final api = ref.read(apiClientProvider);
     try {
@@ -1747,6 +2038,8 @@ class _CertsTabState extends ConsumerState<_CertsTab> {
   @override
   Widget build(BuildContext context) {
     final asyncTpl = ref.watch(certTemplatesProvider(widget.contestId));
+    // Sprint 11 #1 (2026-05-08): user để conditional show button "Duyệt" cho HOD/Admin.
+    final user = ref.watch(authProvider).value;
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1765,7 +2058,7 @@ class _CertsTabState extends ConsumerState<_CertsTab> {
         ]),
         const SizedBox(height: 4),
         Text(
-            'Workflow: tạo template → BCN duyệt (QĐ3) qua tab Phê duyệt → BTC activate → cấp cert hàng loạt cho results.',
+            'Workflow: tạo template → BCN duyệt (QĐ3) qua nút "Duyệt" → BTC activate → cấp cert hàng loạt cho results.',
             style: TextStyle(fontSize: 11, color: context.textMuted)),
         const SizedBox(height: 12),
         Expanded(
@@ -1812,6 +2105,20 @@ class _CertsTabState extends ConsumerState<_CertsTab> {
                                   ]),
                                 ]),
                           ),
+                          // Sprint 11 #1 (2026-05-08): BCN/Admin duyệt cert template (QĐ3).
+                          // Hiện trước Activate vì workflow là Approve → Activate.
+                          if (!isApproved && user != null && (user.isHod || user.isAdmin))
+                            FilledButton.icon(
+                              onPressed: () => _approve(t['template_id'] as int),
+                              icon: const Icon(Icons.check_circle_outline,
+                                  size: 16),
+                              label: const Text('Duyệt'),
+                              style: FilledButton.styleFrom(
+                                  minimumSize: const Size(0, 34),
+                                  backgroundColor: context.successGreen,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12)),
+                            ),
                           if (isApproved && !isActive)
                             FilledButton.icon(
                               onPressed: () => _activate(t['template_id'] as int),
@@ -1929,6 +2236,279 @@ class _AddCertTemplateDialogState extends State<_AddCertTemplateDialog> {
   }
 }
 
+// ============================================================
+// Sprint 9 Group 2 (2026-05-07): Sessions UI
+// ============================================================
+
+/// Card hiển thị 1 phiên thi: tên + type chip + thời gian + location/url.
+class _SessionCard extends StatelessWidget {
+  final Map<String, dynamic> session;
+  const _SessionCard({required this.session});
+
+  @override
+  Widget build(BuildContext context) {
+    final type = session['session_type'] as String? ?? 'OFFLINE';
+    final startAt = session['start_at'] as String?;
+    final endAt = session['end_at'] as String?;
+    final location = session['location_text'] as String?;
+    final room = session['room_text'] as String?;
+    final meetingUrl = session['online_meeting_url'] as String?;
+    final dt = (startAt != null && endAt != null)
+        ? '${_fmt(startAt)} → ${_fmt(endAt)}'
+        : '—';
+    final venue = type == 'ONLINE'
+        ? (meetingUrl ?? '—')
+        : [location, room].where((s) => s != null && s.isNotEmpty).join(' · ');
+    return MCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Expanded(
+              child: Text(
+                '#${session['session_id']} — ${session['session_name']}',
+                style: const TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w700),
+              ),
+            ),
+            Pill(
+              label: type,
+              kind: type == 'ONLINE' ? PillKind.info : PillKind.neutral,
+            ),
+          ]),
+          const SizedBox(height: 6),
+          Row(children: [
+            Icon(Icons.schedule, size: 13, color: context.textMuted),
+            const SizedBox(width: 4),
+            Text(dt,
+                style: TextStyle(fontSize: 11.5, color: context.textMuted)),
+          ]),
+          if (venue.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Row(children: [
+              Icon(
+                  type == 'ONLINE'
+                      ? Icons.link
+                      : Icons.location_on_outlined,
+                  size: 13,
+                  color: context.textMuted),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(venue,
+                    style:
+                        TextStyle(fontSize: 11.5, color: context.textMuted),
+                    overflow: TextOverflow.ellipsis),
+              ),
+            ]),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _fmt(String iso) {
+    try {
+      final d = DateTime.parse(iso).toLocal();
+      return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')} ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return iso;
+    }
+  }
+}
+
+/// Dialog tạo phiên thi mới — form: tên, type online/offline, start/end datetime,
+/// location_text/room hoặc online_meeting_url tùy type.
+class _AddSessionDialog extends StatefulWidget {
+  const _AddSessionDialog();
+
+  @override
+  State<_AddSessionDialog> createState() => _AddSessionDialogState();
+}
+
+class _AddSessionDialogState extends State<_AddSessionDialog> {
+  final _name = TextEditingController();
+  final _location = TextEditingController();
+  final _room = TextEditingController();
+  final _meetingUrl = TextEditingController();
+  String _type = 'OFFLINE';
+  DateTime? _start;
+  DateTime? _end;
+  String? _err;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _location.dispose();
+    _room.dispose();
+    _meetingUrl.dispose();
+    super.dispose();
+  }
+
+  Future<DateTime?> _pickDateTime(DateTime initial) async {
+    final d = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (d == null || !mounted) return null;
+    final t = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initial),
+    );
+    if (t == null) return null;
+    return DateTime(d.year, d.month, d.day, t.hour, t.minute);
+  }
+
+  void _submit() {
+    setState(() => _err = null);
+    final name = _name.text.trim();
+    if (name.length < 2) {
+      setState(() => _err = 'Tên phiên tối thiểu 2 ký tự');
+      return;
+    }
+    if (_start == null || _end == null) {
+      setState(() => _err = 'Bắt buộc chọn thời gian bắt đầu + kết thúc');
+      return;
+    }
+    if (!_end!.isAfter(_start!)) {
+      setState(() => _err = 'Kết thúc phải sau bắt đầu');
+      return;
+    }
+    final data = <String, dynamic>{
+      'session_name': name,
+      'session_type': _type,
+      'start_at': _start!.toUtc().toIso8601String(),
+      'end_at': _end!.toUtc().toIso8601String(),
+    };
+    if (_type == 'OFFLINE') {
+      if (_location.text.trim().isNotEmpty) {
+        data['location_text'] = _location.text.trim();
+      }
+      if (_room.text.trim().isNotEmpty) {
+        data['room_text'] = _room.text.trim();
+      }
+    } else {
+      if (_meetingUrl.text.trim().isNotEmpty) {
+        data['online_meeting_url'] = _meetingUrl.text.trim();
+      }
+    }
+    Navigator.pop(context, data);
+  }
+
+  String _fmtDt(DateTime? d) {
+    if (d == null) return 'Chọn...';
+    return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year} ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Tạo phiên thi',
+                    style: TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _name,
+                  decoration: const InputDecoration(
+                      labelText: 'Tên phiên *',
+                      hintText: 'Vòng sơ loại tuần 1'),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: _type,
+                  decoration: const InputDecoration(labelText: 'Hình thức *'),
+                  items: const [
+                    DropdownMenuItem(
+                        value: 'OFFLINE',
+                        child: Text('Trực tiếp (OFFLINE)')),
+                    DropdownMenuItem(
+                        value: 'ONLINE', child: Text('Trực tuyến (ONLINE)')),
+                  ],
+                  onChanged: (v) => setState(() => _type = v ?? 'OFFLINE'),
+                ),
+                const SizedBox(height: 10),
+                Row(children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () async {
+                        final d = await _pickDateTime(
+                            _start ?? DateTime.now().add(const Duration(days: 1)));
+                        if (d != null) setState(() => _start = d);
+                      },
+                      child: Text('Bắt đầu: ${_fmtDt(_start)}'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () async {
+                        final d = await _pickDateTime(_end ??
+                            (_start ?? DateTime.now())
+                                .add(const Duration(hours: 2)));
+                        if (d != null) setState(() => _end = d);
+                      },
+                      child: Text('Kết thúc: ${_fmtDt(_end)}'),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 10),
+                if (_type == 'OFFLINE') ...[
+                  TextField(
+                    controller: _location,
+                    decoration: const InputDecoration(
+                        labelText: 'Địa điểm',
+                        hintText: 'Toà A1 PTIT cơ sở 1'),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _room,
+                    decoration: const InputDecoration(
+                        labelText: 'Phòng', hintText: 'Phòng Lab CNTT'),
+                  ),
+                ] else
+                  TextField(
+                    controller: _meetingUrl,
+                    decoration: const InputDecoration(
+                        labelText: 'URL meeting',
+                        hintText: 'https://meet.google.com/...'),
+                  ),
+                if (_err != null) ...[
+                  const SizedBox(height: 8),
+                  Text(_err!,
+                      style: const TextStyle(color: ptitRed, fontSize: 12)),
+                ],
+                const SizedBox(height: 16),
+                Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Hủy')),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: _submit,
+                    style: FilledButton.styleFrom(
+                        minimumSize: const Size(120, 40)),
+                    child: const Text('Tạo phiên'),
+                  ),
+                ]),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ---------- Helpers ----------
 
 String _msgOf(Object e) {
@@ -1941,12 +2521,282 @@ String _msgOf(Object e) {
   return '$e';
 }
 
+/// Sprint 12 fix (2026-05-08): parse số từ JSON value bất kỳ (num hoặc string).
+/// BE Pydantic serialize Decimal thành string mặc định (vd "8.8000000000000000")
+/// nên phía FE phải tryParse trước khi format. Trả null nếu không parse được.
+num? _parseNum(dynamic v) {
+  if (v == null) return null;
+  if (v is num) return v;
+  if (v is String) {
+    return num.tryParse(v.trim());
+  }
+  return null;
+}
+
 String _safeFmtIso(dynamic iso) {
   if (iso == null) return '—';
   try {
     return DateFormat('dd/MM/yy HH:mm').format(DateTime.parse(iso as String).toLocal());
   } catch (_) {
     return '—';
+  }
+}
+
+/// Sprint 12 (2026-05-08): contest stats card real-time (GV-07).
+/// 6 stat: entries Approved/Pending/Rejected · submissions · rounds progress · avg score.
+class _ContestStatsCard extends ConsumerWidget {
+  final int contestId;
+  const _ContestStatsCard({required this.contestId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncStats = ref.watch(contestStatsProvider(contestId));
+    return MCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(Icons.insights_outlined,
+              size: 16, color: context.textPrimary),
+          const SizedBox(width: 6),
+          const Text('Tiến độ cuộc thi (real-time)',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+        ]),
+        const SizedBox(height: 12),
+        asyncStats.when(
+          loading: () => Padding(
+            padding: const EdgeInsets.all(8),
+            child: SizedBox(
+              height: 20,
+              width: 20,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: context.textMuted),
+            ),
+          ),
+          error: (_, __) => Text('—',
+              style: TextStyle(fontSize: 12, color: context.textFaint)),
+          data: (s) {
+            if (s == null) {
+              return Text('Chưa có dữ liệu thống kê',
+                  style: TextStyle(
+                      fontSize: 12.5,
+                      color: context.textMuted,
+                      fontStyle: FontStyle.italic));
+            }
+            final approved = s['approved_entries'] ?? 0;
+            final pending = s['pending_entries'] ?? 0;
+            final total = s['total_entries'] ?? 0;
+            final submissions = s['total_submissions'] ?? 0;
+            final submitted = s['submitted_count'] ?? 0;
+            final roundsTotal = s['rounds_count'] ?? 0;
+            final roundsDone = s['rounds_with_results'] ?? 0;
+            // Sprint 12 fix (2026-05-08): BE serialize Decimal thành string
+            // (Pydantic default), nên check num KHÔNG đủ — dùng helper _parseNum.
+            final avgScore = _parseNum(s['average_final_score']);
+            final passRate = _parseNum(s['pass_rate_percent']);
+            final avgScoreStr =
+                avgScore != null ? avgScore.toStringAsFixed(2) : '—';
+            final passRateStr =
+                passRate != null ? '${passRate.toStringAsFixed(0)}%' : '—';
+            return Wrap(spacing: 0, runSpacing: 12, children: [
+              SizedBox(
+                width: 180,
+                child: _StatBlock(
+                  label: 'Đăng ký',
+                  value: '$approved / $total',
+                  hint: 'Đã duyệt / Tổng',
+                  color: context.successGreen,
+                ),
+              ),
+              SizedBox(
+                width: 140,
+                child: _StatBlock(
+                  label: 'Chờ duyệt',
+                  value: '$pending',
+                  hint: 'PENDING',
+                  color: context.warnOrange,
+                ),
+              ),
+              SizedBox(
+                width: 180,
+                child: _StatBlock(
+                  label: 'Bài nộp',
+                  value: '$submitted / $submissions',
+                  hint: 'Đúng hạn / Tổng',
+                  color: context.infoBlue,
+                ),
+              ),
+              SizedBox(
+                width: 160,
+                child: _StatBlock(
+                  label: 'Vòng',
+                  value: '$roundsDone / $roundsTotal',
+                  hint: 'Đã chấm xong',
+                ),
+              ),
+              SizedBox(
+                width: 140,
+                child: _StatBlock(
+                  label: 'Điểm TB',
+                  value: avgScoreStr,
+                  hint: 'final_score',
+                ),
+              ),
+              SizedBox(
+                width: 140,
+                child: _StatBlock(
+                  label: 'Tỷ lệ pass',
+                  value: passRateStr,
+                  hint: 'top 50%',
+                  color: context.achievementGold,
+                ),
+              ),
+            ]);
+          },
+        ),
+      ]),
+    );
+  }
+}
+
+class _StatBlock extends StatelessWidget {
+  final String label;
+  final String value;
+  final String? hint;
+  final Color? color;
+  const _StatBlock({
+    required this.label,
+    required this.value,
+    this.hint,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: TextStyle(
+                fontSize: 10.5,
+                color: context.textMuted,
+                letterSpacing: 0.5)),
+        const SizedBox(height: 3),
+        Text(value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: color ?? context.textPrimary,
+            )),
+        if (hint != null) ...[
+          const SizedBox(height: 2),
+          Text(hint!,
+              style: TextStyle(fontSize: 10, color: context.textFaint)),
+        ],
+      ],
+    );
+  }
+}
+
+/// Sprint 9 Group 3 (2026-05-07): reviews summary card cho _OverviewTab.
+/// Hiển thị 4 stat: total / avg rating / visible / hidden.
+class _ReviewsSummaryCard extends ConsumerWidget {
+  final int contestId;
+  const _ReviewsSummaryCard({required this.contestId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncSummary = ref.watch(contestReviewsSummaryProvider(contestId));
+    return MCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(Icons.rate_review_outlined,
+              size: 16, color: context.textPrimary),
+          const SizedBox(width: 6),
+          const Text('Reviews từ SV',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+        ]),
+        const SizedBox(height: 12),
+        asyncSummary.when(
+          loading: () => Padding(
+            padding: const EdgeInsets.all(8),
+            child: SizedBox(
+              height: 20,
+              width: 20,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: context.textMuted),
+            ),
+          ),
+          error: (e, _) => Text('—',
+              style: TextStyle(fontSize: 12, color: context.textFaint)),
+          data: (s) {
+            if (s == null) {
+              return Text('Chưa có review nào',
+                  style: TextStyle(
+                      fontSize: 12.5,
+                      color: context.textMuted,
+                      fontStyle: FontStyle.italic));
+            }
+            // Sprint 12 fix #2 (2026-05-08): BE schema actual là `average_rating`
+            // + `distribution` map (1-5 → count). KHÔNG có visible/hidden_count.
+            // Hiển thị thay = top 5★ count + ≥4★ count để admin biết tỷ lệ tích cực.
+            final total = s['total'] ?? 0;
+            final avgNum = _parseNum(s['average_rating']);
+            final avgStr = avgNum != null ? avgNum.toStringAsFixed(1) : '—';
+            final dist = (s['distribution'] as Map?) ?? {};
+            final five = (dist['5'] as num?)?.toInt() ?? 0;
+            final four = (dist['4'] as num?)?.toInt() ?? 0;
+            final positive = five + four; // ≥4★ count
+            return Row(children: [
+              _ReviewStat(label: 'Tổng', value: '$total'),
+              _ReviewStat(
+                label: 'Sao TB',
+                value: avgStr,
+                color: context.achievementGold,
+              ),
+              _ReviewStat(
+                label: '5 sao',
+                value: '$five',
+                color: context.achievementGold,
+              ),
+              _ReviewStat(
+                label: '≥4 sao',
+                value: '$positive',
+                color: context.successGreen,
+              ),
+            ]);
+          },
+        ),
+      ]),
+    );
+  }
+}
+
+class _ReviewStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? color;
+  const _ReviewStat({required this.label, required this.value, this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: TextStyle(
+                  fontSize: 10.5,
+                  color: context.textMuted,
+                  letterSpacing: 0.5)),
+          const SizedBox(height: 3),
+          Text(value,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: color ?? context.textPrimary,
+              )),
+        ],
+      ),
+    );
   }
 }
 
