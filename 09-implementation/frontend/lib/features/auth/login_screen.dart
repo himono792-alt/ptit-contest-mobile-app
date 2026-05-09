@@ -2,6 +2,8 @@
 // - Web ≥768: 2-column layout (left branding banner gradient red + right form)
 // - Mobile <768: stack vertical như cũ
 // - Form: role tabs decorative + Ghi nhớ tôi + SSO disabled "Coming soon"
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
@@ -13,7 +15,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/auth/biometric_service.dart';
-import '../../core/secure_storage.dart';
 import '../../core/theme.dart';
 import 'forgot_password_request_screen.dart';
 
@@ -208,13 +209,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       fontWeight: FontWeight.w500,
                       height: 1.6)),
               const SizedBox(height: 36),
-              // 4 stats grid
-              Row(children: const [
-                Expanded(child: _BrandStat(value: '1,847', label: 'TÀI KHOẢN')),
-                Expanded(child: _BrandStat(value: '42', label: 'CUỘC THI')),
-                Expanded(child: _BrandStat(value: '12', label: 'KHOA')),
-                Expanded(child: _BrandStat(value: '99.9%', label: 'UPTIME')),
-              ]),
+              // Sprint 26 (2026-05-09): thay 4 stats hardcoded bằng rotating
+              // quote động viên có author — cảm giác trang trọng + động viên
+              // SV/GV/BCN khi đăng nhập, không phô trương số liệu fake.
+              const _BrandQuoteRotator(),
             ],
           ),
           // Footer build version
@@ -282,10 +280,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               )),
           const SizedBox(height: 22),
 
-          // Sprint 19 S19-2: Role tabs decorative
+          // Sprint 19 S19-2: Role tabs.
+          // Sprint 26 (2026-05-09): click tab auto-fill tài khoản test cho dev.
           _RoleTabs(
             selected: _selectedRoleTab,
-            onChanged: (i) => setState(() => _selectedRoleTab = i),
+            onChanged: (i) => setState(() {
+              _selectedRoleTab = i;
+              final creds = _testCredentialsFor(i);
+              _emailCtrl.text = creds.email;
+              _pwdCtrl.text = creds.password;
+            }),
           ),
           const SizedBox(height: 18),
 
@@ -587,6 +591,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
+  /// Sprint 26 (2026-05-09): tài khoản test mặc định cho mỗi role tab.
+  /// Click tab → auto-fill email + password để dev/demo nhanh.
+  ({String email, String password}) _testCredentialsFor(int idx) {
+    switch (idx) {
+      case 1:
+        return (email: 'gv@ptit.edu.vn', password: 'abc123');
+      case 2:
+        return (email: 'bcn@ptit.edu.vn', password: 'abc123');
+      case 3:
+        return (email: 'admin@ptit.edu.vn', password: 'abc123');
+      case 0:
+      default:
+        return (email: 'b22dccn001@ptit.edu.vn', password: 'abc123');
+    }
+  }
+
   String _hintForRole(int idx) {
     switch (idx) {
       case 0:
@@ -656,32 +676,143 @@ class _RoleTabs extends StatelessWidget {
   }
 }
 
-/// Sprint 19 S19-1: stat khối trắng-trên-đỏ trong branding panel.
-class _BrandStat extends StatelessWidget {
-  final String value;
-  final String label;
-  const _BrandStat({required this.value, required this.label});
+// Sprint 26 (2026-05-09): _BrandStat removed — thay bằng _BrandQuoteRotator
+// rotating quote động viên có author thay 4 stats hardcoded (1,847/42/12/99.9%).
+
+/// Sprint 26 (2026-05-09): rotating quote động viên có tên tác giả nổi tiếng.
+/// Auto-cycle 6s, fade transition smooth. Thay 4 stats hardcoded
+/// (1,847 / 42 / 12 / 99.9%) — số fake không demo professional.
+class _BrandQuoteRotator extends StatefulWidget {
+  const _BrandQuoteRotator();
+
+  @override
+  State<_BrandQuoteRotator> createState() => _BrandQuoteRotatorState();
+}
+
+class _BrandQuoteRotatorState extends State<_BrandQuoteRotator> {
+  static const _quotes = <({String text, String author})>[
+    (
+      text: '"Học, học nữa, học mãi."',
+      author: 'V. I. Lenin',
+    ),
+    (
+      text: '"Hiền tài là nguyên khí của quốc gia."',
+      author: 'Thân Nhân Trung — 1484',
+    ),
+    (
+      text:
+          '"Education is the most powerful weapon which you can use to change the world."',
+      author: 'Nelson Mandela',
+    ),
+    (
+      text:
+          '"An investment in knowledge pays the best interest."',
+      author: 'Benjamin Franklin',
+    ),
+    (
+      text:
+          '"Live as if you were to die tomorrow. Learn as if you were to live forever."',
+      author: 'Mahatma Gandhi',
+    ),
+    (
+      text:
+          '"The beautiful thing about learning is that no one can take it away from you."',
+      author: 'B. B. King',
+    ),
+  ];
+
+  int _idx = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 6), (_) {
+      if (!mounted) return;
+      setState(() => _idx = (_idx + 1) % _quotes.length);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(value,
-            style: GoogleFonts.plusJakartaSans(
+    final q = _quotes[_idx];
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 500),
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      transitionBuilder: (child, anim) => FadeTransition(
+        opacity: anim,
+        child: SlideTransition(
+          position: Tween<Offset>(
+                  begin: const Offset(0, 0.05), end: Offset.zero)
+              .animate(anim),
+          child: child,
+        ),
+      ),
+      child: Column(
+        key: ValueKey(_idx),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Quote mark decorative
+          Text('“',
+              style: GoogleFonts.plusJakartaSans(
+                  color: Colors.white.withValues(alpha: 0.32),
+                  fontSize: 56,
+                  fontWeight: FontWeight.w800,
+                  height: 0.6,
+                  letterSpacing: -2)),
+          const SizedBox(height: 4),
+          Text(q.text,
+              style: GoogleFonts.plusJakartaSans(
                 color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.6,
-                height: 1)),
-        const SizedBox(height: 4),
-        Text(label,
-            style: GoogleFonts.plusJakartaSans(
-                color: Colors.white.withValues(alpha: 0.75),
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.8)),
-      ],
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                fontStyle: FontStyle.italic,
+                height: 1.5,
+                letterSpacing: -0.2,
+              )),
+          const SizedBox(height: 12),
+          Row(children: [
+            Container(
+              width: 22,
+              height: 1.5,
+              color: Colors.white.withValues(alpha: 0.55),
+            ),
+            const SizedBox(width: 10),
+            Text(q.author,
+                style: GoogleFonts.plusJakartaSans(
+                  color: Colors.white.withValues(alpha: 0.85),
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                )),
+          ]),
+          const SizedBox(height: 14),
+          // Indicator dots
+          Row(
+            children: List.generate(_quotes.length, (i) {
+              final active = i == _idx;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                margin: const EdgeInsets.only(right: 6),
+                width: active ? 18 : 6,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.white
+                      .withValues(alpha: active ? 0.85 : 0.35),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
     );
   }
 }
