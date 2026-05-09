@@ -26,9 +26,13 @@ class TokenStorage {
 
   // ---------- Access token ----------
 
-  Future<void> saveToken(String token) async {
+  /// Sprint 28 hotfix #6 (2026-05-10): `persistent=true` (mặc định) → save vào
+  /// localStorage trên web, giữ qua browser restart. `persistent=false` (user
+  /// không check "Ghi nhớ tôi") → sessionStorage, mất khi đóng tab.
+  /// Trên mobile, persistent param ignored — luôn dùng Keychain/Keystore.
+  Future<void> saveToken(String token, {bool persistent = true}) async {
     if (kIsWeb) {
-      webStorage.write(_kAccessToken, token);
+      webStorage.write(_kAccessToken, token, persistent: persistent);
       return;
     }
     return _storage.write(key: _kAccessToken, value: token);
@@ -51,9 +55,9 @@ class TokenStorage {
 
   // ---------- Refresh token (Phase 2 step 4) ----------
 
-  Future<void> saveRefreshToken(String token) async {
+  Future<void> saveRefreshToken(String token, {bool persistent = true}) async {
     if (kIsWeb) {
-      webStorage.write(_kRefreshToken, token);
+      webStorage.write(_kRefreshToken, token, persistent: persistent);
       return;
     }
     return _storage.write(key: _kRefreshToken, value: token);

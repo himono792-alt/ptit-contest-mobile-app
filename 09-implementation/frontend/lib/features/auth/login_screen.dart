@@ -139,8 +139,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       // redirect → ta có thời gian chạy animation split-outward 750ms. Sau khi
       // panels slide xong → ref.invalidate(authProvider) → re-build /me →
       // router redirect (LoginScreen unmount tự nhiên).
+      // Sprint 28 hotfix #6 (2026-05-10): honor "Ghi nhớ tôi" — checked thì
+      // token save localStorage (persistent qua browser restart), unchecked
+      // thì sessionStorage (mất khi đóng tab). Pattern chuẩn web app.
       final svc = ref.read(authServiceProvider);
-      await svc.login(_emailCtrl.text.trim(), _pwdCtrl.text);
+      await svc.login(
+        _emailCtrl.text.trim(),
+        _pwdCtrl.text,
+        persistent: _rememberMe,
+      );
       if (!mounted) return;
 
       // A11y: nếu user bật "reduce motion" → skip animation, redirect ngay.

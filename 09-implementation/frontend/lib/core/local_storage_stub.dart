@@ -2,7 +2,7 @@
 // Tồn tại chỉ để conditional import compile trên mobile.
 class LocalWebStorage {
   String? read(String key) => null;
-  void write(String key, String value) {}
+  void write(String key, String value, {bool persistent = true}) {}
   void remove(String key) {}
 }
 

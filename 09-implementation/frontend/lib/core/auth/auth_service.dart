@@ -12,16 +12,22 @@ class AuthService {
 
   /// POST /api/auth/login. Save cả access token + refresh token vào storage.
   /// Phase 2 step 4 (2026-05-06): refresh token dùng cho biometric unlock lần sau.
-  Future<String> login(String email, String password) async {
+  /// Sprint 28 hotfix #6 (2026-05-10): `persistent` flag honor "Ghi nhớ tôi" —
+  /// false → sessionStorage (mất khi đóng tab), true → localStorage (default).
+  Future<String> login(
+    String email,
+    String password, {
+    bool persistent = true,
+  }) async {
     final res = await _api.dio.post('/auth/login', data: {
       'email': email,
       'password': password,
     });
     final accessToken = res.data['access_token'] as String;
     final refreshToken = res.data['refresh_token'] as String?;
-    await _storage.saveToken(accessToken);
+    await _storage.saveToken(accessToken, persistent: persistent);
     if (refreshToken != null && refreshToken.isNotEmpty) {
-      await _storage.saveRefreshToken(refreshToken);
+      await _storage.saveRefreshToken(refreshToken, persistent: persistent);
     }
     return accessToken;
   }
