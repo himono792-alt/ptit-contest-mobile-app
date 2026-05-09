@@ -29,19 +29,20 @@
 
 ## Trạng thái
 
-| Hạng mục | v1.0 (2026-05-08) |
+| Hạng mục | v1.0 (2026-05-10) |
 |----------|-------------------|
-| Backend FastAPI | **104 endpoints** qua 16 router · 43 SQLAlchemy models · 25 bảng PostgreSQL |
-| Frontend Flutter | **30+ screens** responsive web/mobile · APK Android 25.9 MB |
+| Backend FastAPI | **108 endpoints** qua 17 router · 44 SQLAlchemy models · 26 bảng PostgreSQL (faculty_cert_templates Sprint 25) |
+| Frontend Flutter | **35+ screens** responsive web/mobile · APK Android 25.9 MB |
 | 4 actor end-to-end | ✅ SV / GV-BTC / BCN-HOD / Admin (strict role separation Sprint 15) |
 | Workflow phê duyệt 3 cấp | ✅ QĐ1 (BCN duyệt contest) · QĐ2 (BCN duyệt kết quả) · QĐ3 (BCN duyệt cert template) |
 | Production foundation | ✅ Sentry FE+BE · Rate limit · Refresh token · Email Brevo HTTP · HSTS A+ · R2 file storage |
-| WCAG 2.1 AA | ✅ Touch ≥44dp · Reduce-motion · Skeleton loading · Semantics deep wrap (axe-core 0 violations) |
+| WCAG 2.1 AA | ✅ Touch ≥44dp · Reduce-motion · Skeleton theme-aware shimmer (Sprint 26) · Semantics deep wrap (axe-core 0 violations) |
 | Light + Dark theme | ✅ Material 3 · 484 theme tokens · OKLCH 9-stop brand ramp |
 | Biometric login (APK) | ✅ FaceID/TouchID + refresh token rotation |
-| Workflow Sprint 13-19 | ✅ 14 hotfix UX iterate sidebar collapsible Pattern B (VS Code/Sentry style) |
+| Login UX | ✅ 2-column branding + 6 quote rotator có author + role tab autofill + split-outward animation 750ms |
+| Navigation | ✅ Pattern B collapse 240↔64 sidebar 4 role · Browser back/forward · F5 reload preserve URL · Deep-link share `?to=` |
 
-**Production URL deploy cuối**: `a3f6a20e.ptit-contest-app.pages.dev` (alias `ptit-contest-app.pages.dev`)
+**Production URL deploy cuối**: `627e134a.ptit-contest-app.pages.dev` (alias `ptit-contest-app.pages.dev`)
 
 ---
 
@@ -212,8 +213,12 @@ flowchart TD
 | Audit + fix | Sprint 8-12 | DB/BE/FE smoke test · 11 bug fix · 6 endpoint mới wire UI · contest stats |
 | Design folder | Sprint 13-18 | 14 items P1+P2+P3 từ design mockup · 2 endpoint mới (rounds + leaderboard) |
 | Login redesign | Sprint 19 | Web 2-column branding · Onboarding 3 slides · OTP 6-box · Sidebar collapsible Pattern B (VS Code/Sentry style) |
+| Dashboard redesign | Sprint 20-22 | SV grouped sidebar + 3 hero · GV/BCN dashboard rich (4 stat + 2-col + donut chart CustomPaint) · Pattern B collapse 240↔64 |
+| Real-time stats | Sprint 23-25 | 4 endpoint `/reports/*` · Donut wire data thật · GV activity feed terminal log · 7 placeholder screens build thật · Cert template CRUD (1 Alembic migration) |
+| Polish | Sprint 26-27 | Theme-aware shimmer + stagger fade-in · 6 quote rotator có author (Lenin/Mandela/...) · Role tab autofill credentials |
+| Login animation + nav hotfixes | Sprint 28 | Split-outward 750ms · 4 nav hotfix (didUpdateWidget reset · 7 slug allow-list · splash `?to=` preserve URL) · E2E Chrome MCP 7/7 |
 
-Chi tiết từng sprint xem **báo cáo CNPM v02**: [`11-docs/2026-05-07_bao-cao-cnpm_v02.md`](11-docs/2026-05-07_bao-cao-cnpm_v02.md) (~1500 dòng).
+Chi tiết từng sprint xem **báo cáo CNPM v02**: [`11-docs/2026-05-07_bao-cao-cnpm_v02.md`](11-docs/2026-05-07_bao-cao-cnpm_v02.md) (~1610 dòng, 28 sprint).
 
 ---
 

@@ -214,7 +214,7 @@ Build config: KGP 2.2.0 + AGP 8 + Java 17 (xem memory `apk_android_build_2026-05
 
 ---
 
-## Sprint highlights (Sprint 13-19)
+## Sprint highlights (Sprint 13-28)
 
 | Sprint | Items | Mô tả |
 |--------|-------|-------|
@@ -225,6 +225,14 @@ Build config: KGP 2.2.0 + AGP 8 + Java 17 (xem memory `apk_android_build_2026-05
 | **Sprint 17** | P2 design (4 items) | Featured hero "SỰ KIỆN NỔI BẬT" · Profile achievements · My-contests progress · Notifications time-bucket |
 | **Sprint 18** | P3 polish (5 items) | Stat icons fire/check/trophy · Avatar gradient red→purple · EmptyView enhanced · ⌘K kbd hint · OKLCH 9-stop |
 | **Sprint 19** | Login redesign + sidebar | Web 2-column branding · Onboarding 3 slides · OTP 6-box · Sidebar collapsible Pattern B (VS Code/Sentry) |
+| **Sprint 20-21** | SV/GV dashboard redesign | SV grouped sidebar 3 nhóm + Home 3 gradient hero + 2-col timeline/stats · GV dashboard rich `_BTCDashboardRich` (4 stat trend & progress + 2-col cuộc thi + lịch) · Dark mode sun/moon toggle 4 role · APK Kotlin 2.2.0 |
+| **Sprint 22** | BCN dashboard rich | `_BCNDashboardRich` header "Dashboard — {Khoa}" · 4 stat cards · Queue ưu tiên top 5 SLA color-coded · Donut chart CustomPaint Hiệu suất duyệt · Cảnh báo card |
+| **Sprint 23** | Real-time stats wire | 4 BE endpoint `/reports/*` (approval-stats / bcn-deltas / btc-deltas / activity-feed) · FE donut data thật · GV activity feed terminal mono log · 7 placeholder screens build thật |
+| **Sprint 24** | Polish navigation badge | BCN sidebar QĐ1/QĐ2 badge live count · Activity feed merge Submission events |
+| **Sprint 25** | Cert templates CRUD | Alembic migration `0002_faculty_cert_templates.py` · 4 endpoint `/admin/faculty-cert-templates` HOD scope · `BcnCertTemplatesScreen` form CRUD |
+| **Sprint 26** | Skeleton polish | Theme-aware base/highlight (light/dark) · Stagger fade-in 80ms · Period 1500→1200ms · Reduce-motion fallback static pulse |
+| **Sprint 27** | Login screen polish | `_BrandQuoteRotator` 6 quote nổi tiếng có author (Lenin/Thân Nhân Trung/Mandela/Franklin/Gandhi/B.B.King) · Role tab autofill test credentials |
+| **Sprint 28** | Login animation + nav hotfixes | Split-outward 750ms `easeInOutCubic` · Reveal placeholder match splash · 4 hotfix nav: `didUpdateWidget` reset · build fallback Dashboard · 7 slug allow-list · splash `?to=` preserve URL · E2E Chrome MCP 7/7 PASS |
 
 Chi tiết từng sprint xem báo cáo CNPM: `../../11-docs/2026-05-07_bao-cao-cnpm_v02.md`.
 
