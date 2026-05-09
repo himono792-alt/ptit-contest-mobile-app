@@ -119,7 +119,12 @@ class HomeScreen extends ConsumerWidget {
 
 // ============== Header ==============
 
-class _HomeHeader extends StatelessWidget {
+/// Sprint 28 hotfix #7 (2026-05-10): time-aware greeting + sub-line stats real
+/// + subtle gradient background. Header sinh động hơn — 3 thay đổi vs cũ:
+///   1. "Chào, {name} 👋" → time-aware "Chào buổi sáng/trưa/chiều/tối {name} {emoji}"
+///   2. Thêm sub-line stats: "🎯 X cuộc thi · 📬 Y mới · 📅 {dayName}"
+///   3. Background gradient ptitRed → purple subtle (alpha 0.05-0.08).
+class _HomeHeader extends ConsumerWidget {
   final String userName;
   final String dateStr;
   final bool isWide;
@@ -129,58 +134,174 @@ class _HomeHeader extends StatelessWidget {
     required this.isWide,
   });
 
+  /// Greeting + emoji theo giờ (5h / 11h / 14h / 18h / 22h là cutoff điểm).
+  ({String greeting, String emoji}) _greetingByHour(int hour) {
+    if (hour >= 5 && hour < 11) {
+      return (greeting: 'Chào buổi sáng', emoji: '☀️');
+    }
+    if (hour >= 11 && hour < 14) {
+      return (greeting: 'Chào buổi trưa', emoji: '🌤️');
+    }
+    if (hour >= 14 && hour < 18) {
+      return (greeting: 'Chào buổi chiều', emoji: '🌇');
+    }
+    if (hour >= 18 && hour < 22) {
+      return (greeting: 'Chào buổi tối', emoji: '🌙');
+    }
+    return (greeting: 'Khuya rồi nhé', emoji: '🌌');
+  }
+
+  /// Tên thứ trong tuần tiếng Việt.
+  String _dayNameVi(int weekday) {
+    const names = [
+      'Thứ Hai',
+      'Thứ Ba',
+      'Thứ Tư',
+      'Thứ Năm',
+      'Thứ Sáu',
+      'Thứ Bảy',
+      'Chủ Nhật',
+    ];
+    return names[(weekday - 1).clamp(0, 6)];
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = DateTime.now();
+    final g = _greetingByHour(now.hour);
+    final dayName = _dayNameVi(now.weekday);
+
+    // Stats real-time từ providers đã có sẵn.
+    final notif = ref.watch(notificationsProvider);
+    final unread = notif.maybeWhen(
+      data: (d) => d['unread_count'] as int? ?? 0,
+      orElse: () => 0,
+    );
+    // myEntriesProvider trả List<Map<String, dynamic>> raw — đếm entries
+    // active = contest chưa FINISHED + registration không bị CANCELLED/REJECTED.
+    final entries = ref.watch(myEntriesProvider);
+    final activeCount = entries.maybeWhen(
+      data: (list) => list.where((e) {
+        final cs = (e['contest_status'] as String?) ?? '';
+        final rs = (e['registration_status'] as String?) ?? '';
+        return cs != 'FINISHED' &&
+            rs != 'CANCELLED' &&
+            rs != 'REJECTED';
+      }).length,
+      orElse: () => 0,
+    );
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isWide ? AppSpacing.s24 : AppSpacing.s16,
+        vertical: isWide ? AppSpacing.s20 : AppSpacing.s16,
+      ),
+      decoration: BoxDecoration(
+        // Subtle gradient — light: red→purple alpha 0.06; dark: alpha 0.10.
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            ptitRed.withValues(alpha: isDark ? 0.10 : 0.06),
+            const Color(0xFF7C3AED).withValues(alpha: isDark ? 0.08 : 0.04),
+            Colors.transparent,
+          ],
+          stops: const [0.0, 0.55, 1.0],
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: context.cardBorder.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Breadcrumb mini "Trang chủ"
+                Text('TRANG CHỦ',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: ptitRed,
+                      letterSpacing: 1.2,
+                    )),
+                const SizedBox(height: AppSpacing.s4),
+                // Greeting động + emoji
+                Text('${g.greeting}, $userName ${g.emoji}',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: isWide ? 26 : 20,
+                      fontWeight: FontWeight.w800,
+                      color: context.textPrimary,
+                      letterSpacing: -0.7,
+                      height: 1.1,
+                    )),
+                const SizedBox(height: AppSpacing.s8),
+                // Sub-line stats: 3 mini info có icon
+                Wrap(
+                  spacing: AppSpacing.s12,
+                  runSpacing: AppSpacing.s4,
+                  children: [
+                    _HeaderStatChip(
+                      icon: '🎯',
+                      label: '$activeCount cuộc thi',
+                      hint: 'đang tham gia',
+                    ),
+                    _HeaderStatChip(
+                      icon: '📬',
+                      label: '$unread thông báo',
+                      hint: unread > 0 ? 'mới' : 'đã đọc hết',
+                    ),
+                    _HeaderStatChip(
+                      icon: '📅',
+                      label: dayName,
+                      hint: dateStr,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.s12),
+          const _NotificationButton(),
+        ],
+      ),
+    );
+  }
+}
+
+/// Mini stat chip dưới greeting — emoji + label bold + hint subtle.
+class _HeaderStatChip extends StatelessWidget {
+  final String icon;
+  final String label;
+  final String hint;
+  const _HeaderStatChip({
+    required this.icon,
+    required this.label,
+    required this.hint,
+  });
+
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Trang chủ',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: context.textMuted,
-                    letterSpacing: 0.4,
-                  )),
-              const SizedBox(height: AppSpacing.s4),
-              Text('Chào, $userName 👋',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: isWide ? 24 : 20,
-                    fontWeight: FontWeight.w800,
-                    color: context.textPrimary,
-                    letterSpacing: -0.6,
-                    height: 1.1,
-                  )),
-            ],
-          ),
-        ),
-        const SizedBox(width: AppSpacing.s12),
-        // Date chip
-        Container(
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.s12, vertical: AppSpacing.s8),
-          decoration: BoxDecoration(
-            color: context.cardBg,
-            border: Border.all(color: context.cardBorder),
-            borderRadius: BorderRadius.circular(AppRadius.md),
-          ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.calendar_today_outlined,
-                size: 13, color: context.textMuted),
-            const SizedBox(width: AppSpacing.s8),
-            Text(dateStr,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: context.textPrimary,
-                )),
-          ]),
-        ),
-        const SizedBox(width: AppSpacing.s8),
-        const _NotificationButton(),
+        Text(icon, style: const TextStyle(fontSize: 12)),
+        const SizedBox(width: AppSpacing.s4),
+        Text(label,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: context.textPrimary,
+            )),
+        const SizedBox(width: AppSpacing.s4),
+        Text(hint,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: context.textMuted,
+            )),
       ],
     );
   }
