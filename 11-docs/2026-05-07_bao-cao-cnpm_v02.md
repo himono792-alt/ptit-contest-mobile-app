@@ -1289,16 +1289,16 @@ Header decorative quote mark `"` 56px white opacity 0.32. Tách dòng author b�
 
 **4.29.2 Role tab auto-fill test credentials**
 
-`_RoleTabs.onChanged` callback thêm logic fill ngay email + password test theo role:
+`_RoleTabs.onChanged` callback thêm logic fill ngay email demo theo role (password user nhập tay --- xem hotfix #5 mục 4.30.8):
 
-| Tab | Email | Password |
-|---|---|---|
-| 0 = Sinh viên | b22dccn001@ptit.edu.vn | abc123 |
-| 1 = GV / BTC | gv@ptit.edu.vn | abc123 |
-| 2 = BCN khoa | bcn@ptit.edu.vn | abc123 |
-| 3 = Quản trị | admin@ptit.edu.vn | abc123 |
+| Tab | Email demo |
+|---|---|
+| 0 = Sinh viên | b22dccn001@ptit.edu.vn |
+| 1 = GV / BTC | gv@ptit.edu.vn |
+| 2 = BCN khoa | bcn@ptit.edu.vn |
+| 3 = Quản trị | admin@ptit.edu.vn |
 
-Dev / demo nhanh không cần nhớ credentials --- click tab → fill ngay → click "Đăng nhập". UX hỗ trợ thầy cô khi check demo.
+Dev / demo nhanh không cần nhớ email --- click tab → fill ngay → user gõ password seed (`DEMO_PASSWORD` env) → click "Đăng nhập". UX hỗ trợ thầy cô khi check demo.
 
 Build deploy `97950086`. File diff: `login_screen.dart` (~360 dòng).
 
@@ -1709,7 +1709,7 @@ Codebase hiện tại đã có foundation đủ tốt (Clean Architecture, RBAC,
   **SecurityHeaders.com Scan**             https://securityheaders.com/?q=ptit-contest-mobile-app-production.up.railway.app
   ---------------------------------------- ----------------------------------------------------------------------------------
 
-**A.2 Tài khoản demo (password chung: abc123)**
+**A.2 Tài khoản demo (password đặt qua env `DEMO_PASSWORD` khi seed --- xem `09-implementation/backend/scripts/seed-test-users.py`)**
 
   ---------------------------- ------------------------- ------------------------- -----------------------------------------------------
   **Vai trò**                  **Email**                 **Roles**                 **Ghi chú**

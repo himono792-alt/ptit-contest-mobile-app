@@ -136,8 +136,9 @@ psql -U postgres -d ptit_contest_db -f ../../08-database/2026-05-04_sqlapp_v03.s
 # Stamp Alembic baseline (đánh dấu DB đã ở version baseline)
 alembic stamp head
 
-# Seed test users (GV + BCN + Admin với password abc123)
-python scripts/seed-test-users.py
+# Seed test users (GV + BCN + Admin)
+# Password mặc định lấy từ env DEMO_PASSWORD (xem seed-test-users.py).
+DEMO_PASSWORD=<your-demo-password> python scripts/seed-test-users.py
 
 # Chạy server
 uvicorn app.main:app --reload --port 8000
@@ -225,10 +226,10 @@ curl http://localhost:8000/health
 # List contests (public, no token)
 curl "http://localhost:8000/api/contests?size=5"
 
-# Login GV
+# Login GV (thay <demo-password> bằng password đã set khi seed)
 TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"gv@ptit.edu.vn","password":"abc123"}' | jq -r .access_token)
+  -d '{"email":"gv@ptit.edu.vn","password":"<demo-password>"}' | jq -r .access_token)
 
 # Get me
 curl http://localhost:8000/api/auth/me -H "Authorization: Bearer $TOKEN"

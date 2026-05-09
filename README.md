@@ -19,7 +19,7 @@
 | **Frontend repo** | [`09-implementation/frontend/`](09-implementation/frontend/) |
 | **Báo cáo CNPM** | [`11-docs/2026-05-07_bao-cao-cnpm_v02.md`](11-docs/2026-05-07_bao-cao-cnpm_v02.md) |
 
-**Tài khoản demo** (password chung `abc123`):
+**Tài khoản demo** (password đặt qua env `DEMO_PASSWORD` khi seed — xem `09-implementation/backend/scripts/seed-test-users.py`):
 - `b22dccn001@ptit.edu.vn` — Sinh viên
 - `gv@ptit.edu.vn` — GV/BTC (JUDGE + ORGANIZER)
 - `bcn@ptit.edu.vn` — Ban Chủ nhiệm khoa (HOD)

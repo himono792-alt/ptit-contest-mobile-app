@@ -104,11 +104,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning [SemVer](h
 - **Cert verify**: `https://ptit-contest-app.pages.dev/verify` (deep-link cho QR scan)
 - **Object storage**: Cloudflare R2 bucket `ptit-contest-submissions`
 
-## Test accounts (password chung `abc123`)
+## Test accounts (password đặt qua env `DEMO_PASSWORD` khi seed)
 
 - `b22dccn001@ptit.edu.vn` — Sinh viên (Nguyễn Văn A)
 - `gv@ptit.edu.vn` — GV (Nguyen Van A — ADMIN+JUDGE+ORGANIZER)
 - `bcn@ptit.edu.vn` — BCN HOD khoa CNTT (Tran Van B)
 - `admin@ptit.edu.vn` — Quản trị hệ thống
 
-Seed: `09-implementation/backend/scripts/seed-test-users.py`.
+Seed: `09-implementation/backend/scripts/seed-test-users.py` — chạy với `DEMO_PASSWORD=<your-demo-password>` env.

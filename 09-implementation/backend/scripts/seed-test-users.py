@@ -1,11 +1,11 @@
 """Seed thêm test users để test E2E workflow QĐ1.
 
 Tạo:
-  - 1 GV/BTC    (GV. Nguyen Van A)  email gv@ptit.edu.vn    password abc123
+  - 1 GV/BTC    (GV. Nguyen Van A)  email gv@ptit.edu.vn
                 → roles ORGANIZER + JUDGE (Sprint 15: KHÔNG có ADMIN, BTC thuần)
-  - 1 HOD       (BCN. Tran Van B)   email bcn@ptit.edu.vn   password abc123
+  - 1 HOD       (BCN. Tran Van B)   email bcn@ptit.edu.vn
                 → role HOD + gắn faculty_id của khoa CNTT
-  - 1 ADMIN     (Quản trị hệ thống) email admin@ptit.edu.vn password abc123
+  - 1 ADMIN     (Quản trị hệ thống) email admin@ptit.edu.vn
                 → chỉ assign role ADMIN, không cần profile riêng (Sprint 7 2026-05-07)
 
 Sprint 15 (2026-05-08): bỏ ADMIN role khỏi gv@ — trước đây multi-role
@@ -15,12 +15,17 @@ Audit log...) gây confused phân quyền. Strict separation:
 - BCN → Phê duyệt + Giám sát
 - Admin → Tài khoản + Hệ thống (KHÔNG có Cuộc thi của tôi)
 
+Sprint 28 hotfix #5 (2026-05-10): password đọc từ env DEMO_PASSWORD thay vì
+hardcode literal — GitGuardian flag email+password pair pattern trong source.
+Script báo lỗi nếu env chưa set.
+
 Cách chạy:
     cd 09-implementation/backend
     source .venv/bin/activate
-    python scripts/seed-test-users.py
+    DEMO_PASSWORD=<your-demo-password> python scripts/seed-test-users.py
 """
 import asyncio
+import os
 import sys
 from pathlib import Path
 
@@ -33,6 +38,13 @@ from app.models.enums import RoleCode
 from app.models.identity import AppUser, Role, UserRole
 from app.models.master_data import DepartmentHead, Faculty, Organizer
 from app.security import hash_password
+
+# Sprint 28 hotfix #5: đọc password từ env, không hardcode trong source.
+DEMO_PASSWORD = os.environ.get("DEMO_PASSWORD")
+if not DEMO_PASSWORD:
+    print("✗ Chưa set DEMO_PASSWORD env variable.")
+    print("  Chạy lại: DEMO_PASSWORD=<your-demo-password> python scripts/seed-test-users.py")
+    sys.exit(1)
 
 
 async def get_or_create_user(db, email, full_name, password):
@@ -85,7 +97,7 @@ async def main():
 
         # 1. GV/BTC — Sprint 15: ORGANIZER + JUDGE thuần, KHÔNG có ADMIN.
         print("\n[1/3] GV/BTC (Organizer + Judge)")
-        gv, created = await get_or_create_user(db, "gv@ptit.edu.vn", "GV. Nguyen Van A", "abc123")
+        gv, created = await get_or_create_user(db, "gv@ptit.edu.vn", "GV. Nguyen Van A", DEMO_PASSWORD)
         await assign_role(db, gv.user_id, RoleCode.ORGANIZER)
         await assign_role(db, gv.user_id, RoleCode.JUDGE)
         # Sprint 15 cleanup: nếu gv@ đang có ADMIN role (legacy seed) → gỡ.
@@ -96,7 +108,7 @@ async def main():
 
         # 2. HOD (BCN)
         print("\n[2/3] HOD (BCN)")
-        bcn, created = await get_or_create_user(db, "bcn@ptit.edu.vn", "BCN. Tran Van B", "abc123")
+        bcn, created = await get_or_create_user(db, "bcn@ptit.edu.vn", "BCN. Tran Van B", DEMO_PASSWORD)
         await assign_role(db, bcn.user_id, RoleCode.HOD)
         if created:
             db.add(DepartmentHead(
@@ -110,18 +122,18 @@ async def main():
         # 3. ADMIN (Sprint 7 2026-05-07): để test toggle dark mode trên admin shell.
         # Admin không cần profile riêng — chỉ AppUser + UserRole(ADMIN).
         print("\n[3/3] ADMIN (Quản trị hệ thống)")
-        admin, _ = await get_or_create_user(db, "admin@ptit.edu.vn", "Quản trị hệ thống", "abc123")
+        admin, _ = await get_or_create_user(db, "admin@ptit.edu.vn", "Quản trị hệ thống", DEMO_PASSWORD)
         await assign_role(db, admin.user_id, RoleCode.ADMIN)
 
         await db.commit()
 
     await engine.dispose()
     print("\n✅ Seed test users OK")
-    print("\nLogin credentials (Sprint 15 strict roles):")
-    print("  GV/BTC → gv@ptit.edu.vn     / abc123  [ORGANIZER + JUDGE]")
-    print("  BCN    → bcn@ptit.edu.vn    / abc123  [HOD]")
-    print("  ADMIN  → admin@ptit.edu.vn  / abc123  [ADMIN]")
-    print("  SV     → b22dccn001@ptit.edu.vn / abc123 (cần register trước qua /api/auth/register)")
+    print("\nLogin credentials (Sprint 15 strict roles, password = DEMO_PASSWORD env):")
+    print("  GV/BTC → gv@ptit.edu.vn          [ORGANIZER + JUDGE]")
+    print("  BCN    → bcn@ptit.edu.vn         [HOD]")
+    print("  ADMIN  → admin@ptit.edu.vn       [ADMIN]")
+    print("  SV     → b22dccn001@ptit.edu.vn  (cần register trước qua /api/auth/register)")
 
 
 if __name__ == "__main__":

@@ -149,13 +149,13 @@ lib/
 
 ## Test credentials (seed)
 
-Email cố định, password chung **`abc123`**:
+Email cố định, password lấy từ env `DEMO_PASSWORD` khi seed (xem `../backend/scripts/seed-test-users.py`):
 - `b22dccn001@ptit.edu.vn` — **Sinh viên** (SV-01)
 - `gv@ptit.edu.vn` — **GV/BTC** (ORGANIZER + JUDGE, KHÔNG có ADMIN sau Sprint 15)
 - `bcn@ptit.edu.vn` — **Ban Chủ nhiệm khoa** (HOD khoa CNTT)
 - `admin@ptit.edu.vn` — **Quản trị** (ADMIN only)
 
-Seed script BE: `../backend/scripts/seed-test-users.py`
+Seed script BE: `../backend/scripts/seed-test-users.py` — chạy với `DEMO_PASSWORD=<your-demo-password>` env.
 
 ---
 

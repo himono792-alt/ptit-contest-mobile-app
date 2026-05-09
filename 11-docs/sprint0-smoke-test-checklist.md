@@ -78,10 +78,10 @@ Expected: `HTTP/1.1 401 Unauthorized`
 
 ```powershell
 # Login lấy token rồi test với auth
-$body = @{username="b22dccn001@ptit.edu.vn"; password="abc123"} | ConvertTo-Json
+$body = @{username="b22dccn001@ptit.edu.vn"; password=$env:DEMO_PASSWORD} | ConvertTo-Json
 $res = Invoke-RestMethod -Uri "https://ptit-contest-mobile-app-production.up.railway.app/api/auth/login" `
        -Method Post -ContentType "application/x-www-form-urlencoded" `
-       -Body "username=b22dccn001@ptit.edu.vn&password=abc123"
+       -Body "username=b22dccn001@ptit.edu.vn&password=$($env:DEMO_PASSWORD)"
 $token = $res.access_token
 
 # Hiện tại b22dccn001 chưa upload file nào nên test với owner thực sự sẽ 404
@@ -108,7 +108,7 @@ Expected: 30 response code 200, không 500 connection error
 ### Test 5 — JWT TTL P1-1 (60p mới, không phải 24h)
 
 ```powershell
-$body = "username=b22dccn001@ptit.edu.vn&password=abc123"
+$body = "username=b22dccn001@ptit.edu.vn&password=$($env:DEMO_PASSWORD)"
 $res = Invoke-RestMethod -Uri "https://ptit-contest-mobile-app-production.up.railway.app/api/auth/login" `
        -Method Post -ContentType "application/x-www-form-urlencoded" -Body $body
 $token = $res.access_token
@@ -141,7 +141,7 @@ Tạo 1 contest mới qua FE hoặc curl, sau đó:
 
 ```powershell
 # Login GV
-$body = "username=gv@ptit.edu.vn&password=abc123"
+$body = "username=gv@ptit.edu.vn&password=$($env:DEMO_PASSWORD)"
 $gvRes = Invoke-RestMethod -Uri "https://ptit-contest-mobile-app-production.up.railway.app/api/auth/login" `
          -Method Post -ContentType "application/x-www-form-urlencoded" -Body $body
 $gvToken = $gvRes.access_token

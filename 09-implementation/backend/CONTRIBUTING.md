@@ -135,7 +135,7 @@ async def list_leaderboard(db, contest_id) -> list[dict]:
 # Test login + endpoint
 TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"gv@ptit.edu.vn","password":"abc123"}' | jq -r .access_token)
+  -d '{"email":"gv@ptit.edu.vn","password":"<your-demo-password>"}' | jq -r .access_token)
 
 curl http://localhost:8000/api/contests \
   -H "Authorization: Bearer $TOKEN"

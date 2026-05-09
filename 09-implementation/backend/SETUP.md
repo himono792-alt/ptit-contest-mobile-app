@@ -232,7 +232,7 @@ curl http://localhost:8000/api/contests
 ```bash
 curl -X POST http://localhost:8000/api/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"student_code":"B22DCCN001","email":"b22dccn001@ptit.edu.vn","full_name":"Test","password":"abc123"}'
+  -d '{"student_code":"B22DCCN001","email":"b22dccn001@ptit.edu.vn","full_name":"Test","password":"<your-demo-password>"}'
 # {"detail":"MSSV 'B22DCCN001' không tồn tại trong danh mục SV PTIT"}
 ```
 
@@ -261,7 +261,7 @@ Giờ test register thành công:
 ```bash
 curl -X POST http://localhost:8000/api/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"student_code":"B22DCCN001","email":"b22dccn001@ptit.edu.vn","full_name":"Nguyễn Văn A","password":"abc123"}' | python -m json.tool
+  -d '{"student_code":"B22DCCN001","email":"b22dccn001@ptit.edu.vn","full_name":"Nguyễn Văn A","password":"<your-demo-password>"}' | python -m json.tool
 ```
 
 Output có `user_id`, `email`, `roles: ["STUDENT"]` → OK.
@@ -270,7 +270,7 @@ Login để lấy token:
 ```bash
 curl -X POST http://localhost:8000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"b22dccn001@ptit.edu.vn","password":"abc123"}'
+  -d '{"email":"b22dccn001@ptit.edu.vn","password":"<your-demo-password>"}'
 ```
 
 Lấy `access_token` từ response, thử endpoint `/me`:
