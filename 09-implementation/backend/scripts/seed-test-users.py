@@ -1,9 +1,9 @@
 """Seed thêm test users để test E2E workflow QĐ1.
 
 Tạo:
-  - 1 GV/BTC    (GV. Nguyen Van A)  email gv@ptit.edu.vn
+  - 1 GV/BTC    (GV. Nguyễn Văn A)  email gv@ptit.edu.vn
                 → roles ORGANIZER + JUDGE (Sprint 15: KHÔNG có ADMIN, BTC thuần)
-  - 1 HOD       (BCN. Tran Van B)   email bcn@ptit.edu.vn
+  - 1 HOD       (BCN. Trần Văn B)   email bcn@ptit.edu.vn
                 → role HOD + gắn faculty_id của khoa CNTT
   - 1 ADMIN     (Quản trị hệ thống) email admin@ptit.edu.vn
                 → chỉ assign role ADMIN, không cần profile riêng (Sprint 7 2026-05-07)
@@ -50,7 +50,14 @@ if not DEMO_PASSWORD:
 async def get_or_create_user(db, email, full_name, password):
     existing = (await db.execute(select(AppUser).where(AppUser.email == email))).scalar_one_or_none()
     if existing:
-        print(f"  ! User {email} đã tồn tại — bỏ qua")
+        # Sprint 28 hotfix #7d (2026-05-10): update full_name nếu đổi (vd thêm
+        # dấu tiếng Việt cho tên seed cũ "Nguyen Van A" → "Nguyễn Văn A").
+        # KHÔNG update password — giữ password đã rotate trên prod.
+        if existing.full_name != full_name:
+            existing.full_name = full_name
+            print(f"  ~ User {email} update full_name → {full_name}")
+        else:
+            print(f"  ! User {email} đã tồn tại — bỏ qua")
         return existing, False
     user = AppUser(email=email, password_hash=hash_password(password), full_name=full_name)
     db.add(user)
@@ -97,7 +104,7 @@ async def main():
 
         # 1. GV/BTC — Sprint 15: ORGANIZER + JUDGE thuần, KHÔNG có ADMIN.
         print("\n[1/3] GV/BTC (Organizer + Judge)")
-        gv, created = await get_or_create_user(db, "gv@ptit.edu.vn", "GV. Nguyen Van A", DEMO_PASSWORD)
+        gv, created = await get_or_create_user(db, "gv@ptit.edu.vn", "GV. Nguyễn Văn A", DEMO_PASSWORD)
         await assign_role(db, gv.user_id, RoleCode.ORGANIZER)
         await assign_role(db, gv.user_id, RoleCode.JUDGE)
         # Sprint 15 cleanup: nếu gv@ đang có ADMIN role (legacy seed) → gỡ.
@@ -108,7 +115,7 @@ async def main():
 
         # 2. HOD (BCN)
         print("\n[2/3] HOD (BCN)")
-        bcn, created = await get_or_create_user(db, "bcn@ptit.edu.vn", "BCN. Tran Van B", DEMO_PASSWORD)
+        bcn, created = await get_or_create_user(db, "bcn@ptit.edu.vn", "BCN. Trần Văn B", DEMO_PASSWORD)
         await assign_role(db, bcn.user_id, RoleCode.HOD)
         if created:
             db.add(DepartmentHead(
