@@ -277,17 +277,6 @@ flutter build apk --release \
 
 Order: Backend trước → Frontend sau (FE phụ thuộc API mới của BE) → APK cuối.
 
----
-
-## Naming convention
-
-`YYYY-MM-DD_chu-de_v01.ext`
-
-- kebab-case, không dấu tiếng Việt, không khoảng trắng
-- Version `v01..v10` (KHÔNG `_FINAL`/`_revised`)
-- Folder prefix số `01-`..`11-`
-
----
 
 ## Liên kết tham chiếu
 
@@ -295,11 +284,3 @@ Order: Backend trước → Frontend sau (FE phụ thuộc API mới của BE) �
 - **Traceability matrix**: [`02-requirements/2026-05-04_traceability-matrix_v02.md`](02-requirements/) — 104 endpoint mapping với UI screens
 - **Workflow approval 3 cấp**: [`03-information-architecture/2026-05-04_workflow-approval-overview_v01.md`](03-information-architecture/)
 - **Audit reports**: [`11-docs/audit-report-2026-05-06.md`](11-docs/audit-report-2026-05-06.md) · [`design-audit-2026-05-06.md`](11-docs/design-audit-2026-05-06.md) · [`a11y-baseline-2026-05-07.md`](11-docs/a11y-baseline-2026-05-07.md)
-
----
-
-## Tác giả
-
-Đồ án CNPM HK2 2026 — PTIT.
-
-**Notion**: https://www.notion.so/35678677fb3d8150b200ca56be5a67e0
