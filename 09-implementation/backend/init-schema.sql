@@ -558,6 +558,8 @@ CREATE TABLE submission_files (
     -- Demo: lưu file bytes trong DB (≤10MB). Production nên dùng S3/R2 + signed URL.
     -- Inline v04 (2026-05-06) — trước đây thêm runtime qua idempotent ALTER.
     file_data                BYTEA,
+    -- Inline v04: R2 object key (NULL = legacy BYTEA in-DB; NOT NULL = file ở R2).
+    r2_object_key            VARCHAR(500),
     created_at               TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -736,6 +738,8 @@ CREATE TABLE notifications (
     is_global                BOOLEAN NOT NULL DEFAULT FALSE,
     created_by               BIGINT REFERENCES app_users(user_id) ON DELETE SET NULL,
     published_at             TIMESTAMPTZ,
+    -- Inline v04: deep-link route cho notification (trước đây thêm runtime qua ALTER trong main.py lifespan).
+    target_route             VARCHAR(255),
     created_at               TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -1059,4 +1063,12 @@ COMMENT ON COLUMN workflow_approvals.revision_round IS 'Lần submit thứ mấy
 COMMENT ON COLUMN workflow_approvals.snapshot_json IS 'Snapshot key fields của contest tại thời điểm submit, dùng cho audit/rollback';
 COMMENT ON COLUMN contests.proposed_by IS 'BTC (user_id) đề xuất cuộc thi — thường = created_by lúc submit lần đầu';
 COMMENT ON COLUMN contests.host_faculty_id IS 'Khoa chủ trì — quyết định BCN nào duyệt (BCN_QD1, BCN_QD2)';
-COMMENT ON COLUMN contest_results.bcn_approval_status IS 'Trạng thái phê du
+COMMENT ON COLUMN contest_results.bcn_approval_status IS 'Trạng thái phê duyệt BCN_QD2 (denormalize cho query nhanh, source of truth ở workflow_approvals)';
+
+-- NEW v03 comments
+COMMENT ON TABLE contest_reviews IS 'GAP-1: Sinh viên đánh giá cuộc thi (rating 1-5 sao + comment). Mỗi SV chỉ review 1 lần / contest. Admin có thể ẩn qua is_visible (AD-06)';
+COMMENT ON TABLE certificate_templates IS 'GAP-2: Mẫu giấy chứng nhận do BCN duyệt (BCN-06). Mỗi contest có 1 template active tại 1 thời điểm';
+COMMENT ON TABLE issued_certificates IS 'GAP-2: Giấy chứng nhận đã phát hành cho thí sinh. qr_code dùng cho public verify endpoint /verify/{qr_code}';
+COMMENT ON COLUMN issued_certificates.qr_code IS 'Mã verify random (vd: 32-64 ký tự base62). Endpoint public GET /verify/{qr_code} trả về thông tin chứng nhận';
+COMMENT ON TABLE system_configs IS 'GAP-3: Cấu hình hệ thống (AD-04). Pattern key-value, value_type cho biết cách parse. is_sensitive=true thì mask trong UI';
+COMMENT ON COLUMN system_configs.value_type IS 'Cast theo type: INT, BOOL, JSON parse từ TEXT. Backend dùng helper get_config(key) để đọc';

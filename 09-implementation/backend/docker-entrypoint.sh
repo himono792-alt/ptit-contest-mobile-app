@@ -48,9 +48,14 @@ if [ -z "$SCHEMA_EXISTS" ]; then
   if [ -f "/app/init-schema.sql" ]; then
     psql "$PSQL_URL" -f /app/init-schema.sql
     echo "Schema init done"
-    echo "Alembic stamp baseline..."
-    alembic stamp head
-    echo "Alembic baseline stamped"
+    # init-schema.sql = trạng thái của baseline 0001. Stamp 0001 RỒI upgrade head để
+    # các migration sau baseline (vd 0002_faculty_cert_templates — KHÔNG nằm trong
+    # init-schema.sql) thực sự được apply. Trước đây stamp thẳng head → bỏ qua 0002
+    # → DB mới thiếu bảng faculty_cert_templates (màn BCN mẫu chứng nhận lỗi).
+    echo "Alembic stamp baseline (0001) + upgrade head..."
+    alembic stamp 0001_baseline_v04
+    alembic upgrade head
+    echo "Alembic baseline stamped + migrations applied"
   else
     echo "WARN: /app/init-schema.sql không tồn tại — skip init"
   fi
@@ -66,11 +71,13 @@ else
   echo "Migrations up-to-date"
 fi
 
-# Optional seed users (chỉ chạy nếu chưa có user nào)
-USER_COUNT=$(psql "$PSQL_URL" -tAc "SELECT COUNT(*) FROM ptit_contest.app_users;" 2>/dev/null || echo "0")
-if [ "$USER_COUNT" = "0" ] && [ -f "/app/scripts/seed-users.sh" ]; then
-  echo "DB trống — seed users..."
-  sh scripts/seed-users.sh || echo "Seed failed (non-fatal)"
+# Seed demo data — idempotent, an toàn chạy mỗi lần boot.
+# Tạo 4 vai trò (SV/GV/BCN/Admin) + 2 cuộc thi mẫu để bản clone-and-run có sẵn
+# dữ liệu demo (không phải tự tạo gì). Mật khẩu = env DEMO_PASSWORD (fallback abc123).
+# Reset sạch: `docker compose down -v` rồi `up` lại.
+if [ -f "/app/scripts/seed-demo.py" ]; then
+  echo "Seeding demo data (idempotent)..."
+  python /app/scripts/seed-demo.py || echo "Seed demo failed (non-fatal)"
 fi
 
 echo "Starting uvicorn on 0.0.0.0:$PORT"
