@@ -20,4 +20,6 @@ FROM nginx:alpine
 COPY --from=builder /app/build/web /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
-HEALTHCHECK --interval=15s --timeout=4s CMD wget -q --spider http://localhost/ || exit 1
+# busybox wget (nginx:alpine) báo fail với --spider → container hiện (unhealthy) dù web trả 200.
+# Dùng -O /dev/null để GET / thật sự và trả 0 khi nginx phục vụ OK.
+HEALTHCHECK --interval=15s --timeout=4s CMD wget -q -O /dev/null http://localhost/ || exit 1
