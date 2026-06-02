@@ -29,7 +29,7 @@ docker compose logs -f
 | Giao diện web (Frontend) | http://localhost:8080 |
 | API + tài liệu Swagger (Backend) | http://localhost:8000/api/docs |
 | Health check Backend | http://localhost:8000/health |
-| **DBX — xem DB trên trình duyệt (dbx)** | http://localhost:4224 (access password: `abc123`) |
+| **DBGate — xem DB trên trình duyệt (dbgate)** | http://localhost:4224 (vào thẳng, connection "PTIT Contest DB" có sẵn) |
 | PostgreSQL (kết nối bằng client) | localhost:5432 (user/pass: `ptit_contest` / `dev_password`) |
 
 ## 4. Tài khoản đăng nhập
@@ -75,7 +75,7 @@ Dữ liệu được nạp qua **2 lớp seed chạy nối tiếp** (xem mục 5
 Database **nằm trong cùng `docker-compose.yml` của dự án** — không phải cài PostgreSQL hay tạo schema thủ công. Một lệnh `docker compose up` là có cả DB:
 
 - **Service `postgres`** dùng image `postgres:16-alpine`, dữ liệu lưu ở volume `pg_data` (giữ qua các lần `down`). Tài khoản DB: `ptit_contest` / `dev_password`, database `ptit_contest_db`, cổng `5432`. Kết nối bằng client ngoài (DBeaver/psql/pgAdmin): `postgresql://ptit_contest:dev_password@localhost:5432/ptit_contest_db`.
-- **Service `dbx` (DBX — `t8y2/dbx`)** — DB client chạy luôn trong compose dưới dạng container rời, mở http://localhost:4224 trên trình duyệt. Đăng nhập bằng **access password `abc123`** (env `DBX_PASSWORD`). DBX không nhận connection qua env, nên **tạo connection 1 lần** trong UI (lưu vĩnh viễn ở volume `dbx_data`): chọn **PostgreSQL**, `Host=postgres` · `Port=5432` · `User=ptit_contest` · `Password=dev_password` · `Database=ptit_contest_db` → Test → Save. (`Host` là tên service `postgres`, dùng mạng nội bộ Docker — **không** phải `localhost`.)
+- **Service `dbgate` (DBGate — `dbgate/dbgate`)** — DB client web chạy luôn trong compose dưới dạng container rời, mở http://localhost:4224 là **vào thẳng** (đã `SKIP_ALL_AUTH`, không hỏi đăng nhập). Connection **"PTIT Contest DB"** được khai báo sẵn qua env trong `docker-compose.yml` (`SERVER_pg1=postgres` · `USER_pg1=ptit_contest` · `PASSWORD_pg1=dev_password` · `PORT_pg1=5432`) nên **tự có sẵn trên mọi máy**, không cần tạo tay, không phụ thuộc volume. Lịch sử query/cấu hình DBGate lưu ở volume `dbgate_data`. (Host trong env là `postgres` = tên service, dùng mạng nội bộ Docker — **không** phải `localhost`.)
 - **Backend tự khởi tạo schema** — `docker-compose.yml` **không mount file SQL** vào postgres (tránh 2 nguồn schema lệch nhau). Thay vào đó `docker-entrypoint.sh` của backend lo toàn bộ, theo thứ tự:
   1. Đợi `postgres` *healthy* (qua `depends_on: condition: service_healthy` + `pg_isready`) rồi mới chạy.
   2. **DB trống** → nạp `init-schema.sql` (**v04**) → `alembic stamp 0001_baseline_v04` → `alembic upgrade head`. Stamp baseline **rồi** upgrade để các migration sau baseline (vd `0002_faculty_cert_templates`, **không** nằm trong init-schema) thực sự được apply — trước đây stamp thẳng `head` làm DB mới thiếu bảng `faculty_cert_templates` (màn BCN "Mẫu chứng nhận" lỗi).

@@ -77,28 +77,30 @@ services:
     ports:
       - "8080:80"
 
-  # ============== DBX — web DB client (dbx) ==============
-  # DBX (t8y2/dbx) chạy như container rời trong compose → mở http://localhost:4224.
-  # Đăng nhập bằng access password = DBX_PASSWORD (đặt 'abc123' cho khớp demo).
-  # DBX KHÔNG nhận connection qua env — tạo 1 LẦN trong UI, lưu vào volume dbx_data:
-  #     Type     = PostgreSQL
-  #     Host     = postgres        ← tên service ở trên, qua mạng nội bộ Docker
-  #     Port     = 5432
-  #     User     = ptit_contest
-  #     Password = dev_password
-  #     Database = ptit_contest_db
-  dbx:
-    image: t8y2/dbx
+  # ============== DBGate — web DB client (dbgate) ==============
+  # DBGate chạy như container rời trong compose → mở http://localhost:4224.
+  # Connection "PTIT Contest DB" được khai báo SẴN qua env → tự dựng lại trên MỌI
+  # máy, không cần tạo tay, không phụ thuộc volume. SKIP_ALL_AUTH bỏ luôn đăng nhập.
+  # Host = 'postgres' (tên service ở trên, qua mạng nội bộ Docker).
+  dbgate:
+    image: dbgate/dbgate:latest
     restart: unless-stopped
     depends_on:
       - postgres
     environment:
-      DBX_PASSWORD: abc123
+      SKIP_ALL_AUTH: "1"            # bỏ màn đăng nhập DBGate
+      CONNECTIONS: pg1              # khai báo sẵn 1 connection tên "pg1"
+      LABEL_pg1: PTIT Contest DB
+      SERVER_pg1: postgres
+      USER_pg1: ptit_contest
+      PASSWORD_pg1: dev_password
+      PORT_pg1: "5432"
+      ENGINE_pg1: postgres@dbgate-plugin-postgres
     ports:
-      - "4224:4224"   # mở http://localhost:4224
+      - "4224:3000"   # mở http://localhost:4224 (DBGate chạy cổng 3000 bên trong)
     volumes:
-      - dbx_data:/app/data
+      - dbgate_data:/root/.dbgate
 
 volumes:
   pg_data:
-  dbx_data:
+  dbgate_data:
