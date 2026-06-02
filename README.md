@@ -19,7 +19,7 @@
 | **Frontend repo** | [`09-implementation/frontend/`](09-implementation/frontend/) |
 | **Báo cáo CNPM** | [`11-docs/2026-05-07_bao-cao-cnpm_v02.md`](11-docs/2026-05-07_bao-cao-cnpm_v02.md) |
 
-**Tài khoản demo** (password đặt qua env `DEMO_PASSWORD` khi seed — xem `09-implementation/backend/scripts/seed-test-users.py`):
+**Tài khoản demo** (mật khẩu đặt qua env `DEMO_PASSWORD`, mặc định `abc123` — seed tự động bởi `seed-demo.py` + `seed-rich.py` khi chạy Docker):
 - `b22dccn001@ptit.edu.vn` — Sinh viên
 - `gv@ptit.edu.vn` — GV/BTC (JUDGE + ORGANIZER)
 - `bcn@ptit.edu.vn` — Ban Chủ nhiệm khoa (HOD)
@@ -31,7 +31,7 @@
 
 | Hạng mục | v1.0 (2026-05-10) |
 |----------|-------------------|
-| Backend FastAPI | **108 endpoints** qua 17 router · 44 SQLAlchemy models · 26 bảng PostgreSQL (faculty_cert_templates Sprint 25) |
+| Backend FastAPI | **116 endpoints** qua 15 router module · 44 SQLAlchemy models · 44 bảng PostgreSQL (faculty_cert_templates Sprint 25) |
 | Frontend Flutter | **35+ screens** responsive web/mobile · APK Android 25.9 MB |
 | 4 actor end-to-end | ✅ SV / GV-BTC / BCN-HOD / Admin (strict role separation Sprint 15) |
 | Workflow phê duyệt 3 cấp | ✅ QĐ1 (BCN duyệt contest) · QĐ2 (BCN duyệt kết quả) · QĐ3 (BCN duyệt cert template) |
@@ -105,12 +105,12 @@ flowchart LR
     end
 
     subgraph Backend["Backend — Railway"]
-        API[FastAPI<br/>104 endpoints / 16 router]
+        API[FastAPI<br/>116 endpoints / 15 router]
         Worker[Background<br/>Sentry + Email Brevo]
     end
 
     subgraph Storage
-        DB[(PostgreSQL<br/>25 tables / 17 ENUMs)]
+        DB[(PostgreSQL<br/>44 tables / 19 ENUMs)]
         Sentry[Sentry.io<br/>FE + BE error tracking]
     end
 
@@ -173,9 +173,9 @@ flowchart TD
 - Deploy mobile: APK Android local `flutter build apk` (KGP 2.2.0 + AGP 8 + Java 17)
 
 ### Database (`08-database/`)
-- PostgreSQL schema `ptit_contest` — 25 bảng + 17 ENUM types
+- PostgreSQL schema `ptit_contest` — 44 bảng + 19 ENUM types
 - ER diagram Mermaid: `2026-05-04_er-diagram_v02.mermaid`
-- Schema SQL: `2026-05-04_sqlapp_v03.sql`
+- Schema thiết kế: `2026-05-04_sqlapp_v03.sql` (artifact); schema runtime thực tế là `09-implementation/backend/init-schema.sql` (v04, baseline `0001`) + các Alembic migration sau đó (vd `0002_faculty_cert_templates`)
 
 ---
 
@@ -193,8 +193,8 @@ flowchart TD
 ├── 07-prototypes/               ← interactive prototypes
 ├── 08-database/                 ← schema SQL v03 + ER diagram Mermaid
 ├── 09-implementation/           ← code production
-│   ├── backend/                 ← FastAPI + SQLAlchemy (104 endpoints)
-│   └── frontend/                ← Flutter web + APK (30+ screens)
+│   ├── backend/                 ← FastAPI + SQLAlchemy (116 endpoints)
+│   └── frontend/                ← Flutter web + APK (35+ screens)
 ├── 10-testing/                  ← test cases + audit reports
 ├── 11-docs/                     ← báo cáo CNPM + audit reports + design audit
 ├── assets/                      ← shared logo, fonts
@@ -231,7 +231,7 @@ Một lệnh dựng cả Frontend + Backend + **PostgreSQL chạy chung trong c�
 ```bash
 cd 09-implementation
 docker compose up -d --build
-# Web http://localhost:8080 · API http://localhost:8000/api/docs · Postgres localhost:5432
+# Web http://localhost:8080 · API http://localhost:8000/api/docs · DBGate http://localhost:4224 · Postgres localhost:5432
 ```
 
 DB tự khởi tạo `init-schema.sql` v04 → `alembic stamp 0001 → upgrade head`, rồi nạp **2 lớp seed nối tiếp** (`seed-demo.py` nền + `seed-rich.py` làm giàu: 5 khoa · ~17 SV · 6 cuộc thi gồm cả cuộc thi đã kết thúc có chứng nhận & bảng xếp hạng · đánh giá/Q&A/bài viết/audit). Cả hai idempotent. Mật khẩu demo = `DEMO_PASSWORD` (mặc định `abc123`). Chi tiết: [`README-DEMO.md`](README-DEMO.md).
@@ -245,13 +245,15 @@ source .venv/bin/activate    # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
 cp .env.example .env         # Sửa DATABASE_URL + JWT_SECRET_KEY
 
-# Tạo DB + apply schema v03
+# Tạo DB + init schema v04 (giống Docker) rồi apply Alembic migration
 psql -U postgres -c "CREATE DATABASE ptit_contest_db;"
-psql -U postgres -d ptit_contest_db -f ../../08-database/2026-05-04_sqlapp_v03.sql
-alembic stamp head
+psql -U postgres -d ptit_contest_db -f init-schema.sql
+alembic stamp 0001_baseline_v04   # stamp baseline RỒI upgrade để áp 0002+ (faculty_cert_templates)
+alembic upgrade head
 
-# Seed test users
-python scripts/seed-test-users.py
+# Seed dữ liệu demo (nền + làm giàu) — idempotent
+DEMO_PASSWORD=abc123 python scripts/seed-demo.py
+DEMO_PASSWORD=abc123 python scripts/seed-rich.py
 
 # Run dev
 uvicorn app.main:app --reload --port 8000
@@ -292,7 +294,7 @@ Order: Backend trước → Frontend sau (FE phụ thuộc API mới của BE) �
 
 ## Liên kết tham chiếu
 
-- **Báo cáo CNPM**: [`11-docs/2026-05-07_bao-cao-cnpm_v02.md`](11-docs/2026-05-07_bao-cao-cnpm_v02.md) — đầy đủ chương 1-6 (~1500 dòng, 25 sprint)
+- **Báo cáo CNPM**: [`11-docs/2026-05-07_bao-cao-cnpm_v02.md`](11-docs/2026-05-07_bao-cao-cnpm_v02.md) — đầy đủ chương 1-6 (~1610 dòng, 28 sprint)
 - **Traceability matrix**: [`02-requirements/2026-05-04_traceability-matrix_v02.md`](02-requirements/) — 104 endpoint mapping với UI screens
 - **Workflow approval 3 cấp**: [`03-information-architecture/2026-05-04_workflow-approval-overview_v01.md`](03-information-architecture/)
 - **Audit reports**: [`11-docs/audit-report-2026-05-06.md`](11-docs/audit-report-2026-05-06.md) · [`design-audit-2026-05-06.md`](11-docs/design-audit-2026-05-06.md) · [`a11y-baseline-2026-05-07.md`](11-docs/a11y-baseline-2026-05-07.md)
