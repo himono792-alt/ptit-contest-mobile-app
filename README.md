@@ -224,7 +224,19 @@ Chi tiết từng sprint xem **báo cáo CNPM v02**: [`11-docs/2026-05-07_bao-ca
 
 ## Setup local dev
 
-### Backend
+### Demo nhanh bằng Docker (clone-and-run) — khuyên dùng
+
+Một lệnh dựng cả Frontend + Backend + **PostgreSQL chạy chung trong cùng dự án** (không cần cài DB riêng). Schema, migration và dữ liệu mẫu phong phú đều tự động:
+
+```bash
+cd 09-implementation
+docker compose up -d --build
+# Web http://localhost:8080 · API http://localhost:8000/api/docs · Postgres localhost:5432
+```
+
+DB tự khởi tạo `init-schema.sql` v04 → `alembic stamp 0001 → upgrade head`, rồi nạp **2 lớp seed nối tiếp** (`seed-demo.py` nền + `seed-rich.py` làm giàu: 5 khoa · ~17 SV · 6 cuộc thi gồm cả cuộc thi đã kết thúc có chứng nhận & bảng xếp hạng · đánh giá/Q&A/bài viết/audit). Cả hai idempotent. Mật khẩu demo = `DEMO_PASSWORD` (mặc định `abc123`). Chi tiết: [`README-DEMO.md`](README-DEMO.md).
+
+### Backend (chạy thủ công, không Docker)
 
 ```bash
 cd 09-implementation/backend

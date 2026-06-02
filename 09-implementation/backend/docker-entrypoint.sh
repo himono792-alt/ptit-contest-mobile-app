@@ -80,5 +80,14 @@ if [ -f "/app/scripts/seed-demo.py" ]; then
   python /app/scripts/seed-demo.py || echo "Seed demo failed (non-fatal)"
 fi
 
+# Seed RICH — làm giàu dữ liệu trên nền seed-demo (3 khoa thêm, 14 SV, 3 cuộc thi
+# FINISHED có cert + leaderboard, 1 cuộc thi sắp mở, reviews/Q&A/articles/audit).
+# PHẢI chạy SAU seed-demo vì phụ thuộc base users (gv@/bcn@/admin@/B22DCCN001..).
+# Cũng idempotent (guard theo slug/email/unique key) + non-fatal để demo không kẹt.
+if [ -f "/app/scripts/seed-rich.py" ]; then
+  echo "Seeding RICH demo data (idempotent)..."
+  python /app/scripts/seed-rich.py || echo "Seed rich failed (non-fatal)"
+fi
+
 echo "Starting uvicorn on 0.0.0.0:$PORT"
 exec uvicorn app.main:app --host 0.0.0.0 --port "$PORT"

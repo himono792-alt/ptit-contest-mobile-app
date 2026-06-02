@@ -77,5 +77,28 @@ services:
     ports:
       - "8080:80"
 
+  # ============== DBX — web DB client (dbx) ==============
+  # DBX (t8y2/dbx) chạy như container rời trong compose → mở http://localhost:4224.
+  # Đăng nhập bằng access password = DBX_PASSWORD (đặt 'abc123' cho khớp demo).
+  # DBX KHÔNG nhận connection qua env — tạo 1 LẦN trong UI, lưu vào volume dbx_data:
+  #     Type     = PostgreSQL
+  #     Host     = postgres        ← tên service ở trên, qua mạng nội bộ Docker
+  #     Port     = 5432
+  #     User     = ptit_contest
+  #     Password = dev_password
+  #     Database = ptit_contest_db
+  dbx:
+    image: t8y2/dbx
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      DBX_PASSWORD: abc123
+    ports:
+      - "4224:4224"   # mở http://localhost:4224
+    volumes:
+      - dbx_data:/app/data
+
 volumes:
   pg_data:
+  dbx_data:
