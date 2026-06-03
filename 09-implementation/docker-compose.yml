@@ -101,6 +101,26 @@ services:
     volumes:
       - dbgate_data:/root/.dbgate
 
+  # ============== DBX — web DB client (phương án xem DB thứ 2) ==============
+  # DBX (t8y2/dbx) chạy song song DBGate → mở http://localhost:4225.
+  # Đăng nhập bằng access password = DBX_PASSWORD (đặt 'abc123' cho khớp demo).
+  # DBX KHÔNG nhận connection qua env → tạo 1 LẦN trong UI (lưu ở volume dbx_data):
+  #     Type=PostgreSQL · Host=postgres · Port=5432 · User=ptit_contest
+  #     Password=dev_password · Database=ptit_contest_db
+  # (Host = 'postgres' = tên service, qua mạng nội bộ Docker — KHÔNG phải localhost.)
+  dbx:
+    image: t8y2/dbx
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      DBX_PASSWORD: abc123
+    ports:
+      - "4225:4224"   # mở http://localhost:4225 (DBX chạy cổng 4224 bên trong)
+    volumes:
+      - dbx_data:/app/data
+
 volumes:
   pg_data:
   dbgate_data:
+  dbx_data:

@@ -231,7 +231,7 @@ Một lệnh dựng cả Frontend + Backend + **PostgreSQL chạy chung trong c�
 ```bash
 cd 09-implementation
 docker compose up -d --build
-# Web http://localhost:8080 · API http://localhost:8000/api/docs · DBGate http://localhost:4224 · Postgres localhost:5432
+# Web :8080 · API :8000/api/docs · DBGate :4224 · DBX :4225 · Postgres :5432
 ```
 
 DB tự khởi tạo `init-schema.sql` v04 → `alembic stamp 0001 → upgrade head`, rồi nạp **2 lớp seed nối tiếp** (`seed-demo.py` nền + `seed-rich.py` làm giàu: 5 khoa · ~17 SV · 6 cuộc thi gồm cả cuộc thi đã kết thúc có chứng nhận & bảng xếp hạng · đánh giá/Q&A/bài viết/audit). Cả hai idempotent. Mật khẩu demo = `DEMO_PASSWORD` (mặc định `abc123`). Chi tiết: [`README-DEMO.md`](README-DEMO.md).
