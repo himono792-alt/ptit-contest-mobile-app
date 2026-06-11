@@ -234,16 +234,16 @@ Build config: KGP 2.2.0 + AGP 8 + Java 17 (xem memory `apk_android_build_2026-05
 | **Sprint 27** | Login screen polish | `_BrandQuoteRotator` 6 quote nổi tiếng có author (Lenin/Thân Nhân Trung/Mandela/Franklin/Gandhi/B.B.King) · Role tab autofill test credentials |
 | **Sprint 28** | Login animation + nav hotfixes | Split-outward 750ms `easeInOutCubic` · Reveal placeholder match splash · 4 hotfix nav: `didUpdateWidget` reset · build fallback Dashboard · 7 slug allow-list · splash `?to=` preserve URL · E2E Chrome MCP 7/7 PASS |
 
-Chi tiết từng sprint xem báo cáo CNPM: `../../11-docs/2026-05-07_bao-cao-cnpm_v02.md`.
+Chi tiết từng sprint xem báo cáo CNPM: `../../11-docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md`.
 
 ---
 
 ## Reference
 
 - **Backend**: `../backend/README.md`
-- **Báo cáo CNPM v02**: `../../11-docs/2026-05-07_bao-cao-cnpm_v02.md`
-- **Design tokens audit**: `../../11-docs/design-audit-2026-05-06.md`
-- **A11y baseline**: `../../11-docs/a11y-baseline-2026-05-07.md`
-- **Sprint 5 a11y semantics**: `../../11-docs/sprint5-a11y-baseline-2026-05-07.md`
-- **Sentry FE setup**: `../../11-docs/sentry-frontend-setup-2026-05-07.md`
-- **HTML renderer eval**: `../../11-docs/html-renderer-eval-2026-05-07.md`
+- **Báo cáo CNPM v02**: `../../11-docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md`
+- **Design tokens audit**: `../../11-docs/audits/design-audit-2026-05-06.md`
+- **A11y baseline**: `../../11-docs/audits/a11y-baseline-2026-05-07.md`
+- **Sprint 5 a11y semantics**: `../../11-docs/sprints/sprint5-a11y-baseline-2026-05-07.md`
+- **Sentry FE setup**: `../../11-docs/sprints/sentry-frontend-setup-2026-05-07.md`
+- **HTML renderer eval**: `../../11-docs/audits/html-renderer-eval-2026-05-07.md`

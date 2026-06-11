@@ -114,7 +114,7 @@ lib/
 - Defer: Cat 1 (45 admin_shell sidebar), Cat 2 (95 off-spacing — opportunistic), Cat 4 (129 ở 23 file lẻ — opportunistic).
 
 Reference docs:
-- `11-docs/design-audit-2026-05-06.md` — audit gốc 7 dimension
+- `11-docs/audits/design-audit-2026-05-06.md` — audit gốc 7 dimension
 - `tool/baseline-2026-05-06.txt` — baseline trước Phase A
 - `tool/post-phase-a-2026-05-06.txt` — kết quả sau Phase A
 - `11-docs/DESIGN-REVIEW-CHECKLIST.md` — checklist đầy đủ cho mọi PR

@@ -196,4 +196,4 @@ Trước khi mở PR:
 - README: `README.md`
 - CHANGELOG: `CHANGELOG.md`
 - Backend: `../backend/README.md`
-- Báo cáo CNPM: `../../11-docs/2026-05-07_bao-cao-cnpm_v02.md`
+- Báo cáo CNPM: `../../11-docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md`

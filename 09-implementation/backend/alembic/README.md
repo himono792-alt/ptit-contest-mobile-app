@@ -2,14 +2,14 @@
 
 ## Cách setup lần đầu (recommend)
 
-Vì schema đã có sẵn trong `08-database/2026-05-04_sqlapp_v03.sql`, dùng pattern **baseline + future autogenerate**:
+Vì schema đã có sẵn trong `08-database/2026-05-06_sqlapp_v04.sql`, dùng pattern **baseline + future autogenerate**:
 
 ```bash
 # 1. Tạo DB rỗng
 psql -U postgres -c "CREATE DATABASE ptit_contest_db;"
 
 # 2. Apply schema từ file SQL gốc
-psql -U postgres -d ptit_contest_db -f ../../08-database/2026-05-04_sqlapp_v03.sql
+psql -U postgres -d ptit_contest_db -f ../../08-database/2026-05-06_sqlapp_v04.sql
 
 # 3. Stamp Alembic version table (chưa có migration nào, chỉ đánh dấu baseline)
 alembic stamp head

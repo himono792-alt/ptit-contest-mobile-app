@@ -25,7 +25,7 @@ DB_HOST="${DB_HOST:-localhost}"
 DB_PORT="${DB_PORT:-5432}"
 
 # Đường dẫn schema (giả định chạy từ backend/)
-SCHEMA_FILE="../../08-database/2026-05-04_sqlapp_v03.sql"
+SCHEMA_FILE="../../08-database/2026-05-06_sqlapp_v04.sql"
 
 # =====================
 # 1. Check prereqs

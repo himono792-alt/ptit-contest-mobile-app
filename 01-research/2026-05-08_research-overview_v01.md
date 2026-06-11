@@ -470,7 +470,7 @@ Research cho thấy:
 - Schema v03: `08-database/2026-05-04_sqlapp_v03.sql`
 - ER diagram v02: `08-database/2026-05-04_er-diagram_v02.mermaid`
 - CHANGELOG: `CHANGELOG.md`
-- Báo cáo CNPM v02: `11-docs/2026-05-07_bao-cao-cnpm_v02.md`
+- Báo cáo CNPM v02: `11-docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md`
 - Đối thủ tham khảo (desk research):
   - Devpost — https://devpost.com
   - Codeforces — https://codeforces.com

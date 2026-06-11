@@ -22,7 +22,7 @@ cp .env.example .env
 
 # 4. Tạo DB + apply schema
 psql -U postgres -c "CREATE DATABASE ptit_contest_db;"
-psql -U postgres -d ptit_contest_db -f ../../08-database/2026-05-04_sqlapp_v03.sql
+psql -U postgres -d ptit_contest_db -f ../../08-database/2026-05-06_sqlapp_v04.sql
 alembic stamp head
 python scripts/seed-test-users.py
 
@@ -161,4 +161,4 @@ Railway tự build từ Dockerfile + restart container. Logs: https://railway.ap
 
 - README: `README.md`
 - CHANGELOG: `CHANGELOG.md`
-- Báo cáo CNPM: `../../11-docs/2026-05-07_bao-cao-cnpm_v02.md`
+- Báo cáo CNPM: `../../11-docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md`

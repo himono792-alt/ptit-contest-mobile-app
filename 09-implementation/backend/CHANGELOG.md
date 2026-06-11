@@ -84,5 +84,5 @@ Production v1.0 stable. 104 endpoints qua 16 router. Deploy Railway auto.
 
 ## Reference
 
-- Báo cáo CNPM: `../../11-docs/2026-05-07_bao-cao-cnpm_v02.md`
+- Báo cáo CNPM: `../../11-docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md`
 - Frontend changelog: `../frontend/CHANGELOG.md`

@@ -130,5 +130,5 @@ Production v1.0 stable — 30+ screens responsive web/mobile + APK 25.9 MB.
 
 ## Reference
 
-- Báo cáo CNPM: `../../11-docs/2026-05-07_bao-cao-cnpm_v02.md` (~1500 dòng, full Sprint 1-19)
+- Báo cáo CNPM: `../../11-docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md` (~1500 dòng, full Sprint 1-19)
 - Backend changelog: `../backend/CHANGELOG.md`

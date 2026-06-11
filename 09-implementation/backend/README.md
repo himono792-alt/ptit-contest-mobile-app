@@ -129,9 +129,9 @@ cp .env.example .env
 # Sửa DATABASE_URL, JWT_SECRET_KEY (>= 32 ký tự random):
 python -c "import secrets; print(secrets.token_urlsafe(32))"
 
-# Tạo DB + apply schema từ SQL v03
+# Tạo DB + apply schema từ SQL v04
 psql -U postgres -c "CREATE DATABASE ptit_contest_db;"
-psql -U postgres -d ptit_contest_db -f ../../08-database/2026-05-04_sqlapp_v03.sql
+psql -U postgres -d ptit_contest_db -f ../../08-database/2026-05-06_sqlapp_v04.sql
 
 # Stamp Alembic baseline (đánh dấu DB đã ở version baseline)
 alembic stamp head
@@ -264,8 +264,8 @@ Lần build sau ~30s thay vì 5 phút.
 ## Reference
 
 - **Frontend**: `../frontend/README.md`
-- **Báo cáo CNPM v02**: `../../11-docs/2026-05-07_bao-cao-cnpm_v02.md`
-- **Schema SQL**: `../../08-database/2026-05-04_sqlapp_v03.sql`
+- **Báo cáo CNPM v02**: `../../11-docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md`
+- **Schema SQL**: `../../08-database/2026-05-06_sqlapp_v04.sql`
 - **ER diagram**: `../../08-database/2026-05-04_er-diagram_v02.mermaid`
-- **Traceability matrix**: `../../02-requirements/2026-05-04_traceability-matrix_v02.md`
+- **Traceability matrix**: `../../02-requirements/2026-05-07_traceability-matrix_v03.md`
 - **Workflow approval**: `../../03-information-architecture/2026-05-04_workflow-approval-overview_v01.md`

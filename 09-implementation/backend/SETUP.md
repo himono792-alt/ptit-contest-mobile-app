@@ -109,7 +109,7 @@ File schema nằm trong workspace Windows, WSL truy cập qua `/mnt/e/...`:
 ```bash
 cd /mnt/e/PARA/10-projects/12-cnpm-project
 PGPASSWORD=dev_password psql -h localhost -U ptit_contest -d ptit_contest_db \
-  -f 08-database/2026-05-04_sqlapp_v03.sql
+  -f 08-database/2026-05-06_sqlapp_v04.sql
 ```
 
 Bạn sẽ thấy nhiều dòng `CREATE TYPE`, `CREATE TABLE`, `CREATE INDEX`. Cuối cùng nếu không có `ERROR` đỏ → OK.

@@ -17,7 +17,7 @@
 | **API (Swagger UI)** | https://ptit-contest-mobile-app-production.up.railway.app/api/docs |
 | **Backend repo** | [`09-implementation/backend/`](09-implementation/backend/) |
 | **Frontend repo** | [`09-implementation/frontend/`](09-implementation/frontend/) |
-| **Báo cáo CNPM** | [`11-docs/2026-05-07_bao-cao-cnpm_v02.md`](11-docs/2026-05-07_bao-cao-cnpm_v02.md) |
+| **Báo cáo CNPM** | [`11-docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md`](11-docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md) |
 
 **Tài khoản demo** (mật khẩu đặt qua env `DEMO_PASSWORD`, mặc định `abc123` — seed tự động bởi `seed-demo.py` + `seed-rich.py` khi chạy Docker):
 - `b22dccn001@ptit.edu.vn` — Sinh viên
@@ -185,20 +185,20 @@ flowchart TD
 12-cnpm-project/
 ├── README.md                    ← file này (overview)
 ├── 01-research/                 ← user research, persona, competitor analysis
-├── 02-requirements/             ← traceability matrix v02 (104 endpoints + UI mapping)
+├── 02-requirements/             ← đề cương + traceability matrix v03 (104 endpoints + UI mapping)
 ├── 03-information-architecture/ ← workflow phê duyệt 3 cấp QĐ1+QĐ2+QĐ3
-├── 04-wireframes/               ← low-fi sketches
 ├── 05-mockups/                  ← high-fi UI screens (4 HTML actor + React JSX 8350 dòng)
 ├── 06-design-system/            ← style guide + UI-UX Pro Max skill
-├── 07-prototypes/               ← interactive prototypes
-├── 08-database/                 ← schema SQL v03 + ER diagram Mermaid
+├── 08-database/                 ← schema SQL v04 + ER diagram Mermaid
 ├── 09-implementation/           ← code production
 │   ├── backend/                 ← FastAPI + SQLAlchemy (116 endpoints)
 │   └── frontend/                ← Flutter web + APK (35+ screens)
-├── 10-testing/                  ← test cases + audit reports
-├── 11-docs/                     ← báo cáo CNPM + audit reports + design audit
-├── assets/                      ← shared logo, fonts
-└── docs/                        ← biên bản họp + decision log
+├── 11-docs/                     ← tài liệu dự án
+│   ├── deliverables/            ← báo cáo CNPM + slide bảo vệ + phân công
+│   ├── audits/                  ← audit reports (code/design/ux/a11y)
+│   ├── sprints/                 ← sprint notes + checklists
+│   └── roadmap/                 ← lộ trình + hướng phát triển
+└── 99-archive/                  ← version cũ (v01, v02...)
 ```
 
 ---
@@ -218,7 +218,7 @@ flowchart TD
 | Polish | Sprint 26-27 | Theme-aware shimmer + stagger fade-in · 6 quote rotator có author (Lenin/Mandela/...) · Role tab autofill credentials |
 | Login animation + nav hotfixes | Sprint 28 | Split-outward 750ms · 4 nav hotfix (didUpdateWidget reset · 7 slug allow-list · splash `?to=` preserve URL) · E2E Chrome MCP 7/7 |
 
-Chi tiết từng sprint xem **báo cáo CNPM v02**: [`11-docs/2026-05-07_bao-cao-cnpm_v02.md`](11-docs/2026-05-07_bao-cao-cnpm_v02.md) (~1610 dòng, 28 sprint).
+Chi tiết từng sprint xem **báo cáo CNPM v02**: [`11-docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md`](11-docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md) (~1610 dòng, 28 sprint).
 
 ---
 
@@ -294,7 +294,7 @@ Order: Backend trước → Frontend sau (FE phụ thuộc API mới của BE) �
 
 ## Liên kết tham chiếu
 
-- **Báo cáo CNPM**: [`11-docs/2026-05-07_bao-cao-cnpm_v02.md`](11-docs/2026-05-07_bao-cao-cnpm_v02.md) — đầy đủ chương 1-6 (~1610 dòng, 28 sprint)
-- **Traceability matrix**: [`02-requirements/2026-05-04_traceability-matrix_v02.md`](02-requirements/) — 104 endpoint mapping với UI screens
+- **Báo cáo CNPM**: [`11-docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md`](11-docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md) — đầy đủ chương 1-6 (~1610 dòng, 28 sprint)
+- **Traceability matrix**: [`02-requirements/2026-05-07_traceability-matrix_v03.md`](02-requirements/) — 104 endpoint mapping với UI screens
 - **Workflow approval 3 cấp**: [`03-information-architecture/2026-05-04_workflow-approval-overview_v01.md`](03-information-architecture/)
-- **Audit reports**: [`11-docs/audit-report-2026-05-06.md`](11-docs/audit-report-2026-05-06.md) · [`design-audit-2026-05-06.md`](11-docs/design-audit-2026-05-06.md) · [`a11y-baseline-2026-05-07.md`](11-docs/a11y-baseline-2026-05-07.md)
+- **Audit reports**: [`11-docs/audits/audit-report-2026-05-06.md`](11-docs/audits/audit-report-2026-05-06.md) · [`design-audit-2026-05-06.md`](11-docs/audits/design-audit-2026-05-06.md) · [`a11y-baseline-2026-05-07.md`](11-docs/audits/a11y-baseline-2026-05-07.md)
