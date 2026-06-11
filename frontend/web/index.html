@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<!-- Phase C a11y fix (2026-05-07): lang="vi" cho html element (WCAG 3.1.1 Language of Page).
+     Title + description PTIT Contest thay vì default "frontend" / "A new Flutter project.". -->
+<html lang="vi">
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Hệ thống quản lý cuộc thi sinh viên PTIT — đăng ký, theo dõi, công bố kết quả + cấp chứng nhận.">
+  <meta name="theme-color" content="#C8102E">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="PTIT Contest">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>PTIT Contest</title>
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Phase C a11y fix (2026-05-07): override Flutter's hardcoded
+       maximum-scale=1.0, user-scalable=no AFTER first frame.
+       WCAG 1.4.4 Resize text yêu cầu user zoom được tới 200%.
+       Flutter framework inject `flt-viewport` meta tag với scale lock —
+       em chờ Flutter ready rồi nới lỏng để screen reader user + người
+       thị lực kém zoom được. -->
+  <script>
+    window.addEventListener('flutter-first-frame', function() {
+      var v = document.querySelector('meta[flt-viewport]');
+      if (v) v.setAttribute('content', 'width=device-width, initial-scale=1.0');
+    });
+    // Fallback: nếu Flutter ko emit event sau 5s, vẫn fix viewport.
+    setTimeout(function() {
+      var v = document.querySelector('meta[flt-viewport]');
+      if (v && v.getAttribute('content').includes('maximum-scale')) {
+        v.setAttribute('content', 'width=device-width, initial-scale=1.0');
+      }
+    }, 5000);
+  </script>
+</head>
+<body>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

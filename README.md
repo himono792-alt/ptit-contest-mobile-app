@@ -1,11 +1,11 @@
 # PTIT Contest — Hệ thống quản lý cuộc thi sinh viên
 
-[![Backend](https://img.shields.io/badge/backend-FastAPI-009688?logo=fastapi&logoColor=white)](https://ptit-contest-mobile-app-production.up.railway.app/api/docs)
-[![Frontend](https://img.shields.io/badge/frontend-Flutter%203.27-02569B?logo=flutter&logoColor=white)](https://ptit-contest-app.pages.dev)
-[![Database](https://img.shields.io/badge/database-PostgreSQL-336791?logo=postgresql&logoColor=white)](08-database/)
-[![Status](https://img.shields.io/badge/status-v1.0%20production-success)](#trạng-thái)
+[![Backend](https://img.shields.io/badge/backend-FastAPI-009688?logo=fastapi&logoColor=white)](backend/)
+[![Frontend](https://img.shields.io/badge/frontend-Flutter%203.27-02569B?logo=flutter&logoColor=white)](frontend/)
+[![Database](https://img.shields.io/badge/database-PostgreSQL-336791?logo=postgresql&logoColor=white)](database/)
+[![Status](https://img.shields.io/badge/status-v1.0%20docker%20demo-success)](#trạng-thái)
 
-Đề tài Công nghệ phần mềm (CNPM) HK2 2026 — Học viện Công nghệ Bưu chính Viễn thông (PTIT). Hệ thống full-stack quản lý cuộc thi sinh viên với 4 vai trò: Sinh viên / GV BTC / BCN khoa / Quản trị, workflow phê duyệt 3 cấp, deploy production thực tế (Railway BE + Cloudflare Pages FE + APK Android).
+Đề tài Công nghệ phần mềm (CNPM) HK2 2026 — Học viện Công nghệ Bưu chính Viễn thông (PTIT). Hệ thống full-stack quản lý cuộc thi sinh viên với 4 vai trò: Sinh viên / GV BTC / BCN khoa / Quản trị, workflow phê duyệt 3 cấp. Từng deploy production thực tế (Railway BE + Cloudflare Pages FE + APK Android, đã ngừng 06/2026) — nay chạy trọn bộ bằng **Docker local** (xem [`README-DEMO.md`](README-DEMO.md)).
 
 ---
 
@@ -13,11 +13,11 @@
 
 | Resource | URL |
 |----------|-----|
-| **Web app (production)** | https://ptit-contest-app.pages.dev |
-| **API (Swagger UI)** | https://ptit-contest-mobile-app-production.up.railway.app/api/docs |
-| **Backend repo** | [`09-implementation/backend/`](09-implementation/backend/) |
-| **Frontend repo** | [`09-implementation/frontend/`](09-implementation/frontend/) |
-| **Báo cáo CNPM** | [`11-docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md`](11-docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md) |
+| **Web app (Docker local)** | http://localhost:8080 — `docker compose up -d` (tại root repo) |
+| **API (Swagger UI)** | http://localhost:8000/api/docs |
+| **Backend repo** | [`backend/`](backend/) |
+| **Frontend repo** | [`frontend/`](frontend/) |
+| **Báo cáo CNPM** | [`docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md`](docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md) |
 
 **Tài khoản demo** (mật khẩu đặt qua env `DEMO_PASSWORD`, mặc định `abc123` — seed tự động bởi `seed-demo.py` + `seed-rich.py` khi chạy Docker):
 - `b22dccn001@ptit.edu.vn` — Sinh viên
@@ -42,7 +42,7 @@
 | Login UX | ✅ 2-column branding + 6 quote rotator có author + role tab autofill + split-outward animation 750ms |
 | Navigation | ✅ Pattern B collapse 240↔64 sidebar 4 role · Browser back/forward · F5 reload preserve URL · Deep-link share `?to=` |
 
-**Production URL deploy cuối**: `627e134a.ptit-contest-app.pages.dev` (alias `ptit-contest-app.pages.dev`)
+**Lịch sử production** (đã ngừng 2026-06-11): Railway BE + Cloudflare Pages FE, deploy cuối `627e134a` — config archive tại [`archive/deploy-production/`](archive/deploy-production/)
 
 ---
 
@@ -95,39 +95,33 @@
 ```mermaid
 flowchart LR
     subgraph Client
-        Web[Web Browser<br/>Cloudflare Pages]
-        APK[Android APK<br/>local install]
+        Web[Web Browser]
+        APK[Android APK<br/>cùng WiFi LAN]
     end
 
-    subgraph Edge
-        CF[Cloudflare<br/>Pages CDN]
-        R2[(Cloudflare R2<br/>Object Storage)]
+    subgraph Docker["Docker Compose — project ptit-contest"]
+        FE[nginx :8080<br/>Flutter web build]
+        API[FastAPI :8000<br/>116 endpoints / 15 router]
+        DB[(PostgreSQL 16 :5432<br/>44 tables / 19 ENUMs<br/>volume pg_data)]
+        DBG[DBGate :4224<br/>web DB client]
+        DBX[DBX :4225<br/>web DB client]
     end
 
-    subgraph Backend["Backend — Railway"]
-        API[FastAPI<br/>116 endpoints / 15 router]
-        Worker[Background<br/>Sentry + Email Brevo]
-    end
-
-    subgraph Storage
-        DB[(PostgreSQL<br/>44 tables / 19 ENUMs)]
-        Sentry[Sentry.io<br/>FE + BE error tracking]
-    end
-
-    Web -->|HTTPS| CF
-    CF -->|API calls + JWT| API
-    APK -->|HTTPS direct| API
+    Web -->|http://localhost:8080| FE
+    FE -->|API calls + JWT| API
+    APK -->|http://IP-LAN:8000| API
     API <-->|asyncpg| DB
-    API <-->|aiobotocore S3| R2
-    API -->|breadcrumbs| Sentry
-    Web -->|FE errors| Sentry
-    Worker -->|HTTP API port 443| Brevo[Brevo Email]
+    DBG <--> DB
+    DBX <--> DB
+    API -->|mode console| Log[Email → docker logs]
 
     classDef external fill:#f9f,stroke:#333,stroke-width:1px
     classDef storage fill:#bbf,stroke:#333,stroke-width:1px
-    class Sentry,Brevo,R2 external
+    class Log external
     class DB storage
 ```
+
+> Kiến trúc production cũ (Cloudflare Pages CDN + Railway + R2 + Sentry + Brevo — ngừng 2026-06-11) xem báo cáo chương 4 + `archive/deploy-production/`.
 
 ### Workflow phê duyệt 3 cấp
 
@@ -155,50 +149,49 @@ flowchart TD
 
 ## Tech stack
 
-### Backend (`09-implementation/backend/`)
+### Backend (`backend/`)
 - **Python 3.11+** · **FastAPI** · **SQLAlchemy 2.0 async** · **asyncpg**
 - **PostgreSQL 14+** · **Alembic** baseline migration
 - **Pydantic v2** · **JWT HS256** + refresh token rotation · **bcrypt**
-- **Sentry** error tracking · **Brevo HTTP API** email · **Cloudflare R2** S3-compat object storage
+- Email **console mode** (tự bật Brevo HTTP API khi set key) · File storage **BYTEA in-DB** (tự bật R2 S3-compat khi set key) · Sentry optional qua DSN
 - **slowapi** rate limit · **openpyxl** xlsx export
-- Deploy: Railway auto via git push, Dockerfile cache-friendly
+- Deploy: **Docker Compose** (Dockerfile cache-friendly)
 
-### Frontend (`09-implementation/frontend/`)
+### Frontend (`frontend/`)
 - **Flutter 3.27** · **Dart 3.6** · **Material 3** + 484 theme tokens
 - **Riverpod 2.6** state · **Dio** HTTP · **GoRouter** navigation
 - **Sentry FE** error tracking · **Shimmer** skeleton loading
 - **local_auth** biometric (APK only) · **shared_preferences** persist UI state
 - **google_fonts** Plus Jakarta Sans + JetBrains Mono · **intl** date format
-- Deploy web: Cloudflare Pages manual via `build_deploy.ps1` (wrangler)
+- Deploy web: container nginx trong Docker Compose (`docker compose build frontend`)
 - Deploy mobile: APK Android local `flutter build apk` (KGP 2.2.0 + AGP 8 + Java 17)
 
-### Database (`08-database/`)
+### Database (`database/`)
 - PostgreSQL schema `ptit_contest` — 44 bảng + 19 ENUM types
 - ER diagram Mermaid: `2026-05-04_er-diagram_v02.mermaid`
-- Schema thiết kế: `2026-05-04_sqlapp_v03.sql` (artifact); schema runtime thực tế là `09-implementation/backend/init-schema.sql` (v04, baseline `0001`) + các Alembic migration sau đó (vd `0002_faculty_cert_templates`)
+- Schema thiết kế: `2026-05-06_sqlapp_v04.sql`; schema runtime thực tế là `backend/init-schema.sql` (v04, baseline `0001`) + các Alembic migration sau đó (vd `0002_faculty_cert_templates`)
 
 ---
 
 ## Cấu trúc folder
 
 ```
-12-cnpm-project/
-├── README.md                    ← file này (overview)
-├── 01-research/                 ← user research, persona, competitor analysis
-├── 02-requirements/             ← đề cương + traceability matrix v03 (104 endpoints + UI mapping)
-├── 03-information-architecture/ ← workflow phê duyệt 3 cấp QĐ1+QĐ2+QĐ3
-├── 05-mockups/                  ← high-fi UI screens (4 HTML actor + React JSX 8350 dòng)
-├── 06-design-system/            ← style guide + UI-UX Pro Max skill
-├── 08-database/                 ← schema SQL v04 + ER diagram Mermaid
-├── 09-implementation/           ← code production
-│   ├── backend/                 ← FastAPI + SQLAlchemy (116 endpoints)
-│   └── frontend/                ← Flutter web + APK (35+ screens)
-├── 11-docs/                     ← tài liệu dự án
-│   ├── deliverables/            ← báo cáo CNPM + slide bảo vệ + phân công
-│   ├── audits/                  ← audit reports (code/design/ux/a11y)
-│   ├── sprints/                 ← sprint notes + checklists
-│   └── roadmap/                 ← lộ trình + hướng phát triển
-└── 99-archive/                  ← version cũ (v01, v02...)
+ptit-contest/
+├── backend/                ← FastAPI + SQLAlchemy (116 endpoints)
+├── frontend/               ← Flutter web + APK (35+ screens)
+├── database/               ← schema SQL v04 + ER diagram Mermaid
+├── docker-compose.yml      ← chạy toàn bộ: docker compose up -d
+├── docs/                   ← tài liệu dự án
+│   ├── deliverables/       ← báo cáo CNPM + slide bảo vệ + phân công
+│   ├── requirements/       ← đề cương + traceability matrix v03
+│   ├── architecture/       ← workflow phê duyệt 3 cấp QĐ1+QĐ2+QĐ3
+│   ├── design/             ← mockups HTML + design system + skills
+│   ├── research/           ← user research, persona
+│   ├── audits/             ← audit reports (code/design/ux/a11y)
+│   ├── sprints/            ← sprint notes + checklists
+│   └── roadmap/            ← lộ trình + hướng phát triển
+├── archive/                ← version cũ + config production đã ngừng
+└── README.md · README-DEMO.md · CHANGELOG.md
 ```
 
 ---
@@ -218,7 +211,7 @@ flowchart TD
 | Polish | Sprint 26-27 | Theme-aware shimmer + stagger fade-in · 6 quote rotator có author (Lenin/Mandela/...) · Role tab autofill credentials |
 | Login animation + nav hotfixes | Sprint 28 | Split-outward 750ms · 4 nav hotfix (didUpdateWidget reset · 7 slug allow-list · splash `?to=` preserve URL) · E2E Chrome MCP 7/7 |
 
-Chi tiết từng sprint xem **báo cáo CNPM v02**: [`11-docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md`](11-docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md) (~1610 dòng, 28 sprint).
+Chi tiết từng sprint xem **báo cáo CNPM v02**: [`docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md`](docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md) (~1610 dòng, 28 sprint).
 
 ---
 
@@ -229,7 +222,7 @@ Chi tiết từng sprint xem **báo cáo CNPM v02**: [`11-docs/deliverables/2026
 Một lệnh dựng cả Frontend + Backend + **PostgreSQL chạy chung trong cùng dự án** (không cần cài DB riêng). Schema, migration và dữ liệu mẫu phong phú đều tự động:
 
 ```bash
-cd 09-implementation
+# (chạy tại root repo)
 docker compose up -d --build
 # Web :8080 · API :8000/api/docs · DBGate :4224 · DBX :4225 · Postgres :5432
 ```
@@ -239,7 +232,7 @@ DB tự khởi tạo `init-schema.sql` v04 → `alembic stamp 0001 → upgrade h
 ### Backend (chạy thủ công, không Docker)
 
 ```bash
-cd 09-implementation/backend
+cd backend
 python -m venv .venv
 source .venv/bin/activate    # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
@@ -264,37 +257,34 @@ uvicorn app.main:app --reload --port 8000
 ### Frontend
 
 ```bash
-cd 09-implementation/frontend
+cd frontend
 flutter pub get
 
-# Run web dev
-flutter run -d chrome \
-  --dart-define=API_BASE=https://ptit-contest-mobile-app-production.up.railway.app
+# Run web dev (default API_BASE = http://localhost:8000 — backend Docker phải đang chạy)
+flutter run -d chrome
 
-# Build production web (Cloudflare Pages)
-./build_deploy.ps1   # PowerShell Windows
+# Build web (đã có trong docker compose build frontend; build tay nếu cần)
+flutter build web --release --tree-shake-icons
 
-# Build APK Android
+# Build APK Android (điện thoại cùng WiFi — thay <IP-LAN> bằng IP máy: ipconfig)
 flutter build apk --release \
-  --dart-define=API_BASE=https://ptit-contest-mobile-app-production.up.railway.app
+  --dart-define=API_BASE=http://<IP-LAN>:8000
 ```
 
 ---
 
 ## Triển khai (deployment)
 
-| Layer | Platform | Method | Frequency |
-|-------|----------|--------|-----------|
-| **Backend** | Railway | Git push → auto deploy | Mỗi khi merge BE diff |
-| **Frontend Web** | Cloudflare Pages | `wrangler pages deploy` qua `build_deploy.ps1` | Mỗi khi merge FE diff |
-| **APK Android** | Local file | `flutter build apk --release` | Theo release schedule |
+Từ 2026-06-11 chạy **Docker local duy nhất** — không còn cloud:
 
-Order: Backend trước → Frontend sau (FE phụ thuộc API mới của BE) → APK cuối.
+| Layer | Platform | Method |
+|-------|----------|--------|
+| **Toàn bộ stack** | Docker Compose (project `ptit-contest`) | `docker compose up -d` (tại root repo) |
+| **APK Android** (option) | Local file | `flutter build apk --release --dart-define=API_BASE=http://<IP-LAN>:8000` |
+
+Chi tiết: [`README-DEMO.md`](README-DEMO.md) + runbook [`docs/deliverables/demo-local-runbook.md`](docs/deliverables/demo-local-runbook.md). Lịch sử deploy cloud (Railway + Cloudflare, 05/2026–06/2026): xem `archive/deploy-production/` + CHANGELOG.
 
 
 ## Liên kết tham chiếu
 
-- **Báo cáo CNPM**: [`11-docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md`](11-docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md) — đầy đủ chương 1-6 (~1610 dòng, 28 sprint)
-- **Traceability matrix**: [`02-requirements/2026-05-07_traceability-matrix_v03.md`](02-requirements/) — 104 endpoint mapping với UI screens
-- **Workflow approval 3 cấp**: [`03-information-architecture/2026-05-04_workflow-approval-overview_v01.md`](03-information-architecture/)
-- **Audit reports**: [`11-docs/audits/audit-report-2026-05-06.md`](11-docs/audits/audit-report-2026-05-06.md) · [`design-audit-2026-05-06.md`](11-docs/audits/design-audit-2026-05-06.md) · [`a11y-baseline-2026-05-07.md`](11-docs/audits/a11y-baseline-2026-05-07.md)
+- **Báo cáo CNPM**: [`docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md`](docs/deliverables/2026-05-07_bao-cao-cnpm_v02.md) — đầy đủ chư

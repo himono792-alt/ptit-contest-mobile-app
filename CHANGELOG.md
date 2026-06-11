@@ -6,6 +6,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning [SemVer](h
 
 ---
 
+## [v1.1 — 2026-06-11] Ngừng production cloud — chuyển Docker local
+
+### Changed
+
+- **Ngừng toàn bộ cloud**: Railway (BE + Postgres), Cloudflare Pages (FE), Cloudflare R2, Sentry FE+BE, Brevo. Hệ thống chạy duy nhất qua `docker compose` (project `ptit-contest`, 5 container: postgres/backend/frontend/dbgate/dbx) — xem `README-DEMO.md`.
+- `FRONTEND_BASE_URL` default đổi `pages.dev` → `http://localhost:8080` (link email + QR cert).
+- Compose đặt tên project `ptit-contest` (thay mặc định theo tên folder).
+- Archive `railway.json` + `build_deploy.ps1` → `archive/deploy-production/`.
+- Tái cấu trúc folder dự án: `docs/{deliverables,audits,sprints,roadmap}` + `archive/`.
+
+---
+
 ## [v1.0 — 2026-05-08] Sprint 8-13: Audit + 100% UI coverage + polish
 
 ### Added
@@ -97,18 +109,4 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning [SemVer](h
 
 ---
 
-## Production URLs
-
-- **FE Web**: `https://ptit-contest-app.pages.dev` (auto-CDN, manual deploy)
-- **BE API**: `https://ptit-contest-mobile-app-production.up.railway.app` (Railway, auto-deploy git push)
-- **Cert verify**: `https://ptit-contest-app.pages.dev/verify` (deep-link cho QR scan)
-- **Object storage**: Cloudflare R2 bucket `ptit-contest-submissions`
-
-## Test accounts (password đặt qua env `DEMO_PASSWORD` khi seed)
-
-- `b22dccn001@ptit.edu.vn` — Sinh viên (Nguyễn Văn A)
-- `gv@ptit.edu.vn` — GV (Nguyen Van A — ADMIN+JUDGE+ORGANIZER)
-- `bcn@ptit.edu.vn` — BCN HOD khoa CNTT (Tran Van B)
-- `admin@ptit.edu.vn` — Quản trị hệ thống
-
-Seed: `09-implementation/backend/scripts/seed-test-users.py` — chạy với `DEMO_PASSWORD=<your-demo-password>` env.
+## URLs (Docker local — production cloud đã ng

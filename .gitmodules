@@ -1,4 +1,4 @@
 [submodule "ui-ux-pro-max-skill"]
-	path = 06-design-system/skills/ui-ux-pro-max-skill
+	path = docs/design/design-system/skills/ui-ux-pro-max-skill
 	url = https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git
 	ignore = dirty

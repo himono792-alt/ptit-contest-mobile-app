@@ -10,7 +10,7 @@ Hướng dẫn này dành cho người chấm/giáo viên: chỉ cần **Docker 
 ## 2. Chạy
 
 ```bash
-cd 09-implementation
+# (chạy tại root repo)
 docker compose up -d --build
 ```
 
