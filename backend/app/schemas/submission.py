@@ -11,7 +11,8 @@ class SubmissionVersionCreateIn(BaseModel):
     """SV-08 POST /api/rounds/{id}/submissions/me/versions.
 
     SV nộp 1 version mới (text + link). Backend tự tạo submission nếu chưa.
-    File upload chưa implement (TODO).
+    File đính kèm: nộp riêng qua POST /api/submissions/versions/{id}/files
+    (multipart, lưu R2 hoặc BYTEA fallback).
     """
 
     title: str | None = Field(None, max_length=255)

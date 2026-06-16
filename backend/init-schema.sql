@@ -950,6 +950,15 @@ ON contests(registration_open_at, registration_close_at);
 CREATE INDEX idx_contests_start_end
 ON contests(start_at, end_at);
 
+-- Full-text search (2026-06-16): GIN index trên title+description+rules+award.
+-- Biểu thức immutable (coalesce + ||) khớp đúng query trong app/routers/contests.py
+-- để planner dùng được index (cấu hình 'simple': tách token, giữ dấu tiếng Việt).
+CREATE INDEX idx_contests_fts
+ON contests USING GIN (
+    to_tsvector('simple',
+        coalesce(title, '') || ' ' || coalesce(description, '') || ' ' ||
+        coalesce(rules_text, '') || ' ' || coalesce(award_text, '')));
+
 CREATE INDEX idx_contest_rounds_contest
 ON contest_rounds(contest_id);
 

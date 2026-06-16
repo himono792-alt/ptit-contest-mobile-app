@@ -15,11 +15,14 @@ from app.models.enums import (
     ApprovalTarget,
     ContestStatus,
     EntryType,
+    NotificationScope,
+    RegistrationStatus,
 )
 from app.models.identity import AppUser
 from app.models.judging import ContestResult, RoundResult
 from app.models.master_data import Student
 from app.models.workflow import WorkflowApproval
+from app.services import notification_service
 
 
 # ---------- Helpers ----------
@@ -31,6 +34,46 @@ async def _ensure_btc(db: AsyncSession, user: AppUser, contest: Contest) -> None
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Cần ORGANIZER")
     if contest.created_by != user.user_id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Không phải BTC contest này")
+
+
+async def _resolve_contest_participant_user_ids(
+    db: AsyncSession, contest_id: int
+) -> list[int]:
+    """Trả về list user_id (distinct) của mọi SV đã đăng ký APPROVED 1 contest.
+
+    Dùng khi publish kết quả để bulk notify (B — fix TODO results.py).
+    - Entry INDIVIDUAL: contest_entries.student_id → students.user_id.
+    - Entry TEAM: team_members → students.user_id (tất cả thành viên đội).
+    Chỉ tính entry registration_status = APPROVED (bỏ PENDING/REJECTED/CANCELLED).
+    """
+    user_ids: set[int] = set()
+
+    # INDIVIDUAL: join trực tiếp student
+    indiv_stmt = (
+        select(Student.user_id)
+        .join(ContestEntry, ContestEntry.student_id == Student.student_id)
+        .where(
+            ContestEntry.contest_id == contest_id,
+            ContestEntry.entry_type == EntryType.INDIVIDUAL,
+            ContestEntry.registration_status == RegistrationStatus.APPROVED,
+        )
+    )
+    user_ids.update((await db.execute(indiv_stmt)).scalars().all())
+
+    # TEAM: entry.team_id → team_members → student → user
+    team_stmt = (
+        select(Student.user_id)
+        .join(TeamMember, TeamMember.student_id == Student.student_id)
+        .join(ContestEntry, ContestEntry.team_id == TeamMember.team_id)
+        .where(
+            ContestEntry.contest_id == contest_id,
+            ContestEntry.entry_type == EntryType.TEAM,
+            ContestEntry.registration_status == RegistrationStatus.APPROVED,
+        )
+    )
+    user_ids.update((await db.execute(team_stmt)).scalars().all())
+
+    return list(user_ids)
 
 
 # ---------- Compute ----------
@@ -304,7 +347,26 @@ async def publish_results(
     contest.status = ContestStatus.FINISHED
 
     await db.commit()
-    return contest, now, len(results)
+
+    # Bulk notification (B — fix TODO results.py): báo cho mọi SV đã đăng ký
+    # APPROVED rằng kết quả đã công bố. In-app + deep-link tới trang contest.
+    # notify_users tự commit notification riêng (không ảnh hưởng commit ở trên).
+    participant_user_ids = await _resolve_contest_participant_user_ids(db, contest_id)
+    notified_count = 0
+    if participant_user_ids:
+        await notification_service.notify_users(
+            db,
+            title="Kết quả đã được công bố",
+            message=f'Cuộc thi "{contest.title}" đã công bố kết quả. Nhấn để xem chi tiết.',
+            user_ids=participant_user_ids,
+            scope=NotificationScope.CONTEST,
+            contest_id=contest_id,
+            created_by=user.user_id,
+            target_route=f"/contests/{contest_id}",
+        )
+        notified_count = len(participant_user_ids)
+
+    return contest, now, notified_count
 
 
 # ---------- SV view own results ----------

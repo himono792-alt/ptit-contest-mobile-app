@@ -99,3 +99,33 @@ async def list_all_reviews(
         base.order_by(desc(ContestReview.created_at)).offset(offset).limit(limit)
     )).scalars().all()
     return list(rows), total
+
+
+async def bulk_moderate_reviews(
+    db: AsyncSession,
+    user: AppUser,
+    review_ids: list[int],
+    is_visible: bool,
+    note: str | None,
+) -> tuple[int, list[int]]:
+    """AD-06 — ẩn/hiện HÀNG LOẠT review (chống spam ồ ạt).
+
+    Trả (số_review_đã_xử_lý, danh_sách_id_không_tìm_thấy).
+    """
+    _ensure_admin(user)
+    if not review_ids:
+        return 0, []
+
+    stmt = select(ContestReview).where(ContestReview.review_id.in_(set(review_ids)))
+    rows = (await db.execute(stmt)).scalars().all()
+    found_ids = {r.review_id for r in rows}
+    now = datetime.now(timezone.utc)
+    for review in rows:
+        review.is_visible = is_visible
+        review.moderated_by = user.user_id
+        review.moderated_at = now
+        review.moderation_note = note
+    await db.commit()
+
+    not_found = [rid for rid in dict.fromkeys(review_ids) if rid not in found_ids]
+    return len(found_ids), not_found

@@ -15,7 +15,7 @@ Endpoints:
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -48,11 +48,40 @@ _PUBLIC_STATUSES: tuple[ContestStatus, ...] = (
 
 # ---------- READ ----------
 
+def _contest_search(q: str):
+    """Full-text search cuộc thi trên title + description + rules_text + award_text.
+
+    Dùng cấu hình `simple` (tách token, hạ chữ thường; GIỮ NGUYÊN dấu tiếng Việt) kết
+    hợp fallback ILIKE để bắt cả substring/prefix mà full-text (khớp theo token) bỏ sót.
+    Trả về (điều_kiện_lọc, biểu_thức_rank) — rank dùng để sắp theo độ liên quan.
+    """
+    sp = " "
+    doc = (
+        func.coalesce(Contest.title, "")
+        .op("||")(sp)
+        .op("||")(func.coalesce(Contest.description, ""))
+        .op("||")(sp)
+        .op("||")(func.coalesce(Contest.rules_text, ""))
+        .op("||")(sp)
+        .op("||")(func.coalesce(Contest.award_text, ""))
+    )
+    tsv = func.to_tsvector("simple", doc)
+    tsquery = func.plainto_tsquery("simple", q)
+    like = f"%{q}%"
+    condition = or_(
+        tsv.op("@@")(tsquery),
+        Contest.title.ilike(like),
+        Contest.description.ilike(like),
+    )
+    rank = func.ts_rank(tsv, tsquery)
+    return condition, rank
+
+
 @router.get("", response_model=ContestListOut)
 async def list_contests(
     db: Annotated[AsyncSession, Depends(get_db)],
     pagination: Annotated[Pagination, Depends()],
-    q: str | None = Query(None, description="Tìm theo title (ILIKE)"),
+    q: str | None = Query(None, description="Full-text search title/mô tả/thể lệ/giải thưởng + ranking"),
     status_filter: ContestStatus | None = Query(None, alias="status"),
     delivery_mode: DeliveryMode | None = None,
     participation_mode: EntryType | None = None,
@@ -67,8 +96,10 @@ async def list_contests(
     elif not show_all:
         base = base.where(Contest.status.in_(_PUBLIC_STATUSES))
 
+    rank_expr = None
     if q:
-        base = base.where(Contest.title.ilike(f"%{q}%"))
+        condition, rank_expr = _contest_search(q)
+        base = base.where(condition)
     if delivery_mode:
         base = base.where(Contest.delivery_mode == delivery_mode)
     if participation_mode:
@@ -79,8 +110,12 @@ async def list_contests(
     count_stmt = select(func.count()).select_from(base.subquery())
     total = (await db.execute(count_stmt)).scalar_one()
 
+    order_cols = []
+    if rank_expr is not None:
+        order_cols.append(rank_expr.desc())  # độ liên quan giảm dần khi search
+    order_cols.append(Contest.start_at.desc())
     rows_stmt = (
-        base.order_by(Contest.start_at.desc())
+        base.order_by(*order_cols)
         .offset(pagination.offset)
         .limit(pagination.limit)
     )

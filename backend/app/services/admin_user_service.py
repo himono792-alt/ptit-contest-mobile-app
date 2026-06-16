@@ -282,3 +282,37 @@ async def import_student_directory(
             errors.append(f"{row.student_code}: {e}")
 
     return {"inserted": inserted, "skipped": skipped, "errors": errors}
+
+
+async def bulk_set_user_status(
+    db: AsyncSession, admin: AppUser, user_ids: list[int], action: str
+) -> tuple[int, list[int]]:
+    """AD-02 — khóa/mở/xóa HÀNG LOẠT user. Trả (số_đã_xử_lý, danh_sách_bỏ_qua).
+
+    action: LOCK -> LOCKED, UNLOCK -> ACTIVE, DELETE -> DELETED (soft).
+    Bỏ qua chính admin khi LOCK/DELETE (không tự khóa/xóa mình) và id không tồn tại.
+    """
+    _ensure_admin(admin)
+    status_map = {
+        "LOCK": UserStatus.LOCKED,
+        "UNLOCK": UserStatus.ACTIVE,
+        "DELETE": UserStatus.DELETED,
+    }
+    if action not in status_map:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Action không hợp lệ: {action}")
+    new_status = status_map[action]
+
+    affected = 0
+    skipped: list[int] = []
+    for uid in dict.fromkeys(user_ids):  # giữ thứ tự, loại trùng
+        if uid == admin.user_id and action in ("LOCK", "DELETE"):
+            skipped.append(uid)  # không tự khóa/xóa mình
+            continue
+        target = await db.get(AppUser, uid)
+        if target is None:
+            skipped.append(uid)
+            continue
+        target.status = new_status
+        affected += 1
+    await db.commit()
+    return affected, skipped

@@ -1,6 +1,7 @@
 """Admin schemas (AD-02 users, AD-03 master, AD-04 configs, AD-06 audit)."""
 
 from datetime import datetime
+from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -78,6 +79,24 @@ class StudentDirectoryImportRow(BaseModel):
     faculty_code: str | None = None
     major_code: str | None = None
     class_code: str | None = None
+
+
+class BulkUserAction(str, Enum):
+    LOCK = "LOCK"
+    UNLOCK = "UNLOCK"
+    DELETE = "DELETE"
+
+
+class BulkUserStatusIn(BaseModel):
+    """AD-02 POST /api/admin/users/bulk-status — khóa/mở/xóa nhiều user 1 lần."""
+
+    user_ids: list[int] = Field(..., min_length=1, max_length=500)
+    action: BulkUserAction
+
+
+class BulkUserStatusOut(BaseModel):
+    affected_count: int
+    skipped: list[int] = Field(default_factory=list, description="ID bỏ qua (không tồn tại hoặc chính mình)")
 
 
 class BulkImportIn(BaseModel):

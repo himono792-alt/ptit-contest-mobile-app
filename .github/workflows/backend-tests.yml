@@ -1,0 +1,62 @@
+name: Backend tests
+
+# Chạy bộ test backend (pytest) tự động mỗi push/PR đụng tới backend.
+# Test dùng Postgres NHÚNG (gói pgserver) nên runner KHÔNG cần service Postgres
+# riêng — conftest tự bật server, nạp init-schema.sql và seed dữ liệu demo.
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-tests.yml'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-tests.yml'
+
+jobs:
+  test:
+    name: pytest (Postgres nhúng)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cài Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Cài dependencies (app + dev)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Chạy test
+        run: pytest -v
+
+  lint:
+    name: ruff (advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true   # chưa chặn merge — codebase còn style nit cũ
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cài Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cài ruff
+        run: pip install ruff
+
+      - name: Lint
+        run: ruff check app tests

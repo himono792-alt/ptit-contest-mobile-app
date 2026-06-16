@@ -120,7 +120,7 @@ async def publish_results(
         contest_id=contest.contest_id,
         published_at=published_at,
         contest_status=contest.status.value,
-        notified_count=count,  # TODO: thêm bulk notification thật
+        notified_count=count,  # Số SV đăng ký APPROVED được bulk-notify (in-app + deep-link)
     )
 
 

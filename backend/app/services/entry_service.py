@@ -1,6 +1,6 @@
 """Contest entry business logic (SV-06 register, GV-03 approve, SV-10 cancel)."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import HTTPException, status
@@ -19,6 +19,7 @@ from app.models.enums import (
 )
 from app.models.identity import AppUser
 from app.models.master_data import Organizer, Student
+from app.models.system import SystemConfig
 from app.schemas.entry import EntryReviewAction
 from app.services import notification_service
 
@@ -150,7 +151,23 @@ async def cancel_my_registration(
     if entry.registration_status == RegistrationStatus.CANCELLED:
         raise HTTPException(status.HTTP_409_CONFLICT, "Đã hủy trước đó")
 
-    # TODO (team): check thời gian — system_configs.cancel.min_days_before
+    # QĐ-03: chỉ cho hủy đăng ký trước khi thi bắt đầu tối thiểu N ngày
+    # (config `cancel.min_days_before`). Quá hạn → chặn để tránh hủy phút chót.
+    contest = await db.get(Contest, contest_id)
+    cfg = await db.get(SystemConfig, "cancel.min_days_before")
+    try:
+        min_days = int(cfg.config_value) if cfg and cfg.config_value else 0
+    except (TypeError, ValueError):
+        min_days = 0
+    if contest is not None and contest.start_at is not None and min_days > 0:
+        deadline = contest.start_at - timedelta(days=min_days)
+        if datetime.now(timezone.utc) > deadline:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                f"Quá hạn hủy đăng ký. Chỉ được hủy trước khi thi bắt đầu "
+                f"ít nhất {min_days} ngày.",
+            )
+
     entry.registration_status = RegistrationStatus.CANCELLED
     db.add(EntryStatusLog(
         entry_id=entry.entry_id,

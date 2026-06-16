@@ -35,7 +35,7 @@ class PublishResultsOut(BaseModel):
     contest_id: int
     published_at: datetime
     contest_status: str
-    notified_count: int = Field(0, description="Số notification đã tạo (TODO)")
+    notified_count: int = Field(0, description="Số SV đã đăng ký APPROVED được bulk-notify")
 
 
 class MyResultOut(BaseModel):

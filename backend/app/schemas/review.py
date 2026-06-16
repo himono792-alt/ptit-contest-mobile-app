@@ -26,6 +26,21 @@ class ReviewModerateIn(BaseModel):
     moderation_note: str | None = Field(None, max_length=500)
 
 
+class BulkModerateIn(BaseModel):
+    """AD-06 PATCH /api/admin/reviews/bulk-moderate — ẩn/hiện nhiều review 1 lần."""
+
+    review_ids: list[int] = Field(..., min_length=1, max_length=200)
+    is_visible: bool
+    moderation_note: str | None = Field(None, max_length=500)
+
+
+class BulkModerateOut(BaseModel):
+    """Kết quả bulk moderation."""
+
+    moderated_count: int
+    not_found: list[int] = Field(default_factory=list)
+
+
 class ReviewOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

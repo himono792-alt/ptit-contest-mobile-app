@@ -25,6 +25,8 @@ from app.schemas.admin import (
     AdminUserListOut,
     AdminUserUpdateIn,
     AssignRolesIn,
+    BulkUserStatusIn,
+    BulkUserStatusOut,
     AuditLogListOut,
     AuditLogOut,
     BulkImportIn,
@@ -36,7 +38,7 @@ from app.schemas.admin import (
     MajorIn,
     MajorOut,
 )
-from app.schemas.review import ReviewModerateIn, ReviewOut
+from app.schemas.review import BulkModerateIn, BulkModerateOut, ReviewModerateIn, ReviewOut
 from app.services import (
     admin_audit_service,
     admin_config_service,
@@ -122,6 +124,19 @@ async def unlock_user(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> AdminUserListItem:
     return _user_to_item(await admin_user_service.unlock_user(db, user, user_id))
+
+
+@router.post("/users/bulk-status", response_model=BulkUserStatusOut)
+async def bulk_user_status(
+    data: BulkUserStatusIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> BulkUserStatusOut:
+    """AD-02 — khóa/mở/xóa HÀNG LOẠT user (vd: khóa 50 tài khoản spam 1 lần)."""
+    affected, skipped = await admin_user_service.bulk_set_user_status(
+        db, user, data.user_ids, data.action.value
+    )
+    return BulkUserStatusOut(affected_count=affected, skipped=skipped)
 
 
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -351,6 +366,19 @@ async def moderate_review(
         db, user, review_id, data.is_visible, data.moderation_note
     )
     return ReviewOut.model_validate(review)
+
+
+@router.patch("/reviews/bulk-moderate", response_model=BulkModerateOut)
+async def bulk_moderate_reviews(
+    data: BulkModerateIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> BulkModerateOut:
+    """AD-06 — ẩn/hiện HÀNG LOẠT review (vd: ẩn 50+ review spam 1 lần)."""
+    count, not_found = await admin_audit_service.bulk_moderate_reviews(
+        db, user, data.review_ids, data.is_visible, data.moderation_note
+    )
+    return BulkModerateOut(moderated_count=count, not_found=not_found)
 
 
 # ============================================================
