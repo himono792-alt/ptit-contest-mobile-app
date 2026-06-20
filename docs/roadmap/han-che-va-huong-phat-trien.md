@@ -64,6 +64,8 @@
 | Hủy đăng ký không kiểm tra thời gian (TODO) | ✅ Đã làm (2026-06-16) | Enforce `cancel.min_days_before` trước ngày thi |
 | Không ẩn/hiện review hàng loạt | ✅ Đã làm (2026-06-16) | Endpoint `PATCH /admin/reviews/bulk-moderate` |
 | Không khóa/xóa user hàng loạt | ✅ Đã làm (2026-06-16) | Endpoint `POST /admin/users/bulk-status` (LOCK/UNLOCK/DELETE) |
+| SV không lấy được QR cert của mình | ✅ Đã làm (2026-06-16) | `/me/results` trả `cert_qr_code`; nút Tải/Xác thực tự mở mã |
+| Chứng nhận chỉ có HTML, chưa PDF | ✅ Đã làm (2026-06-16) | `GET /certificates/{qr}/pdf` sinh PDF thật (reportlab, tiếng Việt, QR nhúng) |
 | Không có CI/CD | ✅ Một phần (2026-06-16) | GitHub Actions chạy `pytest` + ruff mỗi PR (chưa auto-deploy) |
 
 ---

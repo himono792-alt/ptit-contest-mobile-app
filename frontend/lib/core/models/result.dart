@@ -7,6 +7,7 @@ class MyResultModel {
   final int? rankNo;
   final String? awardTitle;
   final DateTime publishedAt;
+  final String? certQrCode;
 
   MyResultModel({
     required this.contestId,
@@ -17,6 +18,7 @@ class MyResultModel {
     this.rankNo,
     this.awardTitle,
     required this.publishedAt,
+    this.certQrCode,
   });
 
   factory MyResultModel.fromJson(Map<String, dynamic> j) => MyResultModel(
@@ -28,5 +30,6 @@ class MyResultModel {
         rankNo: j['rank_no'],
         awardTitle: j['award_title'],
         publishedAt: DateTime.parse(j['published_at']),
+        certQrCode: j['cert_qr_code'] as String?,
       );
 }

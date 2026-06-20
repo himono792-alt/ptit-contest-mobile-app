@@ -22,6 +22,7 @@ import '../../core/models/contest.dart';
 import '../../core/models/result.dart';
 import '../../core/spacing.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/help_button.dart';
 import '../../core/widgets/m_card.dart';
 import 'contest_list_screen.dart';
 import 'my_registrations_screen.dart';
@@ -81,6 +82,9 @@ class HomeScreen extends ConsumerWidget {
                 isWide: isWide,
               ),
               const SizedBox(height: AppSpacing.s24),
+
+              // ========= E3: deadline reminder (sắp hết hạn) =========
+              const _DeadlineBanner(),
 
               // ========= 3 hero gradient cards =========
               const _HeroRow(),
@@ -264,6 +268,7 @@ class _HomeHeader extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.s12),
+          const HelpButton(id: 'sv_home'),
           const _NotificationButton(),
         ],
       ),
@@ -384,6 +389,108 @@ const _heroGradients = <List<Color>>[
 ];
 
 const _heroLabels = <String>['CNTT · HOT', 'KHOA CƠ BẢN', 'ĐA KHOA'];
+
+// ============== E3 Deadline Banner ==============
+
+class _DeadlineBanner extends ConsumerWidget {
+  const _DeadlineBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final entries = ref.watch(myEntriesProvider);
+    return entries.maybeWhen(
+      data: (list) {
+        final now = DateTime.now();
+        final urgent = list.where((e) {
+          final cs = (e['contest_status'] as String?) ?? '';
+          final rs = (e['registration_status'] as String?) ?? '';
+          if (cs != 'ONGOING' || rs != 'APPROVED') return false;
+          final endRaw = e['contest_end_at'] as String?;
+          if (endRaw == null) return false;
+          final days = DateTime.parse(endRaw).toLocal().difference(now).inDays;
+          return days >= 0 && days <= 7;
+        }).toList();
+
+        if (urgent.isEmpty) return const SizedBox.shrink();
+
+        urgent.sort((a, b) => DateTime.parse(a['contest_end_at'] as String)
+            .compareTo(DateTime.parse(b['contest_end_at'] as String)));
+
+        final nearest = urgent.first;
+        final end = DateTime.parse(nearest['contest_end_at'] as String).toLocal();
+        final days = end.difference(now).inDays;
+        final slug = nearest['contest_slug'] as String;
+        final title = nearest['contest_title'] as String;
+        final color = days <= 1 ? ptitRed : context.warnOrange;
+        final bg = days <= 1 ? context.ptitRedSoft : context.warnSoft;
+        final daysLabel = days == 0 ? 'Hôm nay!' : 'còn $days ngày';
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.s16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s16, vertical: AppSpacing.s12),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(color: color.withValues(alpha: 0.35)),
+            ),
+            child: Row(children: [
+              Icon(Icons.timer_outlined, size: 18, color: color),
+              const SizedBox(width: AppSpacing.s8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Sắp hết hạn nộp bài',
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelSmall
+                            ?.copyWith(color: color, fontWeight: FontWeight.w700)),
+                    Text(title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: context.textPrimary, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(daysLabel,
+                      style: Theme.of(context)
+                          .textTheme
+                          .labelSmall
+                          ?.copyWith(color: color, fontWeight: FontWeight.w800)),
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      minimumSize: Size.zero,
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    onPressed: () => context.push('/contests/$slug'),
+                    child: Text('Nộp bài →',
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelSmall
+                            ?.copyWith(color: color, fontWeight: FontWeight.w700)),
+                  ),
+                ],
+              ),
+            ]),
+          ),
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+// ============== Hero Row ==============
 
 class _HeroRow extends ConsumerWidget {
   const _HeroRow();

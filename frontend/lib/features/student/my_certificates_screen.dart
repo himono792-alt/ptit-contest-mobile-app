@@ -11,6 +11,8 @@ import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../core/spacing.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/empty_view.dart';
+import '../../core/widgets/help_button.dart';
 import '../../core/widgets/m_shimmer.dart';
 import '../../core/widgets/m_top_bar.dart';
 import 'cert_verify_screen.dart';
@@ -23,7 +25,9 @@ class MyCertificatesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncResults = ref.watch(myResultsProvider);
     return Scaffold(
-      appBar: const MTopBar(title: 'Chứng nhận'),
+      appBar: const MTopBar(title: 'Chứng nhận', actions: [
+        HelpButton(id: 'sv_my_certificates'),
+      ]),
       body: asyncResults.when(
         loading: () => const MCardListSkeleton(count: 3, textLines: 2),
         error: (e, _) => Center(
@@ -62,26 +66,11 @@ class MyCertificatesScreen extends ConsumerWidget {
     );
   }
 
-  Widget _emptyState(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.s32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.workspace_premium_outlined,
-                size: 64, color: context.textMuted.withValues(alpha: 0.5)),
-            const SizedBox(height: AppSpacing.s12),
-            Text(
-              'Chưa có chứng nhận.\nHoàn thành cuộc thi + đạt giải để được cấp chứng nhận.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: context.textMuted, fontSize: 13),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget _emptyState(BuildContext context) => const EmptyView(
+        icon: Icons.workspace_premium_outlined,
+        title: 'Chưa có chứng nhận nào',
+        subtitle: 'Hoàn thành và đạt giải một cuộc thi để nhận chứng nhận đầu tiên.',
+      );
 }
 
 class _SummaryHeader extends StatelessWidget {
@@ -231,17 +220,26 @@ class _CertCard extends StatelessWidget {
                       icon: Icons.calendar_today_outlined),
                 ]),
                 const SizedBox(height: AppSpacing.s12),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    icon: const Icon(Icons.qr_code, size: 16),
-                    label: const Text('Xác thực / Tải về'),
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => const CertVerifyScreen()),
+                Builder(builder: (context) {
+                  // certQrCode != null nghĩa là chứng nhận đã được cấp → mở màn
+                  // xác thực với mã sẵn (tự verify + tải). Null → chưa cấp, mở
+                  // màn nhập mã trống như cũ.
+                  final String? qr = cert.certQrCode as String?;
+                  final bool hasCert = qr != null && qr.isNotEmpty;
+                  return SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      icon: Icon(hasCert ? Icons.verified_outlined : Icons.qr_code,
+                          size: 16),
+                      label: Text(hasCert ? 'Xem / Tải chứng nhận' : 'Xác thực bằng QR'),
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => CertVerifyScreen(initialCode: qr),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                }),
               ],
             ),
           ),

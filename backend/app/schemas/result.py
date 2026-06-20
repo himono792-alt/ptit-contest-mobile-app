@@ -51,3 +51,4 @@ class MyResultOut(BaseModel):
     rank_no: int | None = None
     award_title: str | None = None
     published_at: datetime
+    cert_qr_code: str | None = None

@@ -2,14 +2,15 @@
 // - Top-3 podium với gold/silver/bronze
 // - Table rank #4+ với highlight row "BẠN" nếu entry là của user
 // - State: loading skeleton / empty / error
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
+import '../../core/errors/friendly_error.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/empty_view.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_top_bar.dart';
 import '../../core/widgets/pill.dart';
@@ -78,7 +79,7 @@ class LeaderboardScreen extends ConsumerWidget {
             children: [
               MCard(
                 backgroundColor: context.ptitRedSoft,
-                child: Text('Lỗi: ${_msg(e)}',
+                child: Text('Lỗi: ${FriendlyError.of(e)}',
                     style: const TextStyle(color: ptitRed, fontSize: 13)),
               ),
             ],
@@ -424,28 +425,9 @@ class _EmptyLeaderboard extends StatelessWidget {
   const _EmptyLeaderboard({required this.contestTitle});
 
   @override
-  Widget build(BuildContext context) => ListView(
-        padding: const EdgeInsets.all(40),
-        children: [
-          const SizedBox(height: 80),
-          Icon(Icons.emoji_events_outlined,
-              size: 72, color: context.textMuted),
-          const SizedBox(height: 16),
-          Text('Chưa có bảng xếp hạng',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: context.textPrimary)),
-          const SizedBox(height: 6),
-          Text(
-              'BTC chưa publish kết quả $contestTitle. Quay lại sau khi cuộc thi kết thúc.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: context.textMuted)),
-        ],
+  Widget build(BuildContext context) => EmptyView(
+        icon: Icons.emoji_events_outlined,
+        title: 'Chưa có bảng xếp hạng',
+        subtitle: 'BTC chưa publish kết quả $contestTitle. Quay lại sau khi cuộc thi kết thúc.',
       );
 }
-
-String _msg(Object e) => e is DioException
-    ? (e.response?.data is Map ? '${e.response?.data['detail']}' : e.message ?? '')
-    : '$e';

@@ -3,12 +3,12 @@
 // Nhập email → POST /auth/forgot-password → backend trả token (dev mode)
 // → navigate sang ForgotPasswordResetScreen với token pre-filled.
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
+import '../../core/errors/friendly_error.dart';
 import '../../core/theme.dart';
 import 'forgot_password_reset_screen.dart';
 
@@ -55,10 +55,8 @@ class _ForgotPasswordRequestScreenState
           ),
         ),
       );
-    } on DioException catch (e) {
-      setState(() => _msg = e.response?.data is Map
-          ? '${e.response?.data['detail']}'
-          : (e.message ?? 'Lỗi'));
+    } catch (e) {
+      setState(() => _msg = FriendlyError.of(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

@@ -15,9 +15,11 @@ void main() {
         'rank_no': 1,
         'award_title': 'Giải Nhất',
         'published_at': '2026-06-15T10:00:00Z',
+        'cert_qr_code': 'QR-ABC123',
       });
 
       expect(r.contestId, 5);
+      expect(r.certQrCode, 'QR-ABC123');
       expect(r.finalScore, 95.5);
       expect(r.rankNo, 1);
       expect(r.awardTitle, 'Giải Nhất');
@@ -39,6 +41,7 @@ void main() {
       expect(r.finalScore, isNull);
       expect(r.rankNo, isNull);
       expect(r.awardTitle, isNull);
+      expect(r.certQrCode, isNull);
     });
   });
 }

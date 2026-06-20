@@ -5,14 +5,15 @@
 /// Sau register thành công → chuyển sang /login với email pre-fill.
 library;
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
+import '../../core/errors/friendly_error.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_toast.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
@@ -58,29 +59,16 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         'password': _passCtrl.text,
       });
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Tạo tài khoản thành công. Vui lòng đăng nhập.'),
-        ),
-      );
+      AppToast.success(context, 'Tạo tài khoản thành công. Vui lòng đăng nhập.');
       // Quay về login để user nhập password mới đăng ký.
       context.go('/login');
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _error = _msg(e);
+        _error = FriendlyError.of(e);
       });
     }
-  }
-
-  String _msg(Object e) {
-    if (e is DioException) {
-      final data = e.response?.data;
-      if (data is Map && data['detail'] != null) return '${data['detail']}';
-      return e.message ?? 'Lỗi mạng';
-    }
-    return '$e';
   }
 
   @override

@@ -12,6 +12,8 @@ import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../core/spacing.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/empty_view.dart';
+import '../../core/widgets/help_button.dart';
 import '../../core/widgets/m_shimmer.dart';
 import '../../core/widgets/m_top_bar.dart';
 import 'my_registrations_screen.dart';
@@ -23,7 +25,9 @@ class MyCalendarScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncList = ref.watch(myEntriesProvider);
     return Scaffold(
-      appBar: const MTopBar(title: 'Lịch của tôi'),
+      appBar: const MTopBar(title: 'Lịch của tôi', actions: [
+        HelpButton(id: 'sv_my_calendar'),
+      ]),
       body: asyncList.when(
         loading: () => const MCardListSkeleton(count: 3, textLines: 2),
         error: (e, _) => Center(
@@ -77,26 +81,11 @@ class MyCalendarScreen extends ConsumerWidget {
     );
   }
 
-  Widget _emptyState(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.s32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.calendar_today_outlined,
-                size: 64, color: context.textMuted.withValues(alpha: 0.5)),
-            const SizedBox(height: AppSpacing.s12),
-            Text(
-              'Chưa có sự kiện trong lịch.\nĐăng ký cuộc thi để xuất hiện ở đây.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: context.textMuted, fontSize: 13),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget _emptyState(BuildContext context) => const EmptyView(
+        icon: Icons.calendar_today_outlined,
+        title: 'Chưa có sự kiện nào',
+        subtitle: 'Đăng ký cuộc thi để xuất hiện lịch ở đây.',
+      );
 }
 
 class _MonthHeader extends StatelessWidget {

@@ -1,14 +1,16 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
+import '../../core/errors/friendly_error.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_toast.dart';
 import '../../core/widgets/empty_view.dart';
+import '../../core/widgets/help_button.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/pill.dart';
 
@@ -88,6 +90,7 @@ class _ApprovalQueueScreenState extends ConsumerState<ApprovalQueueScreen> {
                 ],
               ),
             ),
+            const HelpButton(id: 'bcn_approval'),
           ]),
         ),
         // Filter — Sprint 14 P1.1: ẩn dropdown khi locked (sidebar đã chọn lane).
@@ -98,7 +101,7 @@ class _ApprovalQueueScreenState extends ConsumerState<ApprovalQueueScreen> {
               width: 280,
               height: 40,
               child: DropdownButtonFormField<String?>(
-                value: type,
+                initialValue: type,
                 isDense: true,
                 isExpanded: true,
                 decoration: const InputDecoration(
@@ -253,20 +256,35 @@ class _ApprovalDetailDialogState
       final res = await api.dio.get('/approvals/${widget.approvalId}');
       setState(() => _detail = res.data as Map<String, dynamic>);
     } catch (e) {
-      setState(() => _loadError = _msgOf(e));
+      setState(() => _loadError = FriendlyError.of(e));
     }
   }
 
-  String _msgOf(Object e) => e is DioException
-      ? (e.response?.data is Map ? '${e.response?.data['detail']}' : e.message ?? '')
-      : '$e';
-
   Future<void> _decide(String action) async {
     if (action != 'approve' && _commentCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cần nhập comment khi reject/request_revision')),
-      );
+      AppToast.info(context, 'Cần nhập lý do khi từ chối hoặc yêu cầu chỉnh sửa');
       return;
+    }
+    if (action == 'approve') {
+      final contestName = (_detail?['contest']?['title'] as String?) ?? 'cuộc thi này';
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Duyệt cuộc thi?'),
+          content: Text(
+              'Hệ thống sẽ gửi thông báo tới ban tổ chức "$contestName". Không thể hoàn tác.'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Xem lại')),
+            FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: FilledButton.styleFrom(backgroundColor: context.successGreen),
+                child: const Text('Duyệt tất cả')),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
     }
     setState(() => _busy = true);
     final api = ref.read(apiClientProvider);
@@ -277,14 +295,10 @@ class _ApprovalDetailDialogState
       });
       if (!mounted) return;
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Đã ${_actionLabel(action)} thành công')),
-      );
+      AppToast.success(context, 'Đã ${_actionLabel(action)} thành công');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi: ${_msgOf(e)}')),
-      );
+      AppToast.error(context, e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -356,6 +370,7 @@ class _ApprovalDetailDialogState
             ]),
           ),
           IconButton(
+            tooltip: 'Đóng',
             icon: const Icon(Icons.close),
             onPressed: () => Navigator.of(context).pop(),
           ),
@@ -393,8 +408,25 @@ class _ApprovalDetailDialogState
               ),
             ),
             const SizedBox(height: 18),
-            Text('Comment của BCN (bắt buộc nếu reject hoặc request revision)',
+            Text('Lý do (bắt buộc nếu từ chối hoặc yêu cầu chỉnh sửa)',
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.textPrimary)),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: [
+                'Thiếu thông tin thể lệ',
+                'Sai thời gian',
+                'Trùng cuộc thi khác',
+                'Chưa gán khoa',
+              ].map((t) => ActionChip(
+                    label: Text(t, style: const TextStyle(fontSize: 11)),
+                    onPressed: () {
+                      final cur = _commentCtrl.text;
+                      _commentCtrl.text = cur.isEmpty ? t : '$cur; $t';
+                    },
+                  )).toList(),
+            ),
             const SizedBox(height: 6),
             TextField(
               controller: _commentCtrl,
@@ -490,8 +522,9 @@ class _EmptyView extends StatelessWidget {
   const _EmptyView();
   @override
   Widget build(BuildContext context) => const EmptyView(
-        icon: Icons.inbox_outlined,
-        title: 'Không có đề xuất nào đang chờ duyệt',
+        icon: Icons.task_alt,
+        title: 'Tất cả đề xuất đã được xử lý 🎉',
+        subtitle: 'Không còn cuộc thi nào chờ duyệt. Quay lại sau nhé.',
       );
 }
 
@@ -501,11 +534,7 @@ class _ErrorView extends StatelessWidget {
   const _ErrorView({required this.error, required this.onRetry});
   @override
   Widget build(BuildContext context) {
-    final msg = error is DioException
-        ? ((error as DioException).response?.data is Map
-            ? '${(error as DioException).response?.data['detail']}'
-            : (error as DioException).message ?? '')
-        : '$error';
+    final msg = FriendlyError.of(error);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),

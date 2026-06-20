@@ -9,6 +9,7 @@ import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/models/contest_detail.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_toast.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_shimmer.dart';
 import '../../core/widgets/m_top_bar.dart';
@@ -47,12 +48,7 @@ class ContestDetailScreen extends ConsumerWidget {
                   'https://luxury-crostata-3c5c69.netlify.app/contests/$slug';
               await Clipboard.setData(ClipboardData(text: url));
               if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Đã copy link: $url'),
-                  duration: const Duration(seconds: 3),
-                ),
-              );
+              AppToast.info(context, 'Đã copy link: $url');
             },
           ),
         ],

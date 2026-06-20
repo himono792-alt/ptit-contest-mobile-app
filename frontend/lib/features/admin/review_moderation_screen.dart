@@ -1,9 +1,8 @@
-// AD-06 — Admin moderation cho contest reviews (SV-11 SV đã review).
+﻿// AD-06 — Admin moderation cho contest reviews (SV-11 SV đã review).
 //
 // /admin/reviews → list, có filter only_hidden + contest_id.
 // PATCH /admin/reviews/{id}/moderate body { is_visible, moderation_note }.
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -11,7 +10,9 @@ import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_toast.dart';
 import '../../core/widgets/m_card.dart';
+import '../../core/widgets/empty_view.dart';
 import '../../core/widgets/m_shimmer.dart';
 import '../../core/widgets/pill.dart';
 
@@ -69,15 +70,10 @@ class ReviewModerationScreen extends ConsumerWidget {
           data: {'is_visible': visible, 'moderation_note': note.isEmpty ? null : note});
       ref.invalidate(reviewModerationListProvider);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Đã ${visible ? "hiện" : "ẩn"} review #$reviewId')),
-      );
+      AppToast.success(context, 'Đã ${visible ? "hiện" : "ẩn"} review #$reviewId');
     } catch (e) {
-      final msg = e is DioException
-          ? (e.response?.data is Map ? '${e.response?.data['detail']}' : e.message ?? '')
-          : '$e';
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $msg')));
+      AppToast.error(context, e);
     }
   }
 
@@ -121,6 +117,7 @@ class ReviewModerationScreen extends ConsumerWidget {
             ),
             const SizedBox(width: 8),
             IconButton(
+              tooltip: 'Làm mới',
               icon: Icon(Icons.refresh, color: context.textMuted),
               onPressed: () => ref.invalidate(reviewModerationListProvider),
             ),
@@ -138,12 +135,10 @@ class ReviewModerationScreen extends ConsumerWidget {
               ),
             ),
             data: (reviews) => reviews.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(40),
-                      child: Text('Chưa có review nào',
-                          style: TextStyle(color: context.textMuted)),
-                    ),
+                ? const EmptyView(
+                    icon: Icons.rate_review_outlined,
+                    title: 'Chưa có review nào',
+                    subtitle: 'Các đánh giá của sinh viên sẽ hiện ở đây.',
                   )
                 : ListView.builder(
                     padding: EdgeInsets.fromLTRB(isMobile ? 14 : 24, 16, isMobile ? 14 : 24, 24),

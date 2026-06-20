@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
@@ -11,6 +11,7 @@ import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/models/submission.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_toast.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_top_bar.dart';
 import '../../core/widgets/pill.dart';
@@ -77,10 +78,7 @@ class _SubmissionScreenState extends ConsumerState<SubmissionScreen> {
     final file = result.files.first;
     if (file.size > 10 * 1024 * 1024) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('File quá lớn (${(file.size / 1024 / 1024).toStringAsFixed(1)} MB). Tối đa 10 MB.')),
-      );
+      AppToast.info(context, 'File quá lớn (${(file.size / 1024 / 1024).toStringAsFixed(1)} MB). Tối đa 10 MB.');
       return;
     }
     setState(() => _pendingFile = file);
@@ -89,17 +87,30 @@ class _SubmissionScreenState extends ConsumerState<SubmissionScreen> {
   Future<void> _submit() async {
     final link = _linkCtrl.text.trim();
     if (link.isNotEmpty && !RegExp(r'^https?://').hasMatch(link)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('External link cần bắt đầu bằng http:// hoặc https://')),
-      );
+      AppToast.info(context, 'External link cần bắt đầu bằng http:// hoặc https://');
       return;
     }
     if (link.isEmpty && _textCtrl.text.trim().isEmpty && _pendingFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cần nhập ít nhất 1 trong: link / text / upload file')),
-      );
+      AppToast.info(context, 'Cần nhập ít nhất 1 trong: link / text / upload file');
       return;
     }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Xác nhận nộp bài?'),
+        content: const Text(
+            'Sau khi nộp, bạn vẫn có thể nộp lại bản mới trước hạn. Tiếp tục?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Hủy')),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Nộp bài')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     setState(() {
       _loading = true;
       _uploadProgress = null;
@@ -139,13 +150,9 @@ class _SubmissionScreenState extends ConsumerState<SubmissionScreen> {
       }
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_pendingFile != null
-              ? 'Nộp bài + upload file thành công'
-              : 'Nộp bài thành công'),
-          backgroundColor: context.successGreen,
-        ),
+      AppToast.success(
+        context,
+        _pendingFile != null ? 'Nộp bài + upload file thành công. BTC sẽ chấm sau khi vòng kết thúc.' : 'Nộp bài thành công. BTC sẽ chấm sau khi vòng kết thúc.',
       );
       _titleCtrl.clear();
       _linkCtrl.clear();
@@ -158,8 +165,7 @@ class _SubmissionScreenState extends ConsumerState<SubmissionScreen> {
       ref.invalidate(mySubmissionProvider(widget.roundId));
     } on DioException catch (e) {
       if (!mounted) return;
-      final msg = e.response?.data is Map ? '${e.response?.data['detail']}' : e.message;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$msg')));
+      AppToast.error(context, e);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -322,9 +328,9 @@ class _SubmissionScreenState extends ConsumerState<SubmissionScreen> {
                           ),
                         ),
                         IconButton(
+                          tooltip: 'Bỏ file',
                           icon: const Icon(Icons.close,
                               color: ptitRed, size: 18),
-                          tooltip: 'Bỏ file',
                           onPressed: _loading
                               ? null
                               : () => setState(() => _pendingFile = null),

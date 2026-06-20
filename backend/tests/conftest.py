@@ -11,10 +11,9 @@ Môi trường test ĐỘC LẬP, không cần DB production / Docker / root:
 
 Chạy:  cd backend && pytest -v
 """
-import asyncio
-import importlib.util
 import os
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -80,16 +79,9 @@ _appdb.AsyncSessionLocal = async_sessionmaker(
 # ---------------------------------------------------------------------------
 # 4) Seed demo data 1 lần (dùng engine NullPool đã patch ở trên)
 # ---------------------------------------------------------------------------
-def _run_seed() -> None:
-    spec = importlib.util.spec_from_file_location(
-        "seed_demo", BACKEND_DIR / "scripts" / "seed-demo.py"
-    )
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    asyncio.run(mod.main())
-
-
-_run_seed()
+subprocess.run(
+    [sys.executable, str(BACKEND_DIR / "scripts" / "seed-demo.py")], check=True
+)
 
 
 # ---------------------------------------------------------------------------

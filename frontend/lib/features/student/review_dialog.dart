@@ -1,10 +1,10 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_toast.dart';
 
 /// Show modal review dialog cho 1 contest.
 ///
@@ -65,8 +65,7 @@ class _ReviewDialogState extends ConsumerState<ReviewDialog> {
 
   Future<void> _submit() async {
     if (_rating < 1 || _rating > 5) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Phải chọn rating từ 1-5 sao')));
+      AppToast.info(context, 'Phải chọn rating từ 1-5 sao');
       return;
     }
     setState(() => _busy = true);
@@ -85,15 +84,10 @@ class _ReviewDialogState extends ConsumerState<ReviewDialog> {
       }
       if (!mounted) return;
       Navigator.pop(context, true);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_isEdit ? 'Đã cập nhật review' : 'Đã gửi review')));
+      AppToast.success(context, _isEdit ? 'Đã cập nhật review' : 'Đã gửi review');
     } catch (e) {
       if (mounted) {
-        final msg = e is DioException
-            ? (e.response?.data is Map ? '${e.response?.data['detail']}' : e.message ?? '')
-            : '$e';
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Lỗi: $msg')));
+        AppToast.error(context, e);
         setState(() => _busy = false);
       }
     }

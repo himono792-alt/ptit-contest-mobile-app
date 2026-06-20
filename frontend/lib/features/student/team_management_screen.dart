@@ -15,7 +15,10 @@ import 'package:intl/intl.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
+import '../../core/errors/friendly_error.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_toast.dart';
+import '../../core/widgets/empty_view.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_shimmer.dart';
 import '../../core/widgets/m_top_bar.dart';
@@ -58,18 +61,11 @@ class TeamManagementScreen extends ConsumerWidget {
       body: asyncTeams.when(
         // Sprint 13 Batch B (2026-05-08): skeleton thay spinner cho team list.
         loading: () => const MCardListSkeleton(count: 3),
-        error: (e, _) {
-          final msg = e is DioException
-              ? (e.response?.data is Map
-                  ? '${e.response?.data['detail']}'
-                  : e.message ?? '')
-              : '$e';
-          return Center(
-              child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text('Lỗi: $msg',
-                      style: TextStyle(color: context.textMuted))));
-        },
+        error: (e, _) => Center(
+            child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text('Lỗi: ${FriendlyError.of(e)}',
+                    style: TextStyle(color: context.textMuted)))),
         data: (teams) {
           final filtered = filterContestId != null
               ? teams
@@ -153,34 +149,11 @@ class _EmptyTeamView extends StatelessWidget {
   const _EmptyTeamView({required this.forContest});
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 40),
-      child: Column(children: [
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-              color: context.ptitRedSoft, shape: BoxShape.circle),
-          child: const Icon(Icons.groups_outlined,
-              size: 40, color: ptitRed),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          forContest
-              ? 'Bạn chưa có team cho cuộc thi này'
-              : 'Bạn chưa thuộc team nào',
-          style: TextStyle(
-              fontSize: 14, fontWeight: FontWeight.w700, color: context.textPrimary),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Tạo team mới và mời các bạn cùng tham gia',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.textMuted),
-        ),
-      ]),
-    );
-  }
+  Widget build(BuildContext context) => EmptyView(
+        icon: Icons.groups_outlined,
+        title: forContest ? 'Chưa có team cho cuộc thi này' : 'Bạn chưa thuộc team nào',
+        subtitle: 'Tạo team mới và mời các bạn cùng tham gia.',
+      );
 }
 
 class _ContestHeader extends StatelessWidget {
@@ -281,16 +254,10 @@ class _TeamCardState extends ConsumerState<_TeamCard> {
           data: {'student_code': code.toUpperCase()});
       ref.invalidate(myTeamsProvider);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Đã thêm $code vào team')),
-      );
+      AppToast.success(context, 'Đã thêm $code vào team');
     } on DioException catch (e) {
-      final msg = e.response?.data is Map
-          ? '${e.response?.data['detail']}'
-          : (e.message ?? 'Lỗi');
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Lỗi: $msg')));
+      AppToast.error(context, e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -305,19 +272,11 @@ class _TeamCardState extends ConsumerState<_TeamCard> {
         data: {'team_id': widget.team['team_id'], 'note': 'Đăng ký bằng team đã có'},
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('Đăng ký team thành công, chờ BTC duyệt'),
-            backgroundColor: context.successGreen),
-      );
+      AppToast.success(context, 'Đăng ký team thành công, chờ BTC duyệt');
       widget.onRegistered?.call();
     } on DioException catch (e) {
-      final msg = e.response?.data is Map
-          ? '${e.response?.data['detail']}'
-          : (e.message ?? 'Lỗi');
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Lỗi: $msg')));
+      AppToast.error(context, e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -455,17 +414,11 @@ class _CreateTeamSheetState extends ConsumerState<_CreateTeamSheet> {
   Future<void> _create() async {
     final name = _nameCtrl.text.trim();
     if (name.length < 2) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tên team tối thiểu 2 ký tự')),
-      );
+      AppToast.info(context, 'Tên team tối thiểu 2 ký tự');
       return;
     }
     if (widget.defaultContestId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text(
-                'Tạo team từ tab Cuộc thi → Đăng ký để chọn contest cụ thể.')),
-      );
+      AppToast.info(context, 'Tạo team từ tab Cuộc thi → Đăng ký để chọn contest cụ thể.');
       return;
     }
     setState(() => _busy = true);
@@ -477,12 +430,8 @@ class _CreateTeamSheetState extends ConsumerState<_CreateTeamSheet> {
       if (!mounted) return;
       Navigator.pop(context, res.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      final msg = e.response?.data is Map
-          ? '${e.response?.data['detail']}'
-          : (e.message ?? 'Lỗi');
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Lỗi: $msg')));
+      AppToast.error(context, e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }

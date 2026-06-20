@@ -38,6 +38,10 @@ dependencies = [
     # aiobotocore = async wrapper boto3 dùng cùng asyncpg event loop của FastAPI.
     # R2 S3-compatible nên dùng client "s3" với endpoint_url = R2.
     "aiobotocore>=2.15.0",
+    # PDF chứng nhận (2026-06-16): render HTML Mẫu C ra PDF.
+    # weasyprint cần native lib (pango/cairo) cài qua apt trong Dockerfile.
+    "weasyprint>=60.0",
+    "segno>=1.6.0",   # sinh QR (PNG data-URI) phía server, pure-Python
 ]
 
 [project.optional-dependencies]

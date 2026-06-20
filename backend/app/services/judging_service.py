@@ -187,13 +187,41 @@ async def list_my_judge_assignments(
         aid: cnt for aid, cnt in (await db.execute(score_stmt)).all()
     }
 
+    # Redesign 2026-06-20: enrich contest_id/contest_title/round_no/round_name
+    # để FE nhóm assignment theo cuộc thi → vòng (màn "Chấm bài" mới).
+    round_stmt = select(
+        ContestRound.round_id,
+        ContestRound.round_no,
+        ContestRound.round_name,
+        ContestRound.contest_id,
+    ).where(ContestRound.round_id.in_(round_ids))
+    round_meta: dict[int, dict] = {
+        rid: {"round_no": rno, "round_name": rname, "contest_id": cid}
+        for rid, rno, rname, cid in (await db.execute(round_stmt)).all()
+    }
+    contest_ids = {m["contest_id"] for m in round_meta.values()}
+    contest_title_by_id: dict[int, str] = {}
+    if contest_ids:
+        contest_stmt = select(Contest.contest_id, Contest.title).where(
+            Contest.contest_id.in_(contest_ids)
+        )
+        contest_title_by_id = {
+            cid: title for cid, title in (await db.execute(contest_stmt)).all()
+        }
+
     out: list[dict] = []
     for a in assignments:
         total = criteria_count_by_round.get(a.round_id, 0)
         scored = scored_count_by_assignment.get(a.assignment_id, 0)
+        rmeta = round_meta.get(a.round_id, {})
+        cid = rmeta.get("contest_id")
         out.append({
             "assignment_id": a.assignment_id,
             "round_id": a.round_id,
+            "round_no": rmeta.get("round_no"),
+            "round_name": rmeta.get("round_name"),
+            "contest_id": cid,
+            "contest_title": contest_title_by_id.get(cid) if cid else None,
             "entry_id": a.entry_id,
             "submission_id": a.submission_id,
             "judge_id": a.judge_id,

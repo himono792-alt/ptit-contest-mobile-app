@@ -64,6 +64,7 @@ class CertVerifyOut(BaseModel):
     """Public GET /verify/{qr_code} — anyone có QR đều xem được."""
 
     valid: bool
+    qr_code: str | None = None
     cert_id: int | None = None
     contest_title: str | None = None
     award_title: str | None = None

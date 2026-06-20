@@ -4,7 +4,6 @@
 // - Form: role tabs decorative + Ghi nhớ tôi + SSO disabled "Coming soon"
 import 'dart:async';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
+import '../../core/errors/friendly_error.dart';
 import '../../core/auth/biometric_service.dart';
 import '../../core/theme.dart';
 import 'forgot_password_request_screen.dart';
@@ -162,11 +162,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       if (!mounted) return;
       // Animation xong → trigger router redirect.
       ref.invalidate(authProvider);
-    } on DioException catch (e) {
+    } catch (e) {
       setState(() {
-        _error = e.response?.data is Map
-            ? (e.response?.data['detail']?.toString() ?? 'Lỗi đăng nhập')
-            : 'Không kết nối được server';
+        _error = FriendlyError.of(e);
         _splitting = false;
         _loading = false;
       });

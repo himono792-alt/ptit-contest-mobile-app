@@ -24,12 +24,16 @@ class Pill extends StatelessWidget {
   /// Explicit background. Chỉ dùng khi `kind` = null.
   final Color? bg;
 
+  /// Optional leading icon (size 11, same color as label).
+  final IconData? icon;
+
   const Pill({
     super.key,
     required this.label,
     this.kind,
     this.color,
     this.bg,
+    this.icon,
   });
 
   /// Tạo Pill theo status string của BE.
@@ -99,20 +103,20 @@ class Pill extends StatelessWidget {
         color: finalBg,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(
-        label,
-        // Sprint 4 fix C5 (2026-05-07): softWrap=false + maxLines=1 + overflow=visible
-        // để badge KHÔNG wrap "FINISHE\nD" / "ONGOIN\nG" ở narrow column (admin
-        // table 567px). Container width sẽ flex theo text natural width.
-        softWrap: false,
-        maxLines: 1,
-        overflow: TextOverflow.visible,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: fg,
-        ),
-      ),
+      child: icon != null
+          ? Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(icon, size: 11, color: fg),
+              const SizedBox(width: 3),
+              Text(label, softWrap: false, maxLines: 1, overflow: TextOverflow.visible,
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: fg)),
+            ])
+          : Text(
+              label,
+              softWrap: false,
+              maxLines: 1,
+              overflow: TextOverflow.visible,
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: fg),
+            ),
     );
   }
 }

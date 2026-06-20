@@ -1,0 +1,40 @@
+name: Frontend tests
+
+# Chạy phân tích + test Flutter tự động mỗi push/PR đụng tới frontend.
+# Tận dụng bộ test FE đã có trong frontend/test/.
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-tests.yml'
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-tests.yml'
+
+jobs:
+  test:
+    name: flutter test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Cài dependencies
+        run: flutter pub get
+
+      - name: Phân tích (advisory)
+        continue-on-error: true   # chưa chặn merge — còn analyzer nit cũ
+        run: flutter analyze
+
+      - name: Chạy test
+        run: flutter test

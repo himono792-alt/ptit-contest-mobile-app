@@ -1,4 +1,4 @@
-import 'package:dio/dio.dart';
+﻿import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_toast.dart';
 import 'master_data_screen.dart' show facultiesProvider;
 
 /// Show modal CreateContestDialog. Returns true nếu user đã tạo thành công.
@@ -128,11 +129,11 @@ class _CreateContestDialogState extends ConsumerState<CreateContestDialog> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_startAt == null || _endAt == null) {
-      _snack('Phải chọn thời gian bắt đầu + kết thúc');
+      AppToast.info(context, 'Phải chọn thời gian bắt đầu + kết thúc');
       return;
     }
     if (_endAt!.isBefore(_startAt!)) {
-      _snack('Thời gian kết thúc phải sau thời gian bắt đầu');
+      AppToast.info(context, 'Thời gian kết thúc phải sau thời gian bắt đầu');
       return;
     }
 
@@ -182,21 +183,14 @@ class _CreateContestDialogState extends ConsumerState<CreateContestDialog> {
 
       if (!mounted) return;
       Navigator.pop(context, true);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(successMsg)));
+      AppToast.success(context, successMsg);
     } on DioException catch (e) {
-      final msg = e.response?.data is Map
-          ? '${e.response?.data['detail']}'
-          : (e.message ?? 'Lỗi tạo contest');
-      _snack('Lỗi: $msg');
+      AppToast.error(context, e);
     } catch (e) {
-      _snack('Lỗi: $e');
+      AppToast.error(context, e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
-  }
-
-  void _snack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   @override
@@ -240,6 +234,7 @@ class _CreateContestDialogState extends ConsumerState<CreateContestDialog> {
                       ]),
                 ),
                 IconButton(
+                  tooltip: 'Đóng',
                   icon: const Icon(Icons.close),
                   onPressed: _busy ? null : () => Navigator.pop(context, false),
                 ),
@@ -264,10 +259,10 @@ class _CreateContestDialogState extends ConsumerState<CreateContestDialog> {
                             hintText: 'VD: Hackathon Mùa thu 2026',
                           ),
                           onChanged: (v) {
-                            // Auto-fill slug nếu user CHƯA chỉnh slug thủ công
                             if (!_slugManuallyEdited) {
                               _slugCtrl.text = _generateSlug(v);
                             }
+                            setState(() {});
                           },
                           validator: (v) => (v == null || v.trim().length < 3) ? 'Tối thiểu 3 ký tự' : null,
                         ),
@@ -306,7 +301,7 @@ class _CreateContestDialogState extends ConsumerState<CreateContestDialog> {
                         Row(children: [
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: _deliveryMode,
+                              initialValue: _deliveryMode,
                               decoration: const InputDecoration(labelText: 'Hình thức tổ chức *'),
                               items: const [
                                 DropdownMenuItem(value: 'ONLINE', child: Text('Online')),
@@ -319,7 +314,7 @@ class _CreateContestDialogState extends ConsumerState<CreateContestDialog> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: _participationMode,
+                              initialValue: _participationMode,
                               decoration: const InputDecoration(labelText: 'Tham gia *'),
                               items: const [
                                 DropdownMenuItem(value: 'INDIVIDUAL', child: Text('Cá nhân')),
@@ -395,7 +390,7 @@ class _CreateContestDialogState extends ConsumerState<CreateContestDialog> {
                           loading: () => const LinearProgressIndicator(color: ptitRed),
                           error: (_, __) => Text('Không tải được khoa', style: GoogleFonts.plusJakartaSans(color: ptitRed)),
                           data: (list) => DropdownButtonFormField<int?>(
-                            value: _hostFacultyId,
+                            initialValue: _hostFacultyId,
                             decoration: const InputDecoration(
                               labelText: 'Khoa chủ trì *',
                               helperText: 'Bắt buộc — BCN của khoa này sẽ phê duyệt đề xuất',
@@ -432,7 +427,7 @@ class _CreateContestDialogState extends ConsumerState<CreateContestDialog> {
                           title: const Text('Submit ngay cho BCN duyệt'),
                           subtitle: const Text('Bật = tự gọi /submit-for-approval sau khi tạo → BCN thấy trong tab Phê duyệt. Tắt = giữ status DRAFT.', style: TextStyle(fontSize: 11)),
                           value: _submitForApprovalAfterCreate,
-                          activeColor: ptitRed,
+                          activeThumbColor: ptitRed,
                           onChanged: (v) => setState(() => _submitForApprovalAfterCreate = v),
                         ),
 
@@ -473,15 +468,28 @@ class _CreateContestDialogState extends ConsumerState<CreateContestDialog> {
                   child: const Text('Hủy'),
                 ),
                 const SizedBox(width: 10),
-                FilledButton.icon(
-                  onPressed: _busy ? null : _submit,
-                  icon: _busy
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.check, size: 18),
-                  label: const Text('Tạo cuộc thi'),
-                  style: FilledButton.styleFrom(
-                      backgroundColor: ptitRed, minimumSize: const Size(160, 40)),
-                ),
+                Builder(builder: (context) {
+                  final missingTitle = _titleCtrl.text.trim().length < 3;
+                  final missingDates = _startAt == null || _endAt == null;
+                  final canSubmit = !_busy && !missingTitle && !missingDates;
+                  final reason = missingTitle
+                      ? 'Thiếu tên cuộc thi (≥3 ký tự)'
+                      : missingDates
+                          ? 'Chưa chọn thời gian bắt đầu / kết thúc'
+                          : null;
+                  return Tooltip(
+                    message: reason ?? '',
+                    child: FilledButton.icon(
+                      onPressed: canSubmit ? _submit : null,
+                      icon: _busy
+                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Icon(Icons.check, size: 18),
+                      label: const Text('Tạo cuộc thi'),
+                      style: FilledButton.styleFrom(
+                          backgroundColor: ptitRed, minimumSize: const Size(160, 40)),
+                    ),
+                  );
+                }),
               ]),
             ),
           ],

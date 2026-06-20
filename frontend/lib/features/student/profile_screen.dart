@@ -1,4 +1,4 @@
-import 'package:dio/dio.dart';
+﻿import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -9,6 +9,8 @@ import '../../core/auth/auth_provider.dart';
 import '../../core/auth/biometric_service.dart';
 import '../../core/theme.dart';
 import '../../core/theme_provider.dart';
+import '../../core/widgets/app_toast.dart';
+import '../../core/widgets/help_button.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_top_bar.dart';
 import 'cert_verify_screen.dart';
@@ -26,7 +28,9 @@ class ProfileScreen extends ConsumerWidget {
     }
     final initial = user.fullName.split(' ').last.substring(0, 1).toUpperCase();
     return Scaffold(
-      appBar: const MTopBar(title: 'Cài đặt'),
+      appBar: const MTopBar(title: 'Cài đặt', actions: [
+        HelpButton(id: 'sv_profile'),
+      ]),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -116,9 +120,9 @@ class ProfileScreen extends ConsumerWidget {
                               color: context.textPrimary)),
                     ),
                     IconButton(
+                      tooltip: 'Cập nhật thông tin',
                       icon: const Icon(Icons.edit_outlined,
                           size: 16, color: ptitRed),
-                      tooltip: 'Cập nhật thông tin',
                       visualDensity: VisualDensity.compact, constraints: const BoxConstraints(minWidth: 44, minHeight: 44), // P0 #4 hit area ≥44 (WCAG 2.5.5)
                       onPressed: () => Navigator.of(context).push(
                           MaterialPageRoute(
@@ -295,11 +299,10 @@ class ProfileScreen extends ConsumerWidget {
               ref.invalidate(authProvider);
               if (!ctx.mounted) return;
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Đã cập nhật'), backgroundColor: context.successGreen));
+              AppToast.success(context, 'Đã cập nhật');
             } on DioException catch (e) {
               if (!ctx.mounted) return;
-              ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('${e.message}')));
+              AppToast.error(ctx, e);
             }
           },
           child: const Text('Lưu'),
@@ -359,12 +362,10 @@ class ProfileScreen extends ConsumerWidget {
               });
               if (!ctx.mounted) return;
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Đổi mật khẩu OK'), backgroundColor: context.successGreen));
+              AppToast.success(context, 'Đổi mật khẩu thành công');
             } on DioException catch (e) {
               if (!ctx.mounted) return;
-              final msg = e.response?.data is Map ? '${e.response?.data['detail']}' : e.message;
-              ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('$msg')));
+              AppToast.error(ctx, e);
             }
           },
           child: const Text('Đổi'),
@@ -402,9 +403,7 @@ class ProfileScreen extends ConsumerWidget {
             style: FilledButton.styleFrom(backgroundColor: ptitRed),
             onPressed: () async {
               if (confirmCtrl.text.trim().toUpperCase() != 'XÓA') {
-                ScaffoldMessenger.of(ctx).showSnackBar(
-                  const SnackBar(content: Text('Cần gõ chính xác "XÓA"')),
-                );
+                AppToast.info(ctx, 'Cần gõ chính xác "XÓA"');
                 return;
               }
               try {
@@ -413,17 +412,10 @@ class ProfileScreen extends ConsumerWidget {
                 Navigator.pop(ctx);
                 await ref.read(authProvider.notifier).logout();
                 if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Đã xóa tài khoản — tạm biệt!')),
-                );
+                AppToast.success(context, 'Đã xóa tài khoản — tạm biệt!');
               } on DioException catch (e) {
                 if (!ctx.mounted) return;
-                final msg = e.response?.data is Map
-                    ? '${e.response?.data['detail']}'
-                    : e.message;
-                ScaffoldMessenger.of(ctx).showSnackBar(
-                  SnackBar(content: Text('Lỗi xóa: $msg')),
-                );
+                AppToast.error(ctx, e);
               }
             },
             child: const Text('Xóa vĩnh viễn'),
@@ -612,20 +604,14 @@ class _BiometricToggleTileState extends ConsumerState<_BiometricToggleTile> {
       );
       if (!ok) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Xác thực thất bại — chưa bật.')),
-        );
+        AppToast.info(context, 'Xác thực thất bại — chưa bật.');
         return;
       }
     }
     await storage.setBiometricEnabled(value);
     if (!mounted) return;
     setState(() => _enabled = value);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(value
-          ? 'Đã bật đăng nhập sinh trắc'
-          : 'Đã tắt đăng nhập sinh trắc'),
-    ));
+    AppToast.success(context, value ? 'Đã bật đăng nhập sinh trắc' : 'Đã tắt đăng nhập sinh trắc');
   }
 
   @override
@@ -650,7 +636,7 @@ class _BiometricToggleTileState extends ConsumerState<_BiometricToggleTile> {
 
     return SwitchListTile(
       secondary: const Icon(Icons.fingerprint, color: ptitRed, size: 20),
-      activeColor: ptitRed,
+      activeThumbColor: ptitRed,
       title: const Text('Đăng nhập sinh trắc',
           style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
       subtitle: Text(
@@ -706,22 +692,33 @@ class _ThemeModeTile extends ConsumerWidget {
           const Text('Chọn giao diện',
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
           const SizedBox(height: 12),
-          for (final mode in ThemeMode.values)
-            RadioListTile<ThemeMode>(
-              value: mode,
-              groupValue: current,
-              activeColor: ptitRed,
-              title: Text(themeModeLabel(mode),
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-              subtitle: Text(_themeDescription(mode),
-                  style: TextStyle(fontSize: 11, color: context.textMuted)),
-              onChanged: (v) {
-                if (v != null) {
-                  ref.read(themeProvider.notifier).setMode(v);
-                  Navigator.pop(ctx);
-                }
-              },
+          // Flutter 3.32+: RadioGroup quản lý groupValue/onChanged thay vì
+          // đặt trên từng RadioListTile (đã deprecated).
+          RadioGroup<ThemeMode>(
+            groupValue: current,
+            onChanged: (v) {
+              if (v != null) {
+                ref.read(themeProvider.notifier).setMode(v);
+                Navigator.pop(ctx);
+              }
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final mode in ThemeMode.values)
+                  RadioListTile<ThemeMode>(
+                    value: mode,
+                    activeColor: ptitRed,
+                    title: Text(themeModeLabel(mode),
+                        style: const TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w600)),
+                    subtitle: Text(_themeDescription(mode),
+                        style:
+                            TextStyle(fontSize: 11, color: context.textMuted)),
+                  ),
+              ],
             ),
+          ),
           const SizedBox(height: 8),
         ]),
       ),

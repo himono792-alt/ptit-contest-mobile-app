@@ -19,6 +19,7 @@ from app.models.enums import (
     RegistrationStatus,
 )
 from app.models.identity import AppUser
+from app.models.certificate import IssuedCertificate
 from app.models.judging import ContestResult, RoundResult
 from app.models.master_data import Student
 from app.models.workflow import WorkflowApproval
@@ -362,7 +363,7 @@ async def publish_results(
             scope=NotificationScope.CONTEST,
             contest_id=contest_id,
             created_by=user.user_id,
-            target_route=f"/contests/{contest_id}",
+            target_route=f"/contests/{contest.slug}",
         )
         notified_count = len(participant_user_ids)
 
@@ -401,10 +402,15 @@ async def list_my_results(db: AsyncSession, user: AppUser) -> list[dict]:
     if not entry_ids:
         return []
 
-    # Get published results với contest info
+    # Get published results với contest info + qr_code chứng nhận (nếu đã cấp).
+    # LEFT JOIN issued_certificates để SV lấy được mã QR cert của mình → tải/xác thực.
     stmt = (
-        select(ContestResult, Contest)
+        select(ContestResult, Contest, IssuedCertificate.qr_code)
         .join(Contest, Contest.contest_id == ContestResult.contest_id)
+        .outerjoin(
+            IssuedCertificate,
+            IssuedCertificate.contest_result_id == ContestResult.contest_result_id,
+        )
         .where(
             ContestResult.entry_id.in_(entry_ids),
             ContestResult.published_at.is_not(None),
@@ -422,6 +428,7 @@ async def list_my_results(db: AsyncSession, user: AppUser) -> list[dict]:
             "rank_no": cr.rank_no,
             "award_title": cr.award_title,
             "published_at": cr.published_at,
+            "cert_qr_code": qr_code,
         }
-        for cr, contest in rows
+        for cr, contest, qr_code in rows
     ]

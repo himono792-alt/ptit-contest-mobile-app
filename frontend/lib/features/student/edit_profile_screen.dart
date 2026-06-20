@@ -13,6 +13,7 @@ import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_toast.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -105,18 +106,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       await api.dio.patch('/me', data: body);
       ref.invalidate(authProvider);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('Đã lưu thông tin'), backgroundColor: context.successGreen),
-      );
+      AppToast.success(context, 'Đã lưu thông tin');
       Navigator.of(context).pop();
     } on DioException catch (e) {
-      final msg = e.response?.data is Map
-          ? '${e.response?.data['detail']}'
-          : (e.message ?? 'Lỗi');
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Lỗi: $msg')));
+      AppToast.error(context, e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -203,7 +197,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: DropdownButtonFormField<String>(
-                          value: _gender,
+                          initialValue: _gender,
                           decoration: const InputDecoration(
                             labelText: 'Giới tính',
                             prefixIcon: Icon(Icons.wc, size: 18),

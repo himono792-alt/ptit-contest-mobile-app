@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,7 +5,11 @@ import 'package:intl/intl.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
+import '../../core/errors/friendly_error.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_toast.dart';
+import '../../core/widgets/empty_view.dart';
+import '../../core/widgets/help_button.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_shimmer.dart';
 import '../../core/widgets/m_top_bar.dart';
@@ -102,6 +105,7 @@ class NotificationsScreen extends ConsumerWidget {
               )
             : null,
         actions: [
+          const HelpButton(id: 'sv_notifications'),
           asyncData.when(
             loading: () => const SizedBox.shrink(),
             error: (_, __) => const SizedBox.shrink(),
@@ -129,23 +133,16 @@ class NotificationsScreen extends ConsumerWidget {
         error: (e, _) => Center(
             child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: Text('Lỗi: ${_msg(e)}',
+                child: Text('Lỗi: ${FriendlyError.of(e)}',
                     style: const TextStyle(color: ptitRed),
                     textAlign: TextAlign.center))),
         data: (data) {
           final items = (data['items'] as List).cast<Map<String, dynamic>>();
           if (items.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: EdgeInsets.all(40),
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.notifications_off_outlined,
-                      size: 56, color: context.textMuted),
-                  SizedBox(height: 12),
-                  Text('Chưa có thông báo nào',
-                      style: TextStyle(color: context.textMuted, fontSize: 13)),
-                ]),
-              ),
+            return const EmptyView(
+              icon: Icons.notifications_none,
+              title: 'Chưa có thông báo',
+              subtitle: 'Các cập nhật về cuộc thi và bài nộp sẽ hiện ở đây.',
             );
           }
           // Sprint 17 (2026-05-08) S17-4: group by time bucket.
@@ -222,10 +219,7 @@ class NotificationsScreen extends ConsumerWidget {
         api.dio.patch('/me/notifications/$notifId/read').then((_) {
           ref.invalidate(notificationsProvider);
         }).catchError((e) {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context)
-                .showSnackBar(SnackBar(content: Text('Lỗi: ${_msg(e)}')));
-          }
+          if (context.mounted) AppToast.error(context, e);
         });
       } catch (_) {/* swallow */}
     }
@@ -249,12 +243,7 @@ class NotificationsScreen extends ConsumerWidget {
         // Route thật (vd /contests/abc, /admin/contests/5/manage) → push như cũ.
         try {
           context.push(targetRoute);
-        } catch (e) {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('Không tìm thấy màn hình: $targetRoute')));
-          }
-        }
+        } catch (_) {/* route không hợp lệ — bỏ qua */}
       }
     }
   }
@@ -265,15 +254,10 @@ class NotificationsScreen extends ConsumerWidget {
       final res = await api.dio.post('/me/notifications/mark-all-read');
       ref.invalidate(notificationsProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(
-                'Đã đọc ${res.data['marked_read'] ?? 0} thông báo')));
+        AppToast.success(context, 'Đã đọc ${res.data['marked_read'] ?? 0} thông báo');
       }
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Lỗi: ${_msg(e)}')));
-      }
+      if (context.mounted) AppToast.error(context, e);
     }
   }
 }
@@ -350,9 +334,6 @@ class _NotificationCard extends StatelessWidget {
   }
 }
 
-String _msg(Object e) => e is DioException
-    ? (e.response?.data is Map ? '${e.response?.data['detail']}' : e.message ?? '')
-    : '$e';
 
 /// Sprint 17 (2026-05-08) S17-4: section header cho time bucket.
 class _TimeBucketHeader extends StatelessWidget {

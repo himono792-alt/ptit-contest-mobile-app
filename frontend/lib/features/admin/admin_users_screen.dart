@@ -1,12 +1,14 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
+import '../../core/errors/friendly_error.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_toast.dart';
 import '../../core/widgets/empty_view.dart';
+import '../../core/widgets/help_button.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_shimmer.dart';
 import '../../core/widgets/pill.dart';
@@ -97,6 +99,8 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                 ],
               ),
             ),
+            const HelpButton(id: 'admin_users'),
+            const SizedBox(width: 4),
             OutlinedButton.icon(
               onPressed: () => _openBulkImportDialog(),
               icon: const Icon(Icons.upload_file, size: 16),
@@ -140,7 +144,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               width: 180,
               height: 40,
               child: DropdownButtonFormField<String?>(
-                value: params.roleFilter,
+                initialValue: params.roleFilter,
                 isDense: true,
                 isExpanded: true,
                 decoration: const InputDecoration(
@@ -164,7 +168,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               width: 160,
               height: 40,
               child: DropdownButtonFormField<String?>(
-                value: params.statusFilter,
+                initialValue: params.statusFilter,
                 isDense: true,
                 isExpanded: true,
                 decoration: const InputDecoration(
@@ -315,10 +319,7 @@ class _BulkImportDialogState extends ConsumerState<_BulkImportDialog> {
           'Inserted ${d['inserted']} · Skipped ${d['skipped']}'
           '${(d['errors'] as List).isEmpty ? "" : "\nErrors: ${(d['errors'] as List).join("; ")}"}');
     } catch (e) {
-      final msg = e is DioException
-          ? (e.response?.data is Map ? '${e.response?.data['detail']}' : e.message ?? '')
-          : '$e';
-      setState(() => _resultMsg = 'Lỗi: $msg');
+      setState(() => _resultMsg = FriendlyError.of(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -464,16 +465,11 @@ class _UserRowState extends ConsumerState<_UserRow> {
         await api.dio.delete(path);
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(successMsg)));
+      AppToast.success(context, successMsg);
       widget.refresh();
     } catch (e) {
       if (!mounted) return;
-      final msg = e is DioException
-          ? (e.response?.data is Map ? '${e.response?.data['detail']}' : e.message ?? '')
-          : '$e';
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Lỗi: $msg')));
+      AppToast.error(context, e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -567,29 +563,35 @@ class _UserRowState extends ConsumerState<_UserRow> {
                     iconSize: 18,
                     visualDensity: VisualDensity.compact, constraints: const BoxConstraints(minWidth: 44, minHeight: 44), // P0 #4 hit area ≥44 (WCAG 2.5.5)
                     onPressed: () async {
-                      final roles =
-                          await showDialog<List<String>>(
+                      final previousRoles = List<String>.from(u['roles'] ?? []);
+                      final roles = await showDialog<List<String>>(
                         context: context,
-                        builder: (_) => _RolesDialog(
-                            currentRoles: List<String>.from(u['roles'] ?? [])),
+                        builder: (_) =>
+                            _RolesDialog(currentRoles: previousRoles),
                       );
                       if (roles != null) {
                         try {
                           final api = ref.read(apiClientProvider);
-                          await api.dio
-                              .patch('/admin/users/${u['user_id']}/roles',
-                                  data: {'role_codes': roles});
+                          final userId = u['user_id'];
+                          await api.dio.patch('/admin/users/$userId/roles',
+                              data: {'role_codes': roles});
                           if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Đã cập nhật roles')));
                           widget.refresh();
+                          AppToast.successWithUndo(
+                            context,
+                            'Đã cập nhật roles',
+                            () async {
+                              try {
+                                await api.dio.patch(
+                                    '/admin/users/$userId/roles',
+                                    data: {'role_codes': previousRoles});
+                                widget.refresh();
+                              } catch (_) {}
+                            },
+                          );
                         } catch (e) {
                           if (!context.mounted) return;
-                          final msg = e is DioException
-                              ? (e.response?.data is Map ? '${e.response?.data['detail']}' : e.message ?? '')
-                              : '$e';
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Lỗi: $msg')));
+                          AppToast.error(context, e);
                         }
                       }
                     },
@@ -603,23 +605,8 @@ class _UserRowState extends ConsumerState<_UserRow> {
                       onPressed: () async {
                         final confirm = await showDialog<bool>(
                           context: context,
-                          builder: (_) => AlertDialog(
-                            title: const Text('Xóa user?'),
-                            content: Text(
-                                'Soft delete user #${u['user_id']} (${u['email']})?'),
-                            actions: [
-                              TextButton(
-                                  onPressed: () =>
-                                      Navigator.pop(context, false),
-                                  child: const Text('Hủy')),
-                              FilledButton(
-                                  onPressed: () =>
-                                      Navigator.pop(context, true),
-                                  style: FilledButton.styleFrom(
-                                      backgroundColor: ptitRed),
-                                  child: const Text('Xóa')),
-                            ],
-                          ),
+                          builder: (_) => _DangerDeleteDialog(
+                              email: u['email'] as String? ?? '#${u['user_id']}'),
                         );
                         if (confirm == true) {
                           await _action('/admin/users/${u['user_id']}',
@@ -668,13 +655,11 @@ class _CreateUserDialogState extends ConsumerState<_CreateUserDialog> {
     if (_email.text.isEmpty ||
         _password.text.isEmpty ||
         _fullName.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Email/Password/Full name bắt buộc')));
+      AppToast.info(context, 'Email/Password/Full name bắt buộc');
       return;
     }
     if (_roles.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Phải chọn ít nhất 1 role')));
+      AppToast.info(context, 'Phải chọn ít nhất 1 role');
       return;
     }
     setState(() => _busy = true);
@@ -689,15 +674,10 @@ class _CreateUserDialogState extends ConsumerState<_CreateUserDialog> {
       });
       if (!mounted) return;
       Navigator.of(context).pop(true);
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Đã tạo user ${_email.text}')));
+      AppToast.success(context, 'Đã tạo user ${_email.text}');
     } catch (e) {
       if (!mounted) return;
-      final msg = e is DioException
-          ? (e.response?.data is Map ? '${e.response?.data['detail']}' : e.message ?? '')
-          : '$e';
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Lỗi: $msg')));
+      AppToast.error(context, e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -850,17 +830,60 @@ class _RolesDialogState extends State<_RolesDialog> {
   }
 }
 
+class _DangerDeleteDialog extends StatefulWidget {
+  final String email;
+  const _DangerDeleteDialog({required this.email});
+  @override
+  State<_DangerDeleteDialog> createState() => _DangerDeleteDialogState();
+}
+
+class _DangerDeleteDialogState extends State<_DangerDeleteDialog> {
+  final _ctrl = TextEditingController();
+  bool _valid = false;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Xóa tài khoản ${widget.email}?'),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        Text(
+          'Hành động này KHÔNG THỂ hoàn tác. Gõ "XOA" để xác nhận.',
+          style: TextStyle(color: context.textPrimary),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _ctrl,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'XOA'),
+          onChanged: (v) => setState(() => _valid = v.trim() == 'XOA'),
+        ),
+      ]),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Hủy')),
+        FilledButton(
+            onPressed: _valid ? () => Navigator.pop(context, true) : null,
+            style: FilledButton.styleFrom(backgroundColor: ptitRed),
+            child: const Text('Xóa')),
+      ],
+    );
+  }
+}
+
 class _ErrorView extends StatelessWidget {
   final Object error;
   final VoidCallback onRetry;
   const _ErrorView({required this.error, required this.onRetry});
   @override
   Widget build(BuildContext context) {
-    final msg = error is DioException
-        ? ((error as DioException).response?.data is Map
-            ? '${(error as DioException).response?.data['detail']}'
-            : (error as DioException).message ?? '')
-        : '$error';
+    final msg = FriendlyError.of(error);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),

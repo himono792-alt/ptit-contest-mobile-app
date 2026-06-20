@@ -14,11 +14,16 @@ import 'package:intl/intl.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
+import '../../core/errors/friendly_error.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_toast.dart';
+import '../../core/widgets/help_button.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_shimmer.dart';
+import '../../core/widgets/empty_view.dart';
 import '../../core/widgets/m_top_bar.dart';
 import '../../core/widgets/pill.dart';
+import 'student_shell.dart' show studentTabProvider;
 
 final myEntriesProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
@@ -54,7 +59,9 @@ class _MyRegistrationsScreenState extends ConsumerState<MyRegistrationsScreen> {
   Widget build(BuildContext context) {
     final asyncList = ref.watch(myEntriesProvider);
     return Scaffold(
-      appBar: const MTopBar(title: 'Của tôi'),
+      appBar: const MTopBar(title: 'Của tôi', actions: [
+        HelpButton(id: 'sv_my_registrations'),
+      ]),
       body: Column(children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
@@ -97,52 +104,224 @@ class _MyRegistrationsScreenState extends ConsumerState<MyRegistrationsScreen> {
             loading: () =>
                 // Phase 2 step 5: skeleton thay spinner
                 const MCardListSkeleton(count: 3, textLines: 3),
-            error: (e, _) {
-              final msg = e is DioException
-                  ? (e.response?.data is Map
-                      ? '${e.response?.data['detail']}'
-                      : e.message ?? '')
-                  : '$e';
-              return Center(
-                  child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Text('Lỗi: $msg',
-                          style: TextStyle(color: context.textMuted))));
-            },
+            error: (e, _) => Center(
+                child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(FriendlyError.of(e),
+                        style: TextStyle(color: context.textMuted)))),
             data: (entries) {
               final filtered = entries.where(_matchesFilter).toList();
               if (filtered.isEmpty) {
-                return RefreshIndicator(
-                  color: ptitRed,
-                  onRefresh: () async => ref.invalidate(myEntriesProvider),
-                  child: ListView(children: [
-                    const SizedBox(height: 60),
-                    Icon(Icons.inbox_outlined,
-                        size: 64, color: context.textMuted.withValues(alpha: 0.6)),
-                    const SizedBox(height: 12),
-                    Text(
-                      _filter == 'Tất cả'
-                          ? 'Chưa đăng ký cuộc thi nào.\nMở tab Cuộc thi để duyệt + đăng ký.'
-                          : 'Không có entry nào ở mục "$_filter"',
-                      textAlign: TextAlign.center,
-                      style:
-                          Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.textMuted),
-                    ),
-                    const SizedBox(height: 60),
-                  ]),
-                );
+                return _filter == 'Tất cả'
+                    ? EmptyView(
+                        icon: Icons.how_to_reg_outlined,
+                        title: 'Bạn chưa đăng ký cuộc thi nào',
+                        subtitle: 'Khám phá các cuộc thi đang mở và ghi danh ngay hôm nay.',
+                        action: FilledButton.icon(
+                          icon: const Icon(Icons.search),
+                          label: const Text('Khám phá cuộc thi'),
+                          onPressed: () => ref.read(studentTabProvider.notifier).state = 1,
+                        ),
+                      )
+                    : EmptyView(
+                        icon: Icons.inbox_outlined,
+                        title: 'Không có entry nào ở mục "$_filter"',
+                      );
               }
+              // Redesign 2026-06-20: stat strip (toàn bộ entries) + gom nhóm
+              // theo giai đoạn (filtered).
+              final groups = <String, List<Map<String, dynamic>>>{};
+              for (final e in filtered) {
+                groups.putIfAbsent(_entryCategory(e), () => []).add(e);
+              }
+              final cats =
+                  _entryCategoryOrder.where(groups.containsKey).toList();
               return RefreshIndicator(
                 color: ptitRed,
                 onRefresh: () async => ref.invalidate(myEntriesProvider),
-                child: ListView.builder(
+                child: ListView(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  itemCount: filtered.length,
-                  itemBuilder: (_, i) => _EntryCard(entry: filtered[i]),
+                  children: [
+                    _RegStatStrip(entries: entries),
+                    const SizedBox(height: 12),
+                    for (final cat in cats) ...[
+                      _RegGroupHeader(
+                        label: cat,
+                        count: groups[cat]!.length,
+                        color: _entryCategoryColor(context, cat),
+                      ),
+                      for (final e in groups[cat]!) _EntryCard(entry: e),
+                    ],
+                  ],
                 ),
               );
             },
           ),
+        ),
+      ]),
+    );
+  }
+}
+
+// Redesign 2026-06-20: nhóm giai đoạn + stat strip cho "Đăng ký của tôi".
+const _entryCategoryOrder = [
+  'Đang dự thi',
+  'Chờ duyệt',
+  'Đã hoàn thành',
+  'Khác',
+];
+
+String _entryCategory(Map<String, dynamic> e) {
+  final rs = e['registration_status'] as String?;
+  final cs = e['contest_status'] as String?;
+  if (rs == 'PENDING') return 'Chờ duyệt';
+  if (cs == 'FINISHED') return 'Đã hoàn thành';
+  if (['REG_OPEN', 'REG_CLOSED', 'ONGOING'].contains(cs)) {
+    return 'Đang dự thi';
+  }
+  return 'Khác';
+}
+
+Color _entryCategoryColor(BuildContext context, String cat) {
+  switch (cat) {
+    case 'Đang dự thi':
+      return ptitRed;
+    case 'Chờ duyệt':
+      return context.warnOrange;
+    case 'Đã hoàn thành':
+      return context.successGreen;
+    default:
+      return context.textMuted;
+  }
+}
+
+class _RegStatStrip extends StatelessWidget {
+  final List<Map<String, dynamic>> entries;
+  const _RegStatStrip({required this.entries});
+
+  @override
+  Widget build(BuildContext context) {
+    int byCat(String c) =>
+        entries.where((e) => _entryCategory(e) == c).length;
+    return Row(children: [
+      Expanded(
+        child: _RegStat(
+          value: '${entries.length}',
+          label: 'Tổng đăng ký',
+          color: ptitRed,
+          icon: Icons.how_to_reg_outlined,
+        ),
+      ),
+      const SizedBox(width: 8),
+      Expanded(
+        child: _RegStat(
+          value: '${byCat('Chờ duyệt')}',
+          label: 'Chờ duyệt',
+          color: context.warnOrange,
+          icon: Icons.hourglass_empty_outlined,
+        ),
+      ),
+      const SizedBox(width: 8),
+      Expanded(
+        child: _RegStat(
+          value: '${byCat('Đang dự thi')}',
+          label: 'Đang dự thi',
+          color: context.infoBlue,
+          icon: Icons.flag_outlined,
+        ),
+      ),
+    ]);
+  }
+}
+
+class _RegStat extends StatelessWidget {
+  final String value;
+  final String label;
+  final Color color;
+  final IconData icon;
+  const _RegStat(
+      {required this.value,
+      required this.label,
+      required this.color,
+      required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+      decoration: BoxDecoration(
+        color: context.cardBg,
+        border: Border.all(color: context.cardBorder),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(height: 6),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  height: 1.1,
+                  color: context.textPrimary)),
+          Text(label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                  color: context.textMuted)),
+        ],
+      ),
+    );
+  }
+}
+
+class _RegGroupHeader extends StatelessWidget {
+  final String label;
+  final int count;
+  final Color color;
+  const _RegGroupHeader(
+      {required this.label, required this.count, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6, bottom: 8),
+      child: Row(children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 8),
+        Text(label,
+            style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: context.textPrimary,
+                letterSpacing: -0.2)),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+          decoration: BoxDecoration(
+            color: context.cardBorder.withValues(alpha: 0.4),
+            borderRadius: BorderRadius.circular(AppRadius.tight),
+          ),
+          child: Text('$count',
+              style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w800,
+                  color: context.textMuted)),
         ),
       ]),
     );
@@ -177,15 +356,10 @@ class _EntryCard extends ConsumerWidget {
       await api.dio.delete('/contests/${entry['contest_id']}/registration');
       ref.invalidate(myEntriesProvider);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đã hủy đăng ký')));
+      AppToast.success(context, 'Đã hủy đăng ký');
     } on DioException catch (e) {
-      final msg = e.response?.data is Map
-          ? '${e.response?.data['detail']}'
-          : (e.message ?? '');
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Lỗi: $msg')));
+      AppToast.error(context, e);
     }
   }
 
@@ -259,16 +433,14 @@ class _EntryCard extends ConsumerWidget {
       final rounds = res.data as List;
       if (rounds.isEmpty) {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Cuộc thi chưa có round')));
+        AppToast.info(context, 'Cuộc thi chưa có round');
         return;
       }
       if (!context.mounted) return;
       context.push('/rounds/${rounds.first['round_id']}/submit');
     } on DioException catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('${e.message}')));
+      AppToast.error(context, e);
     }
   }
 
@@ -301,9 +473,10 @@ class _EntryCard extends ConsumerWidget {
           const SizedBox(height: 6),
           Row(children: [
             Pill(
-              label: isPending
-                  ? 'Chờ BTC duyệt'
-                  : (isApproved ? 'BTC đã duyệt' : rs),
+              label: isPending ? 'Chờ duyệt' : (isApproved ? 'Đã duyệt' : 'Từ chối'),
+              icon: isPending
+                  ? Icons.hourglass_empty
+                  : (isApproved ? Icons.check_circle_outline : Icons.cancel_outlined),
               color: isApproved
                   ? context.successGreen
                   : (isPending ? context.warnOrange : ptitRed),

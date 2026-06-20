@@ -1,14 +1,15 @@
 import 'dart:convert';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
+import '../../core/errors/friendly_error.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/empty_view.dart';
+import '../../core/widgets/help_button.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_shimmer.dart';
 import '../../core/widgets/pill.dart';
@@ -139,6 +140,7 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
                 ],
               ),
             ),
+            const HelpButton(id: 'admin_audit'),
             IconButton(
               tooltip: 'Refresh',
               icon: Icon(Icons.refresh, color: context.textMuted),
@@ -258,7 +260,7 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
             // Sprint 8b (2026-05-07): skeleton thay spinner.
             loading: () => const MCardListSkeleton(count: 6),
             error: (e, _) => Center(
-                child: Text('Lỗi: ${_msg(e)}',
+                child: Text('Lỗi: ${FriendlyError.of(e)}',
                     style: const TextStyle(color: ptitRed))),
             data: (data) {
               final items =
@@ -432,7 +434,3 @@ class _AuditRow extends StatelessWidget {
     );
   }
 }
-
-String _msg(Object e) => e is DioException
-    ? (e.response?.data is Map ? '${e.response?.data['detail']}' : e.message ?? '')
-    : '$e';

@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
+import '../../core/errors/friendly_error.dart';
 import '../../core/models/contest_detail.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_toast.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_top_bar.dart';
 import 'team_management_screen.dart';
@@ -67,19 +69,10 @@ class _RegisterContestScreenState extends ConsumerState<RegisterContestScreen> {
         data: {'note': _noteCtrl.text.isEmpty ? null : _noteCtrl.text},
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Đăng ký thành công, chờ BTC duyệt'),
-          backgroundColor: context.successGreen,
-        ),
-      );
+      AppToast.success(context, 'Đăng ký thành công, chờ BTC duyệt');
       context.go('/'); // back to list
     } on DioException catch (e) {
-      setState(() {
-        _error = e.response?.data is Map
-            ? '${e.response?.data['detail']}'
-            : e.message;
-      });
+      setState(() => _error = FriendlyError.of(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }

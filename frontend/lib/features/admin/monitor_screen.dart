@@ -1,10 +1,10 @@
-import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
+import '../../core/errors/friendly_error.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_shimmer.dart';
@@ -267,11 +267,7 @@ class _ErrorView extends StatelessWidget {
   const _ErrorView({required this.error, required this.onRetry});
   @override
   Widget build(BuildContext context) {
-    final msg = error is DioException
-        ? ((error as DioException).response?.data is Map
-            ? '${(error as DioException).response?.data['detail']}'
-            : (error as DioException).message ?? '')
-        : '$error';
+    final msg = FriendlyError.of(error);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),

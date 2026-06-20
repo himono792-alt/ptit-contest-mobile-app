@@ -1,14 +1,15 @@
-import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
+import '../../core/errors/friendly_error.dart';
 import '../../core/models/contest.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/empty_view.dart';
+import '../../core/widgets/help_button.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_shimmer.dart';
 import '../../core/widgets/m_top_bar.dart';
@@ -90,6 +91,7 @@ class _ContestListScreenState extends ConsumerState<ContestListScreen> {
 
     return Scaffold(
       appBar: MTopBar(title: 'Cuộc thi', actions: [
+        const HelpButton(id: 'sv_contest_list'),
         IconButton(
           tooltip: 'Bộ lọc',
           icon: Icon(
@@ -116,6 +118,7 @@ class _ContestListScreenState extends ConsumerState<ContestListScreen> {
                 suffixIcon: _searchCtrl.text.isEmpty
                     ? null
                     : IconButton(
+                        tooltip: 'Đóng',
                         icon: const Icon(Icons.close, size: 16),
                         onPressed: () {
                           _searchCtrl.clear();
@@ -160,17 +163,43 @@ class _ContestListScreenState extends ConsumerState<ContestListScreen> {
               child: data.items.isEmpty
                   // Sprint 18 (2026-05-08) S18-3: dùng EmptyView global enhanced
                   // (icon 72 + bg circle + heading bold) thay private text-only.
-                  ? const EmptyView(
-                      icon: Icons.emoji_events_outlined,
-                      title: 'Chưa có cuộc thi nào',
-                      subtitle:
-                          'Hãy quay lại sau khi BTC mở thêm cuộc thi mới.',
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: data.items.length,
-                      itemBuilder: (_, i) => _ContestCard(contest: data.items[i]),
-                    ),
+                  ? ListView(children: const [
+                      SizedBox(height: 80),
+                      EmptyView(
+                        icon: Icons.emoji_events_outlined,
+                        title: 'Chưa có cuộc thi nào',
+                        subtitle:
+                            'Hãy quay lại sau khi BTC mở thêm cuộc thi mới.',
+                      ),
+                    ])
+                  // Redesign 2026-06-20: stat strip + gom nhóm trạng thái.
+                  : Builder(builder: (_) {
+                      final groups = <String, List<ContestSummary>>{};
+                      for (final c in data.items) {
+                        groups
+                            .putIfAbsent(_svCategory(c.status), () => [])
+                            .add(c);
+                      }
+                      final cats = _svCategoryOrder
+                          .where(groups.containsKey)
+                          .toList();
+                      return ListView(
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          _SvContestStatStrip(items: data.items),
+                          const SizedBox(height: 12),
+                          for (final cat in cats) ...[
+                            _SvGroupHeader(
+                              label: cat,
+                              count: groups[cat]!.length,
+                              color: _svCategoryColor(context, cat),
+                            ),
+                            for (final c in groups[cat]!)
+                              _ContestCard(contest: c),
+                          ],
+                        ],
+                      );
+                    }),
             ),
           ),
         ),
@@ -222,11 +251,7 @@ class _ErrorView extends StatelessWidget {
   const _ErrorView({required this.error, required this.onRetry});
   @override
   Widget build(BuildContext context) {
-    final msg = error is DioException
-        ? ((error as DioException).response?.data is Map
-            ? '${(error as DioException).response?.data['detail']}'
-            : (error as DioException).message ?? '')
-        : '$error';
+    final msg = FriendlyError.of(error);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -238,6 +263,178 @@ class _ErrorView extends StatelessWidget {
           FilledButton(onPressed: onRetry, child: const Text('Thử lại')),
         ]),
       ),
+    );
+  }
+}
+
+// Redesign 2026-06-20: nhóm trạng thái + stat strip cho SV.
+const _svCategoryOrder = [
+  'Đang mở đăng ký',
+  'Đang diễn ra',
+  'Sắp diễn ra',
+  'Đã kết thúc',
+  'Khác',
+];
+
+String _svCategory(String s) {
+  switch (s) {
+    case 'REG_OPEN':
+      return 'Đang mở đăng ký';
+    case 'ONGOING':
+    case 'REG_CLOSED':
+      return 'Đang diễn ra';
+    case 'PUBLISHED':
+      return 'Sắp diễn ra';
+    case 'FINISHED':
+    case 'CANCELLED':
+      return 'Đã kết thúc';
+    default:
+      return 'Khác';
+  }
+}
+
+Color _svCategoryColor(BuildContext context, String cat) {
+  switch (cat) {
+    case 'Đang mở đăng ký':
+      return context.successGreen;
+    case 'Đang diễn ra':
+      return context.warnOrange;
+    case 'Sắp diễn ra':
+      return context.infoBlue;
+    default:
+      return context.textMuted;
+  }
+}
+
+class _SvContestStatStrip extends StatelessWidget {
+  final List<ContestSummary> items;
+  const _SvContestStatStrip({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    int byCat(String c) =>
+        items.where((e) => _svCategory(e.status) == c).length;
+    return Row(children: [
+      Expanded(
+        child: _SvStat(
+          value: '${items.length}',
+          label: 'Tổng cuộc thi',
+          color: ptitRed,
+          icon: Icons.emoji_events_outlined,
+        ),
+      ),
+      const SizedBox(width: 8),
+      Expanded(
+        child: _SvStat(
+          value: '${byCat('Đang mở đăng ký')}',
+          label: 'Đang mở ĐK',
+          color: context.successGreen,
+          icon: Icons.how_to_reg_outlined,
+        ),
+      ),
+      const SizedBox(width: 8),
+      Expanded(
+        child: _SvStat(
+          value: '${byCat('Đang diễn ra')}',
+          label: 'Đang diễn ra',
+          color: context.warnOrange,
+          icon: Icons.play_circle_outline,
+        ),
+      ),
+    ]);
+  }
+}
+
+class _SvStat extends StatelessWidget {
+  final String value;
+  final String label;
+  final Color color;
+  final IconData icon;
+  const _SvStat(
+      {required this.value,
+      required this.label,
+      required this.color,
+      required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+      decoration: BoxDecoration(
+        color: context.cardBg,
+        border: Border.all(color: context.cardBorder),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(height: 6),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  height: 1.1,
+                  color: context.textPrimary)),
+          Text(label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                  color: context.textMuted)),
+        ],
+      ),
+    );
+  }
+}
+
+class _SvGroupHeader extends StatelessWidget {
+  final String label;
+  final int count;
+  final Color color;
+  const _SvGroupHeader(
+      {required this.label, required this.count, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6, bottom: 8),
+      child: Row(children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 8),
+        Text(label,
+            style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: context.textPrimary,
+                letterSpacing: -0.2)),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+          decoration: BoxDecoration(
+            color: context.cardBorder.withValues(alpha: 0.4),
+            borderRadius: BorderRadius.circular(AppRadius.tight),
+          ),
+          child: Text('$count',
+              style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w800,
+                  color: context.textMuted)),
+        ),
+      ]),
     );
   }
 }

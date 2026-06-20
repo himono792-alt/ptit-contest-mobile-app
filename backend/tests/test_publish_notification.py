@@ -140,7 +140,7 @@ async def test_publish_creates_notifications(db):
     )).scalars().all()
     assert len(notif) == 1
     assert notif[0].scope == NotificationScope.CONTEST
-    assert notif[0].target_route == f"/contests/{contest.contest_id}"
+    assert notif[0].target_route == f"/contests/{contest.slug}"
 
     # Đúng 2 recipient: u1, u2 — KHÔNG có u3 (entry cancelled)
     recips = (await db.execute(

@@ -55,14 +55,13 @@ def _contest_search(q: str):
     hợp fallback ILIKE để bắt cả substring/prefix mà full-text (khớp theo token) bỏ sót.
     Trả về (điều_kiện_lọc, biểu_thức_rank) — rank dùng để sắp theo độ liên quan.
     """
-    sp = " "
     doc = (
         func.coalesce(Contest.title, "")
-        .op("||")(sp)
+        .op("||")(" ")
         .op("||")(func.coalesce(Contest.description, ""))
-        .op("||")(sp)
+        .op("||")(" ")
         .op("||")(func.coalesce(Contest.rules_text, ""))
-        .op("||")(sp)
+        .op("||")(" ")
         .op("||")(func.coalesce(Contest.award_text, ""))
     )
     tsv = func.to_tsvector("simple", doc)
@@ -161,9 +160,15 @@ async def get_contest_detail(
     slug: str,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ContestDetail:
-    """SV-05 — Chi tiết theo slug."""
+    """SV-05 — Chi tiết theo slug.
+
+    Fallback theo contest_id: deep-link cũ (notification) build route bằng
+    contest_id dạng số → nếu `slug` toàn chữ số và không khớp slug nào, tra theo id.
+    """
     stmt = select(Contest).where(Contest.slug == slug)
     contest = (await db.execute(stmt)).scalar_one_or_none()
+    if contest is None and slug.isdigit():
+        contest = await db.get(Contest, int(slug))
     if contest is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contest not found")
     return ContestDetail.model_validate(contest)

@@ -409,7 +409,7 @@ async def main():
                 contest_id=contest_a.contest_id,
                 title="Mở đăng ký: Cuộc thi Lập trình thuật toán 2026",
                 message="Cuộc thi đã bắt đầu. Xem chi tiết và theo dõi kết quả của bạn.",
-                target_route=f"/contests/{contest_a.contest_id}",
+                target_route=f"/contests/{contest_a.slug}",
                 created_by=gv.user_id,
                 published_at=days(-2),
             )

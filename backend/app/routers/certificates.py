@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.responses import HTMLResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,7 +17,7 @@ from app.schemas.certificate import (
     IssueCertificatesIn,
     IssueCertificatesOut,
 )
-from app.services import certificate_service
+from app.services import certificate_pdf, certificate_render, certificate_service
 
 contests_certs_router = APIRouter(prefix="/contests", tags=["certificates"])
 templates_router = APIRouter(prefix="/certificate-templates", tags=["certificates"])
@@ -116,35 +116,40 @@ async def render_certificate(
     qr_code: str,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> HTMLResponse:
-    """Render HTML cert (SV-09 download). Browser có thể print → save PDF."""
+    """Render HTML cert Mẫu C (SV-09). Browser hiển thị + Ctrl+P lưu PDF.
+
+    Dùng template "Academic Gold" bundle sẵn cho mọi cert (không phụ thuộc
+    template_id trong DB) → luôn đẹp & đồng bộ với bản /pdf.
+    """
     info = await certificate_service.verify_qr(db, qr_code)
     if not info["valid"]:
         return HTMLResponse(
             "<h1>Chứng nhận không hợp lệ hoặc đã bị thu hồi</h1>",
             status_code=404,
         )
+    return HTMLResponse(certificate_render.render_certificate_html(info, qr_code))
 
-    # Get template HTML
-    cert_stmt = select(IssuedCertificate).where(IssuedCertificate.qr_code == qr_code)
-    cert = (await db.execute(cert_stmt)).scalar_one_or_none()
-    if cert is None or cert.template_id is None:
-        return HTMLResponse("<h1>Template không có</h1>", status_code=404)
 
-    from app.models.certificate import CertificateTemplate
+@certs_router.get("/{qr_code}/pdf")
+async def download_certificate_pdf(
+    qr_code: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    """SV-09 — Tải PDF chứng nhận THẬT (reportlab, tiếng Việt, QR nhúng).
 
-    tpl = await db.get(CertificateTemplate, cert.template_id)
-    html = tpl.html_template if tpl else ""
-
-    # Simple {{var}} replace
-    replacements = {
-        "{{full_name}}": info.get("student_name") or "",
-        "{{student_code}}": info.get("student_code") or "",
-        "{{award_title}}": info.get("award_title") or "",
-        "{{contest_title}}": info.get("contest_title") or "",
-        "{{issued_date}}": info["issued_at"].strftime("%d/%m/%Y") if info.get("issued_at") else "",
-        "{{qr_code}}": qr_code,
-    }
-    for k, v in replacements.items():
-        html = html.replace(k, str(v))
-
-    return HTMLResponse(html)
+    Public: ai có mã QR đều tải được (giống verify). Không cần template — sinh
+    layout cố định từ dữ liệu cert.
+    """
+    info = await certificate_service.verify_qr(db, qr_code)
+    if not info.get("valid"):
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            "Chứng nhận không hợp lệ hoặc đã bị thu hồi",
+        )
+    pdf_bytes = certificate_pdf.build_certificate_pdf(info, qr_code)
+    filename = f"chung-nhan-{qr_code[:12]}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

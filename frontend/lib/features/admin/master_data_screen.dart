@@ -1,10 +1,11 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
+import '../../core/errors/friendly_error.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_toast.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_shimmer.dart';
 
@@ -157,11 +158,11 @@ class _FacultiesTab extends ConsumerWidget {
       await ref.read(apiClientProvider).dio.delete('/admin/faculties/$id');
       ref.invalidate(facultiesProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã xóa')));
+        AppToast.success(context, 'Đã xóa');
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: ${_msg(e)}')));
+        AppToast.error(context, e);
       }
     }
   }
@@ -195,8 +196,7 @@ class _FacultyDialogState extends ConsumerState<_FacultyDialog> {
 
   Future<void> _submit() async {
     if (_code.text.isEmpty || _name.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Code và name bắt buộc')));
+      AppToast.info(context, 'Code và name bắt buộc');
       return;
     }
     setState(() => _busy = true);
@@ -216,7 +216,7 @@ class _FacultyDialogState extends ConsumerState<_FacultyDialog> {
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: ${_msg(e)}')));
+        AppToast.error(context, e);
         setState(() => _busy = false);
       }
     }
@@ -295,11 +295,11 @@ class _MajorsTab extends ConsumerWidget {
       await ref.read(apiClientProvider).dio.delete('/admin/majors/$id');
       ref.invalidate(majorsProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã xóa')));
+        AppToast.success(context, 'Đã xóa');
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: ${_msg(e)}')));
+        AppToast.error(context, e);
       }
     }
   }
@@ -337,8 +337,7 @@ class _MajorDialogState extends ConsumerState<_MajorDialog> {
 
   Future<void> _submit() async {
     if (_code.text.isEmpty || _name.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Code và name bắt buộc')));
+      AppToast.info(context, 'Code và name bắt buộc');
       return;
     }
     setState(() => _busy = true);
@@ -357,7 +356,7 @@ class _MajorDialogState extends ConsumerState<_MajorDialog> {
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: ${_msg(e)}')));
+        AppToast.error(context, e);
         setState(() => _busy = false);
       }
     }
@@ -442,11 +441,11 @@ class _ClassesTab extends ConsumerWidget {
       await ref.read(apiClientProvider).dio.delete('/admin/classes/$id');
       ref.invalidate(classesProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã xóa')));
+        AppToast.success(context, 'Đã xóa');
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: ${_msg(e)}')));
+        AppToast.error(context, e);
       }
     }
   }
@@ -486,8 +485,7 @@ class _ClassDialogState extends ConsumerState<_ClassDialog> {
 
   Future<void> _submit() async {
     if (_code.text.isEmpty || _name.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Code và name bắt buộc')));
+      AppToast.info(context, 'Code và name bắt buộc');
       return;
     }
     setState(() => _busy = true);
@@ -507,7 +505,7 @@ class _ClassDialogState extends ConsumerState<_ClassDialog> {
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: ${_msg(e)}')));
+        AppToast.error(context, e);
         setState(() => _busy = false);
       }
     }
@@ -687,13 +685,10 @@ class _ErrorView extends StatelessWidget {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: Text('Lỗi: ${_msg(error)}',
+        child: Text(FriendlyError.of(error),
             style: const TextStyle(color: ptitRed)),
       ),
     );
   }
 }
 
-String _msg(Object e) => e is DioException
-    ? (e.response?.data is Map ? '${e.response?.data['detail']}' : e.message ?? '')
-    : '$e';

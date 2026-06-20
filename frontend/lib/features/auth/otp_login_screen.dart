@@ -8,7 +8,6 @@ library;
 
 import 'dart:async';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,7 +15,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
+import '../../core/errors/friendly_error.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_toast.dart';
 
 class OtpLoginScreen extends ConsumerStatefulWidget {
   const OtpLoginScreen({super.key});
@@ -90,16 +91,12 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _otpFocusNodes.first.requestFocus();
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Đã gửi mã 6 số tới $email. Mã hết hạn sau 5 phút.'),
-        ),
-      );
+      AppToast.info(context, 'Đã gửi mã 6 số tới $email. Mã hết hạn sau 5 phút.');
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _error = _msg(e);
+        _error = FriendlyError.of(e);
       });
     }
   }
@@ -144,18 +141,9 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _error = _msg(e);
+        _error = FriendlyError.of(e);
       });
     }
-  }
-
-  String _msg(Object e) {
-    if (e is DioException) {
-      final data = e.response?.data;
-      if (data is Map && data['detail'] != null) return '${data['detail']}';
-      return e.message ?? 'Lỗi mạng';
-    }
-    return '$e';
   }
 
   String _fmtRemaining() {

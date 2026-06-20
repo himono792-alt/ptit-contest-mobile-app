@@ -5,7 +5,10 @@ import 'package:intl/intl.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
+import '../../core/errors/friendly_error.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_toast.dart';
+import '../../core/widgets/help_button.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_shimmer.dart';
 import '../../core/widgets/pill.dart';
@@ -52,6 +55,7 @@ class ConfigsScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            const HelpButton(id: 'admin_configs'),
             IconButton(
               tooltip: 'Refresh',
               icon: Icon(Icons.refresh, color: context.textMuted),
@@ -67,7 +71,7 @@ class ConfigsScreen extends ConsumerWidget {
             // Sprint 8c (2026-05-07): skeleton thay spinner.
             loading: () => const MCardListSkeleton(count: 5),
             error: (e, _) => Center(
-                child: Text('Lỗi: ${_msg(e)}',
+                child: Text(FriendlyError.of(e),
                     style: const TextStyle(color: ptitRed))),
             data: (items) => SingleChildScrollView(
               padding: EdgeInsets.all(isMobile ? 14 : 24),
@@ -149,18 +153,10 @@ class _MaintenanceCardState extends ConsumerState<_MaintenanceCard> {
       final updated = data['updated_count'] as int? ?? 0;
       final skipped = data['skipped_count'] as int? ?? 0;
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(
-                '✓ Backfill xong: cập nhật $updated contests, bỏ qua $skipped')),
-      );
+      AppToast.success(context, '✓ Backfill xong: cập nhật $updated contests, bỏ qua $skipped');
     } on DioException catch (e) {
-      final msg = e.response?.data is Map
-          ? '${e.response?.data['detail']}'
-          : (e.message ?? '');
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Lỗi: $msg')));
+      AppToast.error(context, e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -342,8 +338,7 @@ class _ConfigEditDialogState extends ConsumerState<_ConfigEditDialog> {
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Lỗi: ${_msg(e)}')));
+        AppToast.error(context, e);
         setState(() => _busy = false);
       }
     }
@@ -393,9 +388,6 @@ class _ConfigEditDialogState extends ConsumerState<_ConfigEditDialog> {
   }
 }
 
-String _msg(Object e) => e is DioException
-    ? (e.response?.data is Map ? '${e.response?.data['detail']}' : e.message ?? '')
-    : '$e';
 
 // Sprint 6 (2026-05-07): AD-04 — Backup / Restore admin actions.
 //
@@ -447,16 +439,11 @@ class _BackupRestoreCardState extends ConsumerState<_BackupRestoreCard> {
         _lastBackup = res.data as Map<String, dynamic>;
         _busy = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-            'Backup thành công: ${_lastBackup?['filename'] ?? 'completed'}'),
-        backgroundColor: context.successGreen,
-      ));
+      AppToast.success(context, 'Backup thành công: ${_lastBackup?['filename'] ?? 'completed'}');
     } catch (e) {
       if (!mounted) return;
       setState(() => _busy = false);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Lỗi backup: ${_msg(e)}')));
+      AppToast.error(context, e);
     }
   }
 

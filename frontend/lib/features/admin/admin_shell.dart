@@ -1,4 +1,4 @@
-// Admin shell — responsive theo screen width:
+﻿// Admin shell — responsive theo screen width:
 //   - Web wide (≥1024px): sidebar 240px (UX desktop hiện có)
 //   - Mobile / Tablet (<1024px hoặc APK): AppBar + Drawer (full menu) + Bottom nav 5 items chính
 //
@@ -19,6 +19,7 @@ import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme.dart';
 import '../../core/theme_provider.dart';
+import '../../core/widgets/app_toast.dart';
 import '../../core/widgets/m_card.dart';
 import 'admin_contests_screen.dart';
 import 'admin_dashboard_screen.dart';
@@ -1141,14 +1142,10 @@ class _BackupRestoreScreen extends ConsumerWidget {
     try {
       final res = await api.dio.post('/admin/backup');
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Đã tạo backup: ${res.data['filename'] ?? '?'}')),
-      );
+      AppToast.success(context, 'Đã tạo backup: ${res.data['filename'] ?? '?'}');
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi backup: $e')),
-      );
+      AppToast.error(context, e);
     }
   }
 
@@ -1231,12 +1228,7 @@ class _BackupRestoreScreen extends ConsumerWidget {
                         side: BorderSide(color: context.ptitRedSoft),
                       ),
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text(
-                                  'Restore yêu cầu can thiệp DBA qua CLI Railway. '
-                                  'Liên hệ admin hệ thống.')),
-                        );
+                        AppToast.info(context, 'Restore yêu cầu can thiệp DBA qua CLI Railway. Liên hệ admin hệ thống.');
                       },
                     ),
                   ],

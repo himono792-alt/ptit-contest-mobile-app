@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
@@ -8,14 +7,20 @@ import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/config.dart';
+import '../../core/errors/friendly_error.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_toast.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_top_bar.dart';
 import '../../core/widgets/pill.dart';
 import 'cert_open_stub.dart' if (dart.library.html) 'cert_open_web.dart';
 
 class CertVerifyScreen extends ConsumerStatefulWidget {
-  const CertVerifyScreen({super.key});
+  /// Mã QR truyền sẵn (vd từ màn 'Chứng nhận' của SV) → tự xác thực ngay,
+  /// không cần dán tay. Null = mở màn nhập mã trống như cũ.
+  final String? initialCode;
+
+  const CertVerifyScreen({super.key, this.initialCode});
   @override
   ConsumerState<CertVerifyScreen> createState() => _CertVerifyScreenState();
 }
@@ -25,6 +30,17 @@ class _CertVerifyScreenState extends ConsumerState<CertVerifyScreen> {
   Map<String, dynamic>? _result;
   String? _error;
   bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final code = widget.initialCode?.trim();
+    if (code != null && code.isNotEmpty) {
+      _codeCtrl.text = code;
+      // Xác thực sau frame đầu (cần ref/context sẵn sàng).
+      WidgetsBinding.instance.addPostFrameCallback((_) => _verify());
+    }
+  }
 
   @override
   void dispose() {
@@ -52,10 +68,7 @@ class _CertVerifyScreenState extends ConsumerState<CertVerifyScreen> {
       final res = await api.dio.get('/verify/$code');
       setState(() => _result = res.data as Map<String, dynamic>);
     } catch (e) {
-      final msg = e is DioException
-          ? (e.response?.data is Map ? '${e.response?.data['detail']}' : e.message ?? '')
-          : '$e';
-      setState(() => _error = msg);
+      setState(() => _error = FriendlyError.of(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -150,22 +163,32 @@ class _ResultCard extends StatelessWidget {
   final Map<String, dynamic> data;
   const _ResultCard({required this.data});
 
+  Future<void> _downloadPdf(BuildContext context) async {
+    final qr = data['qr_code']?.toString() ?? '';
+    if (qr.isEmpty) return;
+    final url = '${AppConfig.api}/certificates/$qr/pdf';
+    final opened = openCertUrl(url);
+    if (!context.mounted) return;
+    if (opened) {
+      AppToast.info(context, 'Đang tải PDF chứng nhận...');
+    } else {
+      await Clipboard.setData(ClipboardData(text: url));
+      if (!context.mounted) return;
+      AppToast.info(context, 'Đã copy link tải PDF: $url');
+    }
+  }
+
   Future<void> _openOrCopyRender(BuildContext context) async {
     final qr = data['qr_code']?.toString() ?? '';
     if (qr.isEmpty) return;
     final url = '${AppConfig.api}/certificates/$qr/render';
     final opened = openCertUrl(url);
     if (opened) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã mở chứng nhận trong tab mới — Ctrl+P để in/save PDF')),
-      );
+      AppToast.info(context, 'Đã mở chứng nhận trong tab mới — Ctrl+P để in/save PDF');
     } else {
-      // Mobile fallback: copy URL
       await Clipboard.setData(ClipboardData(text: url));
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Đã copy URL vào clipboard:\n$url'), duration: const Duration(seconds: 5)),
-      );
+      AppToast.info(context, 'Đã copy URL vào clipboard: $url');
     }
   }
 
@@ -226,12 +249,19 @@ class _ResultCard extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
-                  onPressed: () => _openOrCopyRender(context),
-                  icon: const Icon(Icons.download, size: 18),
-                  label: Text(kIsWeb
-                      ? 'Mở/in chứng nhận (HTML)'
-                      : 'Copy URL chứng nhận'),
+                  onPressed: () => _downloadPdf(context),
+                  icon: const Icon(Icons.picture_as_pdf, size: 18),
+                  label: Text(kIsWeb ? 'Tải PDF chứng nhận' : 'Copy link tải PDF'),
                   style: FilledButton.styleFrom(backgroundColor: ptitRed),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _openOrCopyRender(context),
+                  icon: const Icon(Icons.open_in_new, size: 18),
+                  label: Text(kIsWeb ? 'Mở bản HTML (để in)' : 'Copy URL bản HTML'),
                 ),
               ),
             ],

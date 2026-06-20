@@ -1,9 +1,16 @@
 # PTIT Contest Backend — FastAPI + asyncpg + Uvicorn
 FROM python:3.11-slim
 
-# System deps cho psycopg/asyncpg + healthcheck + postgres client (psql)
+# System deps:
+#  - gcc/libpq-dev: build psycopg/asyncpg
+#  - curl/postgresql-client: healthcheck + psql
+#  - weasyprint runtime (pango/cairo/gdk-pixbuf...) + font tiếng Việt fallback
+#    (Liberation/DejaVu) cho PDF chứng nhận Mẫu C khi offline; có mạng thì lấy Google Fonts.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc libpq-dev curl postgresql-client \
+    libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b libffi-dev \
+    libgdk-pixbuf-2.0-0 libcairo2 shared-mime-info \
+    fonts-liberation fonts-dejavu-core \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

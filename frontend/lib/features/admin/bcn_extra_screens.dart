@@ -1,4 +1,4 @@
-// Sprint 23 Step 4 (2026-05-09): 3 BCN screens placeholder build thật.
+﻿// Sprint 23 Step 4 (2026-05-09): 3 BCN screens placeholder build thật.
 // Tận dụng hodFacultyStatsProvider + system-summary.xlsx export.
 // Mẫu chứng nhận: list config templates static (BE chưa wire).
 
@@ -12,6 +12,9 @@ import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/spacing.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_toast.dart';
+import '../../core/widgets/empty_view.dart';
+import '../../core/widgets/help_button.dart';
 import '../../core/widgets/m_card.dart';
 import '../../core/widgets/m_shimmer.dart';
 import '../../core/xlsx_export_helper.dart';
@@ -71,15 +74,10 @@ class BcnCertTemplatesScreen extends ConsumerWidget {
           .delete('/admin/faculty-cert-templates/${template['template_id']}');
       ref.invalidate(facultyCertTemplatesProvider);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Đã xóa mẫu')));
+      AppToast.success(context, 'Đã xóa mẫu');
     } on DioException catch (e) {
-      final msg = e.response?.data is Map
-          ? '${e.response?.data['detail']}'
-          : (e.message ?? '');
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Lỗi: $msg')));
+      AppToast.error(context, e);
     }
   }
 
@@ -93,6 +91,7 @@ class BcnCertTemplatesScreen extends ConsumerWidget {
           title: 'Mẫu chứng nhận',
           subtitle:
               'Quản lý template chứng nhận khoa — logo, chữ ký, layout. Duyệt mẫu trước khi GV cấp cho SV.',
+          helpId: 'bcn_cert_templates',
         ),
         Expanded(
           child: asyncTemplates.when(
@@ -128,15 +127,10 @@ class BcnCertTemplatesScreen extends ConsumerWidget {
                 ]),
                 const SizedBox(height: AppSpacing.s12),
                 if (templates.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.s32),
-                    child: Center(
-                      child: Text(
-                          'Chưa có mẫu nào.\nClick "Tạo mẫu mới" để thêm.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                              color: context.textMuted, fontSize: 13)),
-                    ),
+                  const EmptyView(
+                    icon: Icons.workspace_premium_outlined,
+                    title: 'Chưa có mẫu chứng nhận nào',
+                    subtitle: 'Tạo mẫu đầu tiên để bắt đầu cấp chứng nhận.',
                   )
                 else
                   ...templates.map<Widget>((t) => Padding(
@@ -229,8 +223,8 @@ class _CertTemplateRow extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.s8),
         IconButton(
-          icon: Icon(Icons.edit_outlined, size: 18, color: context.textMuted),
           tooltip: 'Chỉnh sửa',
+          icon: Icon(Icons.edit_outlined, size: 18, color: context.textMuted),
           onPressed: onEdit,
         ),
         IconButton(
@@ -281,8 +275,7 @@ class _CertTemplateDialogState extends ConsumerState<_CertTemplateDialog> {
     if (_nameCtrl.text.trim().isEmpty ||
         _layoutCtrl.text.trim().isEmpty ||
         _signersCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Cần nhập đủ tên, layout, signers')));
+      AppToast.info(context, 'Cần nhập đủ tên, layout, signers');
       return;
     }
     setState(() => _busy = true);
@@ -304,12 +297,8 @@ class _CertTemplateDialogState extends ConsumerState<_CertTemplateDialog> {
       if (!mounted) return;
       Navigator.pop(context, true);
     } on DioException catch (e) {
-      final msg = e.response?.data is Map
-          ? '${e.response?.data['detail']}'
-          : (e.message ?? '');
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Lỗi: $msg')));
+      AppToast.error(context, e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -389,6 +378,7 @@ class BcnFacultyStatsScreen extends ConsumerWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         _BCNScreenHeader(
           title: 'Thống kê khoa',
+          helpId: 'bcn_faculty_stats',
           subtitle:
               'Tổng quan số liệu cuộc thi / SV / giải thưởng theo khoa.',
         ),
@@ -573,6 +563,7 @@ class BcnReportBghScreen extends ConsumerWidget {
           title: 'Báo cáo BGH',
           subtitle:
               'Báo cáo tháng/quý gửi Ban Giám hiệu — tổng hợp hoạt động khoa.',
+          helpId: 'bcn_bgh_report',
         ),
         Expanded(
           child: ListView(
@@ -720,7 +711,9 @@ class _ScheduleRow extends StatelessWidget {
 class _BCNScreenHeader extends StatelessWidget {
   final String title;
   final String subtitle;
-  const _BCNScreenHeader({required this.title, required this.subtitle});
+  final String? helpId;
+  const _BCNScreenHeader(
+      {required this.title, required this.subtitle, this.helpId});
 
   @override
   Widget build(BuildContext context) {
@@ -733,24 +726,32 @@ class _BCNScreenHeader extends StatelessWidget {
         color: context.cardBg,
         border: Border(bottom: BorderSide(color: context.cardBorder)),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('BCN',
-              style: TextStyle(color: context.textMuted, fontSize: 11)),
-          const SizedBox(height: 2),
-          Text(title,
-              style: GoogleFonts.plusJakartaSans(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: context.textPrimary,
-                  letterSpacing: -0.5)),
-          const SizedBox(height: 4),
-          Text(subtitle,
-              style: TextStyle(
-                  fontSize: 12.5,
-                  color: context.textMuted,
-                  height: 1.5)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('BCN',
+                    style: TextStyle(color: context.textMuted, fontSize: 11)),
+                const SizedBox(height: 2),
+                Text(title,
+                    style: GoogleFonts.plusJakartaSans(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: context.textPrimary,
+                        letterSpacing: -0.5)),
+                const SizedBox(height: 4),
+                Text(subtitle,
+                    style: TextStyle(
+                        fontSize: 12.5,
+                        color: context.textMuted,
+                        height: 1.5)),
+              ],
+            ),
+          ),
+          if (helpId != null) HelpButton(id: helpId!),
         ],
       ),
     );

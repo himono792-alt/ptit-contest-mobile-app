@@ -3,12 +3,12 @@
 // Nhận email + token (pre-filled từ step 1 dev mode hoặc rỗng prod).
 // User nhập new password + confirm → POST /auth/reset-password → success → quay về login.
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
+import '../../core/errors/friendly_error.dart';
 import '../../core/theme.dart';
 
 class ForgotPasswordResetScreen extends ConsumerStatefulWidget {
@@ -63,10 +63,8 @@ class _ForgotPasswordResetScreenState
         'new_password': _newPwdCtrl.text,
       });
       setState(() => _done = true);
-    } on DioException catch (e) {
-      setState(() => _error = e.response?.data is Map
-          ? '${e.response?.data['detail']}'
-          : (e.message ?? 'Lỗi'));
+    } catch (e) {
+      setState(() => _error = FriendlyError.of(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

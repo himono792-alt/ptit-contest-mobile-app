@@ -189,7 +189,7 @@ async def issue_certificates(
             contest_result_id=cr.contest_result_id,
             template_id=template.template_id,
             qr_code=qr_code,
-            pdf_url=f"/api/certificates/{qr_code}/render",  # render HTML on-demand
+            pdf_url=f"/api/certificates/{qr_code}/pdf",  # PDF thật (reportlab) on-demand
             issued_by=user.user_id,
         )
         db.add(cert)
@@ -211,7 +211,7 @@ async def verify_qr(db: AsyncSession, qr_code: str) -> dict:
     cert_stmt = select(IssuedCertificate).where(IssuedCertificate.qr_code == qr_code)
     cert = (await db.execute(cert_stmt)).scalar_one_or_none()
     if cert is None:
-        return {"valid": False}
+        return {"valid": False, "qr_code": qr_code}
 
     cr = await db.get(ContestResult, cert.contest_result_id)
     contest = await db.get(Contest, cr.contest_id) if cr else None
@@ -249,6 +249,7 @@ async def verify_qr(db: AsyncSession, qr_code: str) -> dict:
 
     return {
         "valid": cert.revoked_at is None,
+        "qr_code": qr_code,
         "cert_id": cert.cert_id,
         "contest_title": contest.title if contest else None,
         "award_title": cr.award_title if cr else None,

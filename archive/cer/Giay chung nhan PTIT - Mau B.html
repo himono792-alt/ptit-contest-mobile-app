@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Giấy chứng nhận PTIT — Mẫu B (Minimal)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ptit-red:#E30613; --ptit-red-dark:#A8050F;
+    --ink:#1A1A1A; --muted:#6B6B6B; --line:#E6E2DC; --paper:#FFFFFF;
+  }
+  @page{ size:A4 landscape; margin:0; }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ background:#4a4a4a; font-family:"Be Vietnam Pro",system-ui,sans-serif; color:var(--ink); -webkit-font-smoothing:antialiased; }
+  .stage{ min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+
+  .cert{
+    width:297mm; height:210mm; background:var(--paper);
+    position:relative; overflow:hidden; flex-shrink:0;
+    box-shadow:0 18px 60px rgba(0,0,0,.35);
+    display:flex;
+  }
+  /* left accent rail */
+  .rail{
+    width:42mm; flex-shrink:0; position:relative;
+    background:linear-gradient(160deg,var(--ptit-red) 0%,var(--ptit-red-dark) 100%);
+    color:#fff;
+    display:flex; flex-direction:column; align-items:center; justify-content:space-between;
+    padding:16mm 6mm;
+  }
+  .rail::after{
+    content:""; position:absolute; right:-1px; top:0; bottom:0; width:3mm;
+    background:repeating-linear-gradient(45deg,rgba(255,255,255,.16) 0 2px,transparent 2px 7px);
+  }
+  .rail .logo{
+    width:24mm; height:24mm; border-radius:50%; border:1.5pt solid rgba(255,255,255,.7);
+    display:grid; place-items:center; font-weight:800; font-size:15pt; letter-spacing:.5px;
+  }
+  .rail .vertical{
+    writing-mode:vertical-rl; transform:rotate(180deg);
+    font-size:9pt; letter-spacing:4px; text-transform:uppercase; opacity:.85; font-weight:500;
+  }
+  .rail .yr{ font-size:11pt; font-weight:700; letter-spacing:1px; }
+
+  .body{ flex:1; padding:18mm 20mm 14mm; display:flex; flex-direction:column; position:relative; }
+
+  .org{ font-size:11pt; font-weight:700; color:var(--ptit-red); letter-spacing:.3px; }
+  .org-en{ font-size:8pt; color:var(--muted); letter-spacing:1.4px; text-transform:uppercase; margin-top:1mm; }
+
+  .kicker{ font-size:9.5pt; letter-spacing:5px; text-transform:uppercase; color:var(--muted); margin-top:18mm; font-weight:600; }
+  .title{ font-size:40pt; font-weight:800; letter-spacing:-1px; line-height:1; margin-top:3mm; color:var(--ink); }
+  .title .dot{ color:var(--ptit-red); }
+
+  .lead{ font-size:11.5pt; color:var(--muted); margin-top:12mm; }
+  .name{ font-size:34pt; font-weight:800; color:var(--ink); letter-spacing:-.5px; margin-top:2mm; line-height:1; }
+  .name-underline{ width:46mm; height:3px; background:var(--ptit-red); margin-top:4mm; border-radius:2px; }
+  .scode{ font-size:10.5pt; color:var(--muted); margin-top:4mm; }
+  .scode b{ color:var(--ink); font-weight:600; }
+
+  .ach{ font-size:12pt; color:var(--ink); margin-top:9mm; line-height:1.8; max-width:170mm; }
+  .ach .award{ display:inline-block; background:var(--ptit-red); color:#fff; font-weight:700; padding:1mm 4mm; border-radius:3px; font-size:12pt; }
+  .ach .contest{ font-weight:700; }
+  .issued{ font-size:10pt; color:var(--muted); margin-top:5mm; }
+
+  .foot{ margin-top:auto; display:flex; align-items:flex-end; justify-content:space-between; gap:12mm; }
+  .sign{ width:60mm; }
+  .sign .l{ border-top:1pt solid var(--ink); margin-bottom:2mm; }
+  .sign .r{ font-size:10pt; font-weight:600; }
+  .sign .h{ font-size:8pt; color:var(--muted); font-style:italic; margin-top:.5mm; }
+
+  .verify{ display:flex; align-items:center; gap:5mm; }
+  .verify .meta{ text-align:right; }
+  .verify .meta .lbl{ font-size:8pt; color:var(--muted); letter-spacing:.5px; }
+  .verify .meta .code{ font-size:8pt; font-weight:600; color:var(--ink); letter-spacing:1px; margin-top:1.5mm; max-width:46mm; line-height:1.5; }
+  .qr-box{ width:88px; height:88px; border:1.5px dashed var(--muted); border-radius:6px; display:grid; place-items:center; color:var(--muted); font-size:9pt; font-weight:600; background:#fff; overflow:hidden; }
+  .qr-box img,.qr-box canvas{ width:100%!important; height:100%!important; display:block; }
+
+  @media print{ html,body{ background:#fff; } .stage{ padding:0; min-height:auto; } .cert{ box-shadow:none; } }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="cert" id="cert">
+    <div class="rail">
+      <div class="logo">PTIT</div>
+      <div class="vertical">Certificate of Achievement</div>
+      <div class="yr">2026</div>
+    </div>
+    <div class="body">
+      <div>
+        <div class="org">HỌC VIỆN CÔNG NGHỆ BƯU CHÍNH VIỄN THÔNG</div>
+        <div class="org-en">Posts and Telecommunications Institute of Technology</div>
+      </div>
+
+      <div class="kicker">Giấy chứng nhận</div>
+      <div class="title">Thành tích<span class="dot">.</span></div>
+
+      <div class="lead">Chứng nhận sinh viên</div>
+      <div class="name">{{full_name}}</div>
+      <div class="name-underline"></div>
+      <div class="scode">Mã sinh viên: <b>{{student_code}}</b></div>
+
+      <div class="ach" id="ach">
+        đã đạt <span class="award">{{award_title}}</span> tại cuộc thi<br>
+        <span class="contest">{{contest_title}}</span>
+      </div>
+      <div class="issued">Ngày cấp: {{issued_date}}</div>
+
+      <div class="foot">
+        <div class="sign">
+          <div class="l"></div>
+          <div class="r">Đại diện Ban tổ chức</div>
+          <div class="h">(Ký và ghi rõ họ tên)</div>
+        </div>
+        <div class="verify">
+          <div class="meta">
+            <div class="lbl">MÃ XÁC THỰC · Quét QR</div>
+            <div class="code">{{qr_code}}</div>
+          </div>
+          <div class="qr-box" id="qrcode" data-verify="http://localhost:8080/verify/{{qr_code}}">QR</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+(function(){
+  var SAMPLE={ "{{full_name}}":"Nguyễn Văn An","{{student_code}}":"B22DCCN001","{{award_title}}":"Giải Nhất","{{contest_title}}":"Cuộc thi Lập trình Web 2025","{{issued_date}}":"20/04/2026","{{qr_code}}":"999b3b934032af089aeb3ac6f61d9c04" };
+  var cert=document.getElementById('cert'), qrBox=document.getElementById('qrcode');
+  if(cert.innerHTML.indexOf('{{')!==-1){
+    walk(cert,function(n){ var t=n.nodeValue; for(var k in SAMPLE)t=t.split(k).join(SAMPLE[k]); n.nodeValue=t; });
+    var v=qrBox.getAttribute('data-verify'); for(var k in SAMPLE)v=v.split(k).join(SAMPLE[k]); qrBox.setAttribute('data-verify',v);
+  }
+  var ach=document.getElementById('ach'), aw=ach&&ach.querySelector('.award');
+  if(aw && aw.textContent.trim()===''){
+    var c=ach.querySelector('.contest'); ach.innerHTML='đã tham gia cuộc thi<br><span class="contest">'+(c?c.textContent:'')+'</span>';
+  }
+  var url=qrBox.getAttribute('data-verify');
+  var ce=cert.querySelector('.code'); if(ce){var rw=(ce.textContent||'').trim(); if(/^[0-9a-fA-F]{12,}$/.test(rw)) ce.textContent=rw.replace(/(.{8})(?=.)/g,'$1\u2009·\u2009');}
+  if(typeof QRCode!=='undefined'&&url&&url.indexOf('{{')===-1){ qrBox.textContent=''; new QRCode(qrBox,{text:url,width:88,height:88,colorDark:"#1A1A1A",colorLight:"#fff",correctLevel:QRCode.CorrectLevel.M}); }
+  function walk(el,fn){ var n,w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,null,false),a=[]; while(n=w.nextNode())a.push(n); a.forEach(fn); }
+})();
+</script>
+</body>
+</html>
