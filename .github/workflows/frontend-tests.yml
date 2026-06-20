@@ -38,3 +38,7 @@ jobs:
 
       - name: Chạy test
         run: flutter test
+
+      - name: Design-lint ratchet (chặn vi phạm token MỚI; baseline 355)
+        shell: pwsh
+        run: ./tool/design_lint.ps1 -Quiet -Max 355

@@ -5,7 +5,9 @@
 #        pwsh tool/design_lint.ps1 -Quiet     (count only, dùng cho CI)
 # Exit:  0 = PASS (no violations), 1 = FAIL, 2 = setup error.
 
-param([switch]$Quiet)
+# -Max N: ratchet — PASS nếu total <= N (ngân sách baseline, chặn vi phạm MỚI).
+#         Mặc định 0 = phải sạch tuyệt đối.
+param([switch]$Quiet, [int]$Max = 0)
 
 $Verbose = -not $Quiet
 $ErrorActionPreference = 'Stop'
@@ -96,12 +98,13 @@ $total += Show-Result `
 
 Write-Host ""
 Write-Host "============================================================"
-if ($total -eq 0) {
-    Write-Host " RESULT: PASS - 0 violations" -ForegroundColor Green
+if ($total -le $Max) {
+    $budget = if ($Max -gt 0) { " (within budget $total/$Max)" } else { "" }
+    Write-Host " RESULT: PASS - $total total violations$budget" -ForegroundColor Green
     Write-Host "============================================================"
     exit 0
 } else {
-    Write-Host " RESULT: FAIL - $total total violations" -ForegroundColor Yellow
+    Write-Host " RESULT: FAIL - $total total violations (max $Max)" -ForegroundColor Yellow
     Write-Host "============================================================"
     exit 1
 }

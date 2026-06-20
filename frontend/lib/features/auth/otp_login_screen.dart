@@ -182,7 +182,7 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: context.ptitRedSoft,
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                   child: const Icon(Icons.mail_outline,
                       color: ptitRed, size: 26),

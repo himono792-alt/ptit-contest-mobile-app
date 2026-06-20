@@ -101,7 +101,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: context.ptitRedSoft,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
                     child: const Icon(Icons.person_add_outlined,
                         color: ptitRed, size: 26),

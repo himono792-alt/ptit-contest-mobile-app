@@ -946,7 +946,7 @@ class _BrandQuoteRotatorState extends State<_BrandQuoteRotator> {
                 decoration: BoxDecoration(
                   color: Colors.white
                       .withValues(alpha: active ? 0.85 : 0.35),
-                  borderRadius: BorderRadius.circular(3),
+                  borderRadius: BorderRadius.circular(AppRadius.tight),
                 ),
               );
             }),

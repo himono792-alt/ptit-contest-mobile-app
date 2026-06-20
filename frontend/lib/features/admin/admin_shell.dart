@@ -1055,7 +1055,7 @@ class _NewContestQuickScreen extends ConsumerWidget {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: context.ptitRedSoft,
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
                   ),
                   child: const Icon(Icons.add_circle_outline,
                       size: 36, color: ptitRed),
