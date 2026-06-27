@@ -1,7 +1,7 @@
 # PTIT Contest Frontend — Flutter web build, served by nginx
 # Multi-stage: builder (Flutter SDK) → runtime (nginx slim)
 
-FROM ghcr.io/cirruslabs/flutter:3.27.1 AS builder
+FROM ghcr.io/cirruslabs/flutter:3.44.0 AS builder
 WORKDIR /app
 
 # Cache pubspec deps
