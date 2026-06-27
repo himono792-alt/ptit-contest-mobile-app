@@ -15,6 +15,8 @@ import '../../core/widgets/m_shimmer.dart';
 import '../../core/widgets/m_top_bar.dart';
 import 'cert_verify_screen.dart';
 import 'review_dialog.dart';
+import 'appeal_dialog.dart';
+import 'my_appeals_screen.dart';
 
 final myResultsProvider = FutureProvider.autoDispose<List<MyResultModel>>((ref) async {
   final api = ref.watch(apiClientProvider);
@@ -29,8 +31,15 @@ class MyResultsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncResults = ref.watch(myResultsProvider);
     return Scaffold(
-      appBar: const MTopBar(title: 'Kết quả', actions: [
-        HelpButton(id: 'sv_my_results'),
+      appBar: MTopBar(title: 'Kết quả', actions: [
+        IconButton(
+          tooltip: 'Phúc khảo của tôi',
+          icon: const Icon(Icons.gavel_outlined),
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const MyAppealsScreen()),
+          ),
+        ),
+        const HelpButton(id: 'sv_my_results'),
       ]),
       body: asyncResults.when(
         // Phase 2 step 5: skeleton thay spinner — list rank dùng MListItemSkeleton
@@ -291,6 +300,21 @@ class _ResultCard extends StatelessWidget {
               onPressed: () => showReviewDialog(
                 context,
                 contestId: result.contestId,
+                contestTitle: result.contestTitle,
+              ),
+            ),
+          ),
+          // Phúc khảo kết quả (2026-06-27) — SV đề nghị xem lại điểm/giải.
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.gavel_outlined, size: 16),
+              label: const Text('Gửi phúc khảo'),
+              onPressed: () => showAppealDialog(
+                context,
+                contestId: result.contestId,
+                entryId: result.entryId,
                 contestTitle: result.contestTitle,
               ),
             ),

@@ -50,6 +50,7 @@ class ContestDetail(ContestSummary):
     team_min_members: int | None = None
     team_max_members: int | None = None
     requires_submission: bool
+    appeal_deadline: datetime | None = None
     proposed_by: int | None = None
     created_by: int
     created_at: datetime

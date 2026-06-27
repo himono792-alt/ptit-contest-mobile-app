@@ -69,6 +69,7 @@ else:
 from app.routers import (
     admin,
     anomaly,
+    appeals,
     approvals,
     auth,
     certificates,
@@ -260,6 +261,10 @@ app.include_router(results.me_results_router, prefix=P)
 
 # Reviews
 app.include_router(reviews.contests_reviews_router, prefix=P)
+
+app.include_router(appeals.contests_appeals_router, prefix=P)  # Phúc khảo kết quả 2026-06-27
+app.include_router(appeals.me_appeals_router, prefix=P)
+app.include_router(appeals.appeals_router, prefix=P)
 
 # Notifications
 app.include_router(notifications.me_notifications_router, prefix=P)

@@ -341,6 +341,7 @@ CREATE TABLE contests (
     start_at                  TIMESTAMPTZ NOT NULL,
     end_at                    TIMESTAMPTZ NOT NULL,
     location_text             VARCHAR(255),
+    appeal_deadline           TIMESTAMPTZ,
     status                    contest_status_enum NOT NULL DEFAULT 'DRAFT',
     proposed_by               BIGINT REFERENCES app_users(user_id) ON DELETE SET NULL,
     host_faculty_id           BIGINT REFERENCES faculties(faculty_id) ON DELETE SET NULL,

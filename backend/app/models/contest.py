@@ -45,6 +45,7 @@ class Contest(Base):
     start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     location_text: Mapped[str | None] = mapped_column(String(255))
+    appeal_deadline: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     status: Mapped[ContestStatus] = mapped_column(
         SAEnum(ContestStatus, name="contest_status_enum", schema="ptit_contest", create_type=False),
         nullable=False, default=ContestStatus.DRAFT,

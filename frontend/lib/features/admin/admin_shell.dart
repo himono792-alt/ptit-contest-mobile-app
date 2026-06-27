@@ -26,6 +26,7 @@ import 'admin_dashboard_screen.dart';
 import 'anomaly_reports_screen.dart';
 import 'bcn_extra_screens.dart';
 import 'gv_extra_screens.dart';
+import 'gv_appeals_screen.dart';
 import 'approval_queue_screen.dart';
 import 'admin_users_screen.dart';
 import 'audit_log_screen.dart';
@@ -111,6 +112,9 @@ class _AdminShellState extends ConsumerState<AdminShell> {
       }
       items.add(_NavItem('gv-results', 'Kết quả',
           Icons.workspace_premium_outlined, const GvResultsScreen()));
+      // Phúc khảo kết quả (2026-06-27) — GV/BTC tiếp nhận & xử lý.
+      items.add(_NavItem('gv-appeals', 'Phúc khảo',
+          Icons.gavel_outlined, const GvAppealsScreen()));
       items.add(_NavItem.section('Báo cáo'));
       items.add(_NavItem('gv-stats', 'Thống kê',
           Icons.bar_chart_outlined, const GvStatsScreen()));

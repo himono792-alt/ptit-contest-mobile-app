@@ -1,10 +1,13 @@
 """Reports / aggregate stats (GV-07, BCN-03, BCN-05, AD-05)."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta as _td, timezone
 from decimal import Decimal
 from io import BytesIO
 
 from fastapi import HTTPException, status
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.utils import get_column_letter
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -13,6 +16,7 @@ from app.models.certificate import IssuedCertificate
 from app.models.contest import Contest, ContestRound
 from app.models.entry import ContestEntry, Team, TeamMember
 from app.models.enums import (
+    ApprovalStatus,
     ContestStatus,
     EntryType,
     RegistrationStatus,
@@ -30,9 +34,38 @@ from app.models.master_data import (
 )
 from app.models.review import ContestReview
 from app.models.submission import Submission
+from app.models.workflow import WorkflowApproval
 
 
 # ---------- Helpers ----------
+
+# PTIT brand styles cho xlsx export (dùng chung 2 hàm export bên dưới)
+_HEADER_FONT = Font(bold=True, color="FFFFFF", size=11)
+_HEADER_FILL = PatternFill(start_color="1E3A8A", end_color="1E3A8A", fill_type="solid")
+_HEADER_ALIGN = Alignment(horizontal="center", vertical="center")
+
+
+def _write_headers(ws, headers: list[str]) -> None:
+    for col_idx, h in enumerate(headers, start=1):
+        cell = ws.cell(row=1, column=col_idx, value=h)
+        cell.font = _HEADER_FONT
+        cell.fill = _HEADER_FILL
+        cell.alignment = _HEADER_ALIGN
+    ws.freeze_panes = "A2"
+    ws.auto_filter.ref = f"A1:{get_column_letter(len(headers))}1"
+
+
+def _autosize(ws, max_width: int = 50) -> None:
+    for col_idx in range(1, ws.max_column + 1):
+        col_letter = get_column_letter(col_idx)
+        max_len = 0
+        for row in ws.iter_rows(min_col=col_idx, max_col=col_idx):
+            for cell in row:
+                val = str(cell.value) if cell.value is not None else ""
+                if len(val) > max_len:
+                    max_len = len(val)
+        ws.column_dimensions[col_letter].width = min(max(max_len + 2, 10), max_width)
+
 
 async def _ensure_organizer_or_admin(user, contest):
     if "ADMIN" in user.role_codes:
@@ -265,7 +298,6 @@ async def faculty_summary(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Faculty not found")
 
     # Year boundary
-    from datetime import datetime, timezone
     year_start = datetime(year, 1, 1, tzinfo=timezone.utc)
     year_end = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
 
@@ -350,7 +382,6 @@ async def system_summary(db: AsyncSession, user, year: int) -> dict:
     if "ADMIN" not in user.role_codes:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Cần ADMIN")
 
-    from datetime import datetime, timezone
     year_start = datetime(year, 1, 1, tzinfo=timezone.utc)
     year_end = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
 
@@ -468,11 +499,6 @@ async def export_contest_results_xlsx(
 
     Permission: BTC của contest, BCN, ADMIN.
     """
-    # openpyxl import lazy để tránh load nếu module không dùng
-    from openpyxl import Workbook
-    from openpyxl.styles import Alignment, Font, PatternFill
-    from openpyxl.utils import get_column_letter
-
     contest = await db.get(Contest, contest_id)
     if contest is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Contest not found")
@@ -542,33 +568,6 @@ async def export_contest_results_xlsx(
     ws2 = wb.create_sheet("Vòng - kết quả")
     ws3 = wb.create_sheet("Submissions")
     ws4 = wb.create_sheet("Metadata")
-
-    # PTIT brand styles
-    header_font = Font(bold=True, color="FFFFFF", size=11)
-    header_fill = PatternFill(start_color="1E3A8A", end_color="1E3A8A", fill_type="solid")
-    header_align = Alignment(horizontal="center", vertical="center")
-
-    def _write_headers(ws, headers: list[str]) -> None:
-        for col_idx, h in enumerate(headers, start=1):
-            cell = ws.cell(row=1, column=col_idx, value=h)
-            cell.font = header_font
-            cell.fill = header_fill
-            cell.alignment = header_align
-        # Freeze pane header row
-        ws.freeze_panes = "A2"
-        # Autofilter
-        ws.auto_filter.ref = f"A1:{get_column_letter(len(headers))}1"
-
-    def _autosize(ws, max_width: int = 50) -> None:
-        for col_idx in range(1, ws.max_column + 1):
-            col_letter = get_column_letter(col_idx)
-            max_len = 0
-            for row in ws.iter_rows(min_col=col_idx, max_col=col_idx):
-                for cell in row:
-                    val = str(cell.value) if cell.value is not None else ""
-                    if len(val) > max_len:
-                        max_len = len(val)
-            ws.column_dimensions[col_letter].width = min(max(max_len + 2, 10), max_width)
 
     # ----- Sheet 1: Tổng quan -----
     _write_headers(ws1, ["Hạng", "Tên / Team", "Mã SV / Team ID", "Tổng điểm", "Giải thưởng", "BCN duyệt"])
@@ -686,10 +685,6 @@ async def export_system_summary_xlsx(
 
     Permission: ADMIN only — service `system_summary` enforce qua role check.
     """
-    from openpyxl import Workbook
-    from openpyxl.styles import Alignment, Font, PatternFill
-    from openpyxl.utils import get_column_letter
-
     # Reuse JSON service — đã enforce admin permission + đếm stats.
     summary = await system_summary(db, user, year)
 
@@ -698,33 +693,6 @@ async def export_system_summary_xlsx(
     ws1.title = "Tổng quan"
     ws2 = wb.create_sheet("Phân loại user")
     ws3 = wb.create_sheet("Metadata")
-
-    # PTIT brand styles — match per-contest export.
-    header_font = Font(bold=True, color="FFFFFF", size=11)
-    header_fill = PatternFill(
-        start_color="1E3A8A", end_color="1E3A8A", fill_type="solid")
-    header_align = Alignment(horizontal="center", vertical="center")
-
-    def _write_headers(ws, headers: list[str]) -> None:
-        for col_idx, h in enumerate(headers, start=1):
-            cell = ws.cell(row=1, column=col_idx, value=h)
-            cell.font = header_font
-            cell.fill = header_fill
-            cell.alignment = header_align
-        ws.freeze_panes = "A2"
-        ws.auto_filter.ref = f"A1:{get_column_letter(len(headers))}1"
-
-    def _autosize(ws, max_width: int = 50) -> None:
-        for col_idx in range(1, ws.max_column + 1):
-            col_letter = get_column_letter(col_idx)
-            max_len = 0
-            for row in ws.iter_rows(min_col=col_idx, max_col=col_idx):
-                for cell in row:
-                    val = str(cell.value) if cell.value is not None else ""
-                    if len(val) > max_len:
-                        max_len = len(val)
-            ws.column_dimensions[col_letter].width = min(
-                max(max_len + 2, 10), max_width)
 
     # ----- Sheet 1: Tổng quan -----
     _write_headers(ws1, ["Hạng mục", "Giá trị", "Ghi chú"])
@@ -794,11 +762,6 @@ async def export_system_summary_xlsx(
 # ============================================================
 # Sprint 23 (2026-05-09): Real-time stats endpoints
 # ============================================================
-
-from datetime import timedelta as _td  # noqa: E402
-
-from app.models.workflow import WorkflowApproval  # noqa: E402
-from app.models.enums import ApprovalStatus  # noqa: E402
 
 
 async def approval_stats(
