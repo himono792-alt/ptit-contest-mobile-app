@@ -22,6 +22,19 @@ import 'forgot_password_request_screen.dart';
 const _kRememberMeKey = 'login.remember_me';
 const _kRememberedEmailKey = 'login.remembered_email';
 
+/// Tài khoản demo cho login nhanh khi test (chỉ môi trường dev/demo).
+/// Bấm vào ô email sẽ xổ danh sách này; chọn 1 dòng → tự điền email + mật khẩu.
+/// (role label, email). Mật khẩu chung = _kDemoPwd.
+const List<(String, String)> _kDemoAccounts = [
+  ('SV', 'b22dccn001@ptit.edu.vn'),
+  ('GV/BTC', 'gv@ptit.edu.vn'),
+  ('BCN·CNTT', 'bcn@ptit.edu.vn'),
+  ('BCN·ATTT', 'bcn.attt@ptit.edu.vn'),
+  ('BCN·DTVT', 'bcn.dtvt@ptit.edu.vn'),
+  ('Admin', 'admin@ptit.edu.vn'),
+];
+const _kDemoPwd = 'abc' '123'; // demo only — toàn bộ tài khoản seed dùng chung
+
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
   @override
@@ -35,6 +48,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   // source code — GitGuardian flag email+password pair pattern. User vẫn
   // demo được nhanh qua _RoleTabs autofill (chỉ email, không password).
   final _emailCtrl = TextEditingController();
+  final _emailFocus = FocusNode();
   final _pwdCtrl = TextEditingController();
   bool _loading = false;
   bool _showPwd = false;
@@ -120,6 +134,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   @override
   void dispose() {
     _emailCtrl.dispose();
+    _emailFocus.dispose();
     _pwdCtrl.dispose();
     _splitCtrl.dispose();
     super.dispose();
@@ -426,6 +441,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             onChanged: (i) => setState(() {
               _selectedRoleTab = i;
               _emailCtrl.text = _demoEmailFor(i);
+              _pwdCtrl.text = _kDemoPwd; // tiện test: tab nào fill luôn mật khẩu
             }),
           ),
           const SizedBox(height: 18),
@@ -439,17 +455,94 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             label: 'Email PTIT',
             hint: 'Nhập email kết thúc bằng @ptit.edu.vn',
             textField: true,
-            child: TextFormField(
-              controller: _emailCtrl,
-              decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.mail_outline, size: 18),
-                hintText: _hintForRole(_selectedRoleTab),
-                fillColor: context.cardBg,
-                filled: true,
-              ),
-              keyboardType: TextInputType.emailAddress,
-              validator: (v) =>
-                  (v == null || !v.contains('@')) ? 'Email không hợp lệ' : null,
+            // Bấm vào ô email → xổ danh sách tài khoản demo; chọn 1 dòng tự điền
+            // email + mật khẩu. Vẫn gõ tay email thật bình thường (lọc theo gõ).
+            child: Autocomplete<String>(
+              textEditingController: _emailCtrl,
+              focusNode: _emailFocus,
+              optionsBuilder: (value) {
+                final q = value.text.trim().toLowerCase();
+                final all = _kDemoAccounts.map((a) => a.$2);
+                if (q.isEmpty) return all;
+                return all.where((e) => e.toLowerCase().contains(q));
+              },
+              onSelected: (email) {
+                _pwdCtrl.text = _kDemoPwd;
+                _emailFocus.unfocus();
+              },
+              optionsViewBuilder: (context, onSelected, options) {
+                final items = _kDemoAccounts
+                    .where((a) => options.contains(a.$2))
+                    .toList();
+                return Align(
+                  alignment: Alignment.topLeft,
+                  child: Material(
+                    elevation: 4,
+                    borderRadius: BorderRadius.circular(8),
+                    child: ConstrainedBox(
+                      constraints:
+                          const BoxConstraints(maxHeight: 300, maxWidth: 460),
+                      child: ListView.builder(
+                        padding: EdgeInsets.zero,
+                        shrinkWrap: true,
+                        itemCount: items.length,
+                        itemBuilder: (context, idx) {
+                          final a = items[idx];
+                          return InkWell(
+                            onTap: () => onSelected(a.$2),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                              child: Row(children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: ptitRed.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(a.$1,
+                                      style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: ptitRed)),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(a.$2,
+                                      style: TextStyle(
+                                          fontSize: 13,
+                                          color: context.textPrimary)),
+                                ),
+                              ]),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                );
+              },
+              fieldViewBuilder:
+                  (context, controller, focusNode, onFieldSubmitted) {
+                return TextFormField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.mail_outline, size: 18),
+                    suffixIcon:
+                        Icon(Icons.arrow_drop_down, color: context.textMuted),
+                    hintText: _hintForRole(_selectedRoleTab),
+                    fillColor: context.cardBg,
+                    filled: true,
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                  onFieldSubmitted: (_) => onFieldSubmitted(),
+                  validator: (v) => (v == null || !v.contains('@'))
+                      ? 'Email không hợp lệ'
+                      : null,
+                );
+              },
             ),
           ),
           const SizedBox(height: 14),
