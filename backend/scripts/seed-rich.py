@@ -692,6 +692,32 @@ async def main():
         ktdt = await get_or_create_faculty(db, "KTDT", "Kỹ thuật Điện tử")
         await db.flush()
 
+        # ── 2b. BCN/HOD cho từng khoa ───────────────────────────────────────
+        # Mỗi khoa cần 1 BCN riêng thì mới duyệt được contest của khoa đó:
+        # approval queue lọc `contests.host_faculty_id == bcn.faculty_id`. seed-demo
+        # mới tạo bcn@ (CNTT) → contest khoa ATTT/DTVT không ai duyệt. Thêm BCN ở đây.
+        # Mật khẩu = DEMO_PASSWORD (abc123). Idempotent.
+        print("[BCN/HOD theo khoa]")
+        attt = (await db.execute(select(Faculty).where(Faculty.faculty_code == "ATTT"))).scalar_one()
+        for fac, email, name in [
+            (attt, "bcn.attt@ptit.edu.vn", "BCN. Phạm Văn ATTT"),
+            (dtvt, "bcn.dtvt@ptit.edu.vn", "BCN. Vũ Thị DTVT"),
+        ]:
+            u, _ = await get_or_create_user(db, email, name)
+            await assign_role(db, u.user_id, "HOD")
+            dh = (await db.execute(
+                select(DepartmentHead).where(DepartmentHead.user_id == u.user_id)
+            )).scalar_one_or_none()
+            if not dh:
+                db.add(DepartmentHead(
+                    user_id=u.user_id,
+                    faculty_id=fac.faculty_id,
+                    title="Trưởng khoa",
+                    is_primary_approver=True,
+                ))
+                print(f"  → BCN {fac.faculty_code} ({email})")
+        await db.flush()
+
         # Ngành
         majors_data = [
             ("CNTT_KT", "Kỹ thuật phần mềm", cntt),
