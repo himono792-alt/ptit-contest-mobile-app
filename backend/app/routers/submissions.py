@@ -12,6 +12,7 @@ Endpoints:
 """
 
 from typing import Annotated
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
@@ -285,8 +286,17 @@ async def download_file(
     # get_submission_detail đã raise 403 nếu không có quyền → tới đây là OK
     _ = submission  # silence unused var warning
 
+    # RFC 6266: HTTP header chỉ encode được latin-1. file_name có dấu tiếng Việt
+    # (vd "bài_nộp_của_nguyễn_văn_an.pdf") sẽ khiến uvicorn raise UnicodeEncodeError
+    # → response fail → FE báo "Có lỗi xảy ra". Fix: filename ASCII fallback +
+    # filename*=UTF-8'' percent-encoded cho tên gốc có dấu.
+    raw_name = sub_file.file_name or "download"
+    ascii_name = raw_name.encode("ascii", "ignore").decode("ascii").strip() or "download"
+    utf8_name = quote(raw_name)
     headers = {
-        "Content-Disposition": f'inline; filename="{sub_file.file_name}"',
+        "Content-Disposition": (
+            f'inline; filename="{ascii_name}"; filename*=UTF-8\'\'{utf8_name}'
+        ),
     }
     if sub_file.file_size_bytes:
         headers["Content-Length"] = str(sub_file.file_size_bytes)

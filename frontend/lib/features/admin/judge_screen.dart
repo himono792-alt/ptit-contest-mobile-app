@@ -1,10 +1,16 @@
-﻿import 'package:flutter/material.dart';
+﻿// ignore: avoid_web_libraries_in_flutter
+import 'dart:async';
+import 'dart:html' as html;
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/auth/auth_provider.dart';
+import '../../core/config.dart';
+import '../../core/secure_storage.dart';
 import '../../core/errors/friendly_error.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/app_toast.dart';
@@ -182,7 +188,7 @@ class _JudgeStatStrip extends StatelessWidget {
         child: _JudgeMiniStat(
           value: '${(pct * 100).round()}%',
           label: 'Tiến độ',
-          color: context.infoBlue,
+          color: infoBlue,
           icon: Icons.donut_large_outlined,
         ),
       ),
@@ -460,7 +466,7 @@ class _AssignmentCard extends ConsumerWidget {
             else
               Pill(
                 label: canSeeId ? 'Open judging' : 'Blind',
-                color: canSeeId ? context.infoBlue : context.warnOrange,
+                color: canSeeId ? infoBlue : context.warnOrange,
                 bg: canSeeId ? context.infoSoft : context.warnSoft,
               ),
           ]),
@@ -528,10 +534,19 @@ class _ScoreDialogState extends ConsumerState<_ScoreDialog> {
   bool _busy = false;
   String? _loadError;
 
+  // Bài làm của SV
+  Map<String, dynamic>? _submission;
+  bool _submissionLoading = false;
+  String? _submissionError;
+
+  // Điểm đã chấm: criterion_id → ScoreOut
+  Map<int, Map<String, dynamic>> _existingScores = {};
+
   @override
   void initState() {
     super.initState();
     _loadCriteria();
+    _loadSubmission();
   }
 
   @override
@@ -545,17 +560,75 @@ class _ScoreDialogState extends ConsumerState<_ScoreDialog> {
     super.dispose();
   }
 
+  Future<void> _loadSubmission() async {
+    setState(() => _submissionLoading = true);
+    try {
+      final api = ref.read(apiClientProvider);
+      final submissionId = widget.assignment['submission_id'];
+      final roundId = widget.assignment['round_id'];
+      final entryId = widget.assignment['entry_id'];
+
+      Map<String, dynamic>? found;
+      if (submissionId != null) {
+        // Fast path: submission_id đã có trong assignment → fetch detail trực tiếp
+        final res = await api.dio.get('/submissions/$submissionId');
+        found = res.data as Map<String, dynamic>;
+      } else {
+        // Fallback: BTC tạo assignment trước khi SV nộp —
+        // list submissions của round rồi tìm entry, sau đó fetch detail để có files
+        final listRes = await api.dio.get('/rounds/$roundId/submissions');
+        final list = (listRes.data as List).cast<Map<String, dynamic>>();
+        final stub = list.where((s) => s['entry_id'] == entryId).firstOrNull;
+        if (stub != null) {
+          final detailRes =
+              await api.dio.get('/submissions/${stub['submission_id']}');
+          found = detailRes.data as Map<String, dynamic>;
+        }
+      }
+
+      setState(() {
+        _submission = found;
+        _submissionLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _submissionError = FriendlyError.of(e);
+        _submissionLoading = false;
+      });
+    }
+  }
+
   Future<void> _loadCriteria() async {
     try {
       final api = ref.read(apiClientProvider);
-      final res =
-          await api.dio.get('/rounds/${widget.assignment['round_id']}/criteria');
-      final list = (res.data as List).cast<Map<String, dynamic>>();
+      final assignmentId = widget.assignment['assignment_id'];
+
+      // Load criteria + existing scores song song
+      final results = await Future.wait([
+        api.dio.get('/rounds/${widget.assignment['round_id']}/criteria'),
+        api.dio.get('/assignments/$assignmentId/scores'),
+      ]);
+
+      final list = (results[0].data as List).cast<Map<String, dynamic>>();
+      final scoreList = (results[1].data as List).cast<Map<String, dynamic>>();
+      final scoresByCriterion = {
+        for (final s in scoreList) s['criterion_id'] as int: s,
+      };
+
       setState(() {
         _criteria = list;
+        _existingScores = scoresByCriterion;
         for (final c in list) {
-          _scoreCtrls[c['criterion_id']] = TextEditingController();
-          _commentCtrls[c['criterion_id']] = TextEditingController();
+          final id = c['criterion_id'] as int;
+          final existing = scoresByCriterion[id];
+          _scoreCtrls[id] = TextEditingController(
+            text: existing != null
+                ? existing['score_value'].toString()
+                : '',
+          );
+          _commentCtrls[id] = TextEditingController(
+            text: existing?['comment_text'] as String? ?? '',
+          );
         }
       });
     } catch (e) {
@@ -653,9 +726,23 @@ class _ScoreDialogState extends ConsumerState<_ScoreDialog> {
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Chấm điểm — Assignment #${a['assignment_id']}',
+                  Row(children: [
+                    Text(
+                      _existingScores.isNotEmpty
+                          ? 'Sửa điểm — Assignment #${a['assignment_id']}'
+                          : 'Chấm điểm — Assignment #${a['assignment_id']}',
                       style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w700)),
+                          fontSize: 16, fontWeight: FontWeight.w700),
+                    ),
+                    if (_existingScores.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Pill(
+                        label: 'Đã chấm',
+                        color: const Color(0xFF059669),
+                        bg: const Color(0xFFD1FAE5),
+                      ),
+                    ],
+                  ]),
                   const SizedBox(height: 4),
                   Text(
                       'Round #${a['round_id']} · Entry #${a['entry_id']}'
@@ -672,27 +759,35 @@ class _ScoreDialogState extends ConsumerState<_ScoreDialog> {
       Flexible(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
-          child: _criteria!.isEmpty
-              ? Padding(
-                  padding: EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Bài làm của SV ── (luôn hiện, kể cả SV chưa nộp)
+              _buildSubmissionPanel(context),
+              const SizedBox(height: 16),
+              Divider(color: context.cardBorder),
+              const SizedBox(height: 12),
+              // ── Tiêu chí chấm ──
+              if (_criteria!.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(20),
                   child: Center(
                       child: Text(
                           'Round này chưa có criteria. GV BTC cần thêm rubric trước.',
                           style: TextStyle(color: context.textMuted))),
                 )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Tiêu chí chấm',
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: context.textMuted,
-                            letterSpacing: 0.5)),
-                    const SizedBox(height: 10),
-                    ..._criteria!.map((c) => _buildCriterion(context, c)),
-                  ],
-                ),
+              else ...[
+                Text('Tiêu chí chấm',
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: context.textMuted,
+                        letterSpacing: 0.5)),
+                const SizedBox(height: 10),
+                ..._criteria!.map((c) => _buildCriterion(context, c)),
+              ],
+            ],
+          ),
         ),
       ),
       Container(
@@ -722,8 +817,13 @@ class _ScoreDialogState extends ConsumerState<_ScoreDialog> {
             child: FilledButton.icon(
               onPressed:
                   (_busy || (_criteria?.isEmpty ?? true)) ? null : () => _submit(),
-              icon: const Icon(Icons.send, size: 16),
-              label: const Text('Submit điểm'),
+              icon: Icon(
+                _existingScores.isNotEmpty ? Icons.edit : Icons.send,
+                size: 16,
+              ),
+              label: Text(
+                _existingScores.isNotEmpty ? 'Cập nhật điểm' : 'Submit điểm',
+              ),
               style: FilledButton.styleFrom(
                   minimumSize: const Size(140, 38),
                   backgroundColor: ptitRed),
@@ -759,7 +859,7 @@ class _ScoreDialogState extends ConsumerState<_ScoreDialog> {
               if (weight != null)
                 Pill(
                     label: 'weight $weight%',
-                    color: context.infoBlue,
+                    color: infoBlue,
                     bg: context.infoSoft),
               const SizedBox(width: 6),
               Pill(
@@ -800,6 +900,240 @@ class _ScoreDialogState extends ConsumerState<_ScoreDialog> {
             ]),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Panel hiển thị bài làm (file, link, text answer) của SV.
+  Widget _buildSubmissionPanel(BuildContext context) {
+    if (_submissionLoading) {
+      return Row(children: [
+        const SizedBox(
+            width: 14, height: 14,
+            child: CircularProgressIndicator(strokeWidth: 2, color: ptitRed)),
+        const SizedBox(width: 8),
+        Text('Đang tải bài làm…',
+            style: TextStyle(fontSize: 12, color: context.textMuted)),
+      ]);
+    }
+    if (_submissionError != null) {
+      return Row(children: [
+        Icon(Icons.warning_amber_rounded, size: 14, color: context.textMuted),
+        const SizedBox(width: 6),
+        Text('Không tải được bài làm: $_submissionError',
+            style: TextStyle(fontSize: 12, color: context.textMuted)),
+      ]);
+    }
+    if (_submission == null) {
+      return Row(children: [
+        Icon(Icons.inbox_outlined, size: 14, color: context.textMuted),
+        const SizedBox(width: 6),
+        Text('SV chua nop bai cho vong nay.',
+            style: TextStyle(fontSize: 12, color: context.textMuted)),
+      ]);
+    }
+
+    // Lấy version mới nhất (version_no cao nhất)
+    final versions = (_submission!['versions'] as List? ?? [])
+        .cast<Map<String, dynamic>>();
+    if (versions.isEmpty) {
+      return Row(children: [
+        Icon(Icons.inbox_outlined, size: 14, color: context.textMuted),
+        const SizedBox(width: 6),
+        Text('SV chưa nộp file nào.',
+            style: TextStyle(fontSize: 12, color: context.textMuted)),
+      ]);
+    }
+    versions.sort((a, b) =>
+        (b['version_no'] as int).compareTo(a['version_no'] as int));
+    final latest = versions.first;
+    final files = (latest['files'] as List? ?? []).cast<Map<String, dynamic>>();
+    final externalLink = latest['external_link'] as String?;
+    final textAnswer = latest['text_answer'] as String?;
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Icon(Icons.folder_open_outlined, size: 14, color: context.textMuted),
+        const SizedBox(width: 6),
+        Text(
+          'Bài làm — Version #${latest['version_no']}',
+          style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: context.textMuted,
+              letterSpacing: 0.5),
+        ),
+      ]),
+      const SizedBox(height: 8),
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: context.appBg,
+          border: Border.all(color: context.cardBorder),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // Files
+          if (files.isNotEmpty) ...[
+            ...files.map((f) => _buildFileRow(context, f)),
+          ] else if (externalLink == null && textAnswer == null)
+            Text('(Không có tệp đính kèm)',
+                style: TextStyle(fontSize: 12, color: context.textMuted)),
+          // External link
+          if (externalLink != null && externalLink.isNotEmpty) ...[
+            if (files.isNotEmpty) const SizedBox(height: 6),
+            _buildLinkRow(context, externalLink),
+          ],
+          // Text answer
+          if (textAnswer != null && textAnswer.isNotEmpty) ...[
+            if (files.isNotEmpty || externalLink != null)
+              const SizedBox(height: 8),
+            Text('Câu trả lời văn bản:',
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: context.textMuted)),
+            const SizedBox(height: 4),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: context.cardBg,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                border: Border.all(color: context.cardBorder),
+              ),
+              child: SelectableText(
+                textAnswer,
+                style: TextStyle(fontSize: 12, color: context.textPrimary),
+              ),
+            ),
+          ],
+        ]),
+      ),
+    ]);
+  }
+
+  // Download file dùng dart:html XHR trực tiếp (responseType='blob') để giữ
+  // binary data nguyên vẹn và tránh vấn đề async context trong Flutter web.
+  Future<void> _downloadFile(String fileUrl, String fileName) async {
+    try {
+      final token = await ref.read(tokenStorageProvider).readToken();
+      final fullUrl = '${AppConfig.apiBaseUrl}$fileUrl';
+
+      final request = html.HttpRequest();
+      request.open('GET', fullUrl, async: true);
+      request.responseType = 'arraybuffer';
+      if (token != null && token.isNotEmpty) {
+        request.setRequestHeader('Authorization', 'Bearer $token');
+      }
+
+      final completer = Completer<void>();
+      request.onLoad.listen((_) {
+        try {
+          if (request.status != 200) {
+            completer.completeError(
+              Exception('HTTP ${request.status}: không tải được file'),
+            );
+            return;
+          }
+          final buffer = request.response as ByteBuffer;
+          final bytes = buffer.asUint8List();
+          final blob = html.Blob([bytes]);
+          final url = html.Url.createObjectUrlFromBlob(blob);
+          html.AnchorElement(href: url)
+            ..setAttribute('download', fileName)
+            ..click();
+          Future.delayed(
+            const Duration(milliseconds: 300),
+            () => html.Url.revokeObjectUrl(url),
+          );
+          completer.complete();
+        } catch (e) {
+          completer.completeError(e);
+        }
+      });
+      request.onError.listen((_) {
+        completer.completeError(Exception('Không kết nối được máy chủ. Kiểm tra mạng hoặc thử lại sau.'));
+      });
+
+      request.send();
+      await completer.future;
+    } catch (e) {
+      if (mounted) AppToast.error(context, e);
+    }
+  }
+
+  static String _mimeOf(String name) {
+    final n = name.toLowerCase();
+    if (n.endsWith('.pdf')) return 'application/pdf';
+    if (n.endsWith('.zip')) return 'application/zip';
+    if (n.endsWith('.docx')) return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    if (n.endsWith('.xlsx')) return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    if (n.endsWith('.png')) return 'image/png';
+    if (n.endsWith('.jpg') || n.endsWith('.jpeg')) return 'image/jpeg';
+    return 'application/octet-stream';
+  }
+
+  Widget _buildFileRow(BuildContext context, Map<String, dynamic> f) {
+    final fileName = f['file_name'] as String? ?? 'file';
+    final fileUrl = f['file_url'] as String? ?? '';
+    final bytes = f['file_size_bytes'] as int?;
+    final sizeLabel = bytes == null
+        ? ''
+        : bytes < 1024
+            ? ' · ${bytes}B'
+            : bytes < 1024 * 1024
+                ? ' · ${(bytes / 1024).toStringAsFixed(0)}KB'
+                : ' · ${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        onTap: () => _downloadFile(fileUrl, fileName),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+          child: Row(children: [
+            Icon(Icons.attach_file, size: 14, color: ptitRed),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                '$fileName$sizeLabel',
+                style: const TextStyle(
+                    fontSize: 12,
+                    color: ptitRed,
+                    decoration: TextDecoration.underline),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Icon(Icons.download_outlined, size: 14, color: context.textMuted),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLinkRow(BuildContext context, String url) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.sm),
+      onTap: () => html.window.open(url, '_blank'),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+        child: Row(children: [
+          Icon(Icons.link, size: 14, color: infoBlue),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              url,
+              style: TextStyle(
+                  fontSize: 12,
+                  color: infoBlue,
+                  decoration: TextDecoration.underline),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Icon(Icons.open_in_new, size: 14, color: context.textMuted),
+        ]),
       ),
     );
   }

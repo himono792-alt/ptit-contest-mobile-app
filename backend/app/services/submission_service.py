@@ -11,8 +11,9 @@ from app.models.contest import Contest, ContestRound
 from app.models.entry import ContestEntry, TeamMember
 from app.models.enums import EntryType, RegistrationStatus, SubmissionStatus
 from app.models.identity import AppUser
-from app.models.master_data import Student
-from app.models.submission import Submission, SubmissionVersion
+from app.models.judging import JudgeAssignment
+from app.models.master_data import Judge, Student
+from app.models.submission import Submission, SubmissionFile, SubmissionVersion
 from app.schemas.submission import SubmissionVersionCreateIn
 
 
@@ -106,6 +107,19 @@ async def _ensure_can_view_submission(
                 if (await db.execute(tm_stmt)).scalar_one_or_none() is not None:
                     return
 
+    # JUDGE assigned to this submission (or entry in same round)
+    if "JUDGE" in user.role_codes:
+        judge_stmt = select(Judge).where(Judge.user_id == user.user_id)
+        judge = (await db.execute(judge_stmt)).scalar_one_or_none()
+        if judge is not None:
+            assign_stmt = select(JudgeAssignment).where(
+                JudgeAssignment.judge_id == judge.judge_id,
+                JudgeAssignment.entry_id == submission.entry_id,
+                JudgeAssignment.round_id == submission.round_id,
+            )
+            if (await db.execute(assign_stmt)).scalar_one_or_none() is not None:
+                return
+
     raise HTTPException(status.HTTP_403_FORBIDDEN, "Bạn không có quyền xem submission này")
 
 
@@ -187,7 +201,7 @@ async def get_my_submission_in_round(
     stmt = (
         select(Submission)
         .where(Submission.round_id == round_id, Submission.entry_id == entry.entry_id)
-        .options(selectinload(Submission.versions))
+        .options(selectinload(Submission.versions).selectinload(SubmissionVersion.files))
     )
     return (await db.execute(stmt)).scalar_one_or_none()
 
@@ -223,7 +237,7 @@ async def get_submission_detail(
     stmt = (
         select(Submission)
         .where(Submission.submission_id == submission_id)
-        .options(selectinload(Submission.versions))
+        .options(selectinload(Submission.versions).selectinload(SubmissionVersion.files))
     )
     submission = (await db.execute(stmt)).scalar_one_or_none()
     if submission is None:

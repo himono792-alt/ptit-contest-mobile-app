@@ -102,6 +102,20 @@ async def list_my_assignments(
 
 # ---------- Score ----------
 
+@assignments_router.get(
+    "/{assignment_id}/scores",
+    response_model=list[ScoreOut],
+)
+async def get_scores(
+    assignment_id: int,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[ScoreOut]:
+    """JUDGE — Lấy điểm đã chấm của assignment (để FE pre-fill form sửa)."""
+    items = await judging_service.get_assignment_scores(db, user, assignment_id)
+    return [ScoreOut.model_validate(s) for s in items]
+
+
 @assignments_router.post(
     "/{assignment_id}/scores",
     response_model=list[ScoreOut],

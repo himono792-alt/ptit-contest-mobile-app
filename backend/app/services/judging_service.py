@@ -307,6 +307,23 @@ async def submit_scores_bulk(
     return saved
 
 
+async def get_assignment_scores(
+    db: AsyncSession, user: AppUser, assignment_id: int
+) -> list[Score]:
+    """JUDGE — Lấy điểm đã chấm của assignment để FE pre-fill."""
+    assignment = await db.get(JudgeAssignment, assignment_id)
+    if assignment is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Assignment not found")
+
+    judge_stmt = select(Judge).where(Judge.user_id == user.user_id)
+    judge = (await db.execute(judge_stmt)).scalar_one_or_none()
+    if judge is None or judge.judge_id != assignment.judge_id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Bạn không phải judge của assignment này")
+
+    stmt = select(Score).where(Score.assignment_id == assignment_id)
+    return list((await db.execute(stmt)).scalars().all())
+
+
 # ---------- Compute Round Results ----------
 
 async def compute_round_results(

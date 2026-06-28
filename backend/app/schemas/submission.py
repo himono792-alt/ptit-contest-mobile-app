@@ -22,6 +22,17 @@ class SubmissionVersionCreateIn(BaseModel):
     note: str | None = None
 
 
+class SubmissionFileOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    submission_file_id: int
+    file_name: str
+    file_url: str
+    mime_type: str | None = None
+    file_size_bytes: int | None = None
+    created_at: datetime
+
+
 class SubmissionVersionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -36,6 +47,7 @@ class SubmissionVersionOut(BaseModel):
     submitted_by: int | None = None
     submitted_at: datetime
     note: str | None = None
+    files: list[SubmissionFileOut] = []
 
 
 class SubmissionOut(BaseModel):

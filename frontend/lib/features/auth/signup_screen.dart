@@ -1,6 +1,6 @@
 /// Sprint 9 Group 1 (2026-05-07): Self-signup cho SV.
 ///
-/// SV mới chưa có tài khoản → form full_name + email + password + confirm.
+/// SV mới chưa có tài khoản → form student_code + full_name + email + password + confirm.
 /// POST /auth/register → backend tạo user với role STUDENT mặc định.
 /// Sau register thành công → chuyển sang /login với email pre-fill.
 library;
@@ -24,6 +24,7 @@ class SignupScreen extends ConsumerStatefulWidget {
 
 class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _codeCtrl = TextEditingController();
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
@@ -34,6 +35,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
   @override
   void dispose() {
+    _codeCtrl.dispose();
     _nameCtrl.dispose();
     _emailCtrl.dispose();
     _passCtrl.dispose();
@@ -54,6 +56,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     try {
       final api = ref.read(apiClientProvider);
       await api.dio.post('/auth/register', data: {
+        'student_code': _codeCtrl.text.trim(),
         'full_name': _nameCtrl.text.trim(),
         'email': _emailCtrl.text.trim(),
         'password': _passCtrl.text,
@@ -126,6 +129,21 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   ),
                   const SizedBox(height: 24),
                   TextFormField(
+                    controller: _codeCtrl,
+                    enabled: !_busy,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: 'Mã sinh viên (MSSV)',
+                      prefixIcon: Icon(Icons.badge_outlined, size: 18),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Bắt buộc';
+                      if (v.trim().length < 3) return 'MSSV không hợp lệ';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
                     controller: _nameCtrl,
                     enabled: !_busy,
                     textInputAction: TextInputAction.next,
@@ -143,7 +161,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
-                      labelText: 'Email PTIT',
+                      labelText: 'Email PTIT (đúng email trong danh mục SV)',
                       prefixIcon: Icon(Icons.mail_outline, size: 18),
                     ),
                     validator: (v) {

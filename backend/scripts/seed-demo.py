@@ -64,8 +64,9 @@ from app.models.master_data import (
     Student,
     StudentDirectory,
 )
+from app.models.judging import JudgeAssignment, RoundScoreCriterion, Score
 from app.models.notification import Notification, NotificationRecipient
-from app.models.submission import Submission, SubmissionVersion
+from app.models.submission import Submission, SubmissionFile, SubmissionVersion
 from app.models.workflow import WorkflowApproval
 from app.security import hash_password
 
@@ -210,7 +211,9 @@ async def main():
             await db.execute(select(Judge).where(Judge.user_id == gv.user_id))
         ).scalar_one_or_none()
         if judge is None:
-            db.add(Judge(user_id=gv.user_id, expertise="Lập trình, Thuật toán"))
+            judge = Judge(user_id=gv.user_id, expertise="Lập trình, Thuật toán")
+            db.add(judge)
+            await db.flush()
             print("    → judge profile")
 
         # --- BCN/HOD ---
@@ -333,19 +336,108 @@ async def main():
             )
             db.add(sub)
             await db.flush()
-            db.add(
-                SubmissionVersion(
-                    submission_id=sub.submission_id,
-                    version_no=1,
-                    title="Lời giải bài thuật toán — Nguyễn Văn An",
-                    description="Giải bằng quy hoạch động, độ phức tạp O(n log n).",
-                    external_link="https://github.com/demo/ptit-contest-solution",
-                    text_answer="Trình bày ý tưởng, độ phức tạp và mã nguồn kèm theo.",
-                    submitted_by=st1.user_id,
-                    submitted_at=hours(-12),
-                    note="Bài nộp demo.",
-                )
+            sub_ver = SubmissionVersion(
+                submission_id=sub.submission_id,
+                version_no=1,
+                title="Lời giải bài thuật toán — Nguyễn Văn An",
+                description="Giải bằng quy hoạch động, độ phức tạp O(n log n).",
+                external_link="https://github.com/demo/ptit-contest-solution",
+                text_answer="Trình bày ý tưởng, độ phức tạp và mã nguồn kèm theo.",
+                submitted_by=st1.user_id,
+                submitted_at=hours(-12),
+                note="Bài nộp demo.",
             )
+            db.add(sub_ver)
+            await db.flush()
+
+            # File đính kèm mẫu (BYTEA nhỏ — nội dung PDF giả)
+            pdf_bytes = b"%PDF-1.4 demo submission file - ptit contest"
+            db.add(SubmissionFile(
+                submission_version_id=sub_ver.submission_version_id,
+                file_name="loi_giai_thuat_toan.pdf",
+                file_url=f"/api/submissions/files/1/download",  # sẽ update sau flush
+                mime_type="application/pdf",
+                file_size_bytes=len(pdf_bytes),
+                file_data=pdf_bytes,
+            ))
+            db.add(SubmissionFile(
+                submission_version_id=sub_ver.submission_version_id,
+                file_name="source_code.zip",
+                file_url=f"/api/submissions/files/2/download",
+                mime_type="application/zip",
+                file_size_bytes=512,
+                file_data=b"PK\x03\x04" + b"\x00" * 508,  # ZIP header giả
+            ))
+            await db.flush()
+
+            # Cập nhật file_url đúng với submission_file_id thật
+            from sqlalchemy import text as sa_text
+            await db.execute(sa_text(
+                "UPDATE submission_files SET file_url = '/api/submissions/files/' || submission_file_id || '/download' "
+                "WHERE submission_version_id = :vid"
+            ), {"vid": sub_ver.submission_version_id})
+
+            # 3 tiêu chí chấm cho round_a
+            crit1 = RoundScoreCriterion(
+                round_id=round_a.round_id,
+                criterion_name="Tính đúng đắn",
+                description="Kết quả đúng với các test case, xử lý edge case.",
+                max_score=40,
+                weight_percent=40,
+                display_order=1,
+            )
+            crit2 = RoundScoreCriterion(
+                round_id=round_a.round_id,
+                criterion_name="Độ phức tạp & tối ưu",
+                description="Thuật toán đạt độ phức tạp yêu cầu, không TLE.",
+                max_score=35,
+                weight_percent=35,
+                display_order=2,
+            )
+            crit3 = RoundScoreCriterion(
+                round_id=round_a.round_id,
+                criterion_name="Trình bày & tài liệu",
+                description="Code sạch, comment rõ, README đầy đủ.",
+                max_score=25,
+                weight_percent=25,
+                display_order=3,
+            )
+            db.add_all([crit1, crit2, crit3])
+            await db.flush()
+
+            # Assignment: GV chấm entry1 (đã có submission)
+            assignment1 = JudgeAssignment(
+                round_id=round_a.round_id,
+                entry_id=entry1.entry_id,
+                submission_id=sub.submission_id,
+                judge_id=judge.judge_id,
+                assigned_by=gv.user_id,
+                can_view_identity=True,
+            )
+            db.add(assignment1)
+            await db.flush()
+
+            # Scores mẫu — GV đã chấm xong assignment1
+            db.add_all([
+                Score(
+                    assignment_id=assignment1.assignment_id,
+                    criterion_id=crit1.criterion_id,
+                    score_value=36,
+                    comment_text="Đúng 9/10 test, sai 1 edge case n=0.",
+                ),
+                Score(
+                    assignment_id=assignment1.assignment_id,
+                    criterion_id=crit2.criterion_id,
+                    score_value=30,
+                    comment_text="O(n log n) như yêu cầu, tốt.",
+                ),
+                Score(
+                    assignment_id=assignment1.assignment_id,
+                    criterion_id=crit3.criterion_id,
+                    score_value=22,
+                    comment_text="README khá tốt, thiếu ví dụ chạy.",
+                ),
+            ])
 
             # ===== Contest B: TEAM, PROPOSED → hàng đợi duyệt BCN =====
             contest_b = Contest(

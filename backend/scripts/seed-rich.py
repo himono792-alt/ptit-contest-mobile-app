@@ -67,7 +67,7 @@ from app.models.master_data import (
 )
 from app.models.notification import Article, Notification, NotificationRecipient, Question, QuestionAnswer
 from app.models.review import ContestReview
-from app.models.submission import Submission, SubmissionVersion
+from app.models.submission import Submission, SubmissionFile, SubmissionVersion
 from app.models.system import AuditLog, SystemConfig
 from app.security import hash_password
 
@@ -316,8 +316,9 @@ async def create_finished_individual_contest(
         sub_objs.append(sub)
     await db.flush()
 
+    ver_objs = []
     for sub, (st, st_user) in zip(sub_objs, students):
-        db.add(SubmissionVersion(
+        ver = SubmissionVersion(
             submission_id=sub.submission_id,
             version_no=1,
             title=f"Bài nộp của {st_user.full_name}",
@@ -325,8 +326,42 @@ async def create_finished_individual_contest(
             text_answer="Nội dung bài làm đã được nộp và khoá.",
             submitted_by=st_user.user_id,
             submitted_at=sub.submitted_at,
-        ))
+        )
+        db.add(ver)
+        ver_objs.append(ver)
     await db.flush()
+
+    # File mẫu cho mỗi submission version
+    _pdf = b"%PDF-1.4 demo submission - ptit contest"
+    _zip = b"PK\x03\x04" + b"\x00" * 60
+    for ver, (st, st_user) in zip(ver_objs, students):
+        safe_name = st_user.full_name.replace(" ", "_").lower()
+        f1 = SubmissionFile(
+            submission_version_id=ver.submission_version_id,
+            file_name=f"bai_lam_{safe_name}.pdf",
+            file_url="",  # cập nhật sau flush
+            mime_type="application/pdf",
+            file_size_bytes=len(_pdf),
+            file_data=_pdf,
+        )
+        f2 = SubmissionFile(
+            submission_version_id=ver.submission_version_id,
+            file_name=f"source_{safe_name}.zip",
+            file_url="",
+            mime_type="application/zip",
+            file_size_bytes=len(_zip),
+            file_data=_zip,
+        )
+        db.add_all([f1, f2])
+    await db.flush()
+
+    # Cập nhật file_url sau khi có ID thật
+    from sqlalchemy import text as _sa_text
+    await db.execute(_sa_text(
+        "UPDATE submission_files "
+        "SET file_url = '/api/submissions/files/' || submission_file_id || '/download' "
+        "WHERE file_url = ''"
+    ))
 
     # Judge assignments + Scores
     j0 = judges[0]
@@ -415,6 +450,10 @@ async def create_finished_individual_contest(
 async def create_finished_team_contest(
     db, slug, title, faculty, organizer, judges, teams_data, criteria, gv_user
 ):
+    from sqlalchemy import text as _sa_text
+    _pdf = b"%PDF-1.4 demo submission - ptit contest"
+    _zip = b"PK\x03\x04" + b"\x00" * 60
+
     existing = (await db.execute(select(Contest).where(Contest.slug == slug))).scalar_one_or_none()
     if existing:
         print(f"  [skip] contest '{slug}' đã tồn tại")
@@ -538,7 +577,7 @@ async def create_finished_team_contest(
         db.add(sub)
         await db.flush()
 
-        db.add(SubmissionVersion(
+        ver2 = SubmissionVersion(
             submission_id=sub.submission_id,
             version_no=1,
             title=f"Demo sản phẩm — {teams_data[e_idx][0]}",
@@ -546,6 +585,33 @@ async def create_finished_team_contest(
             text_answer="Sản phẩm demo tại hội trường.",
             submitted_by=gv_user.user_id,
             submitted_at=sub.submitted_at,
+        )
+        db.add(ver2)
+        await db.flush()
+
+        team_safe = teams_data[e_idx][0].replace(" ", "_").lower()
+        f_pdf = SubmissionFile(
+            submission_version_id=ver2.submission_version_id,
+            file_name=f"slide_{team_safe}.pdf",
+            file_url="",
+            mime_type="application/pdf",
+            file_size_bytes=len(_pdf),
+            file_data=_pdf,
+        )
+        f_zip = SubmissionFile(
+            submission_version_id=ver2.submission_version_id,
+            file_name=f"source_{team_safe}.zip",
+            file_url="",
+            mime_type="application/zip",
+            file_size_bytes=len(_zip),
+            file_data=_zip,
+        )
+        db.add_all([f_pdf, f_zip])
+        await db.flush()
+        await db.execute(_sa_text(
+            "UPDATE submission_files "
+            "SET file_url = '/api/submissions/files/' || submission_file_id || '/download' "
+            "WHERE file_url = ''"
         ))
 
         ja = JudgeAssignment(
