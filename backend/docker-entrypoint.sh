@@ -89,5 +89,13 @@ if [ -f "/app/scripts/seed-rich.py" ]; then
   python /app/scripts/seed-rich.py || echo "Seed rich failed (non-fatal)"
 fi
 
+# File nộp mẫu (BYTEA) cho các SubmissionVersion chưa có file — để bản clone-and-run
+# hiện được file trong màn Chấm bài của GV. Idempotent: chỉ thêm cho version chưa có
+# file nào, chạy lại không nhân đôi. PHẢI sau seed-rich (cần submissions đã tồn tại).
+if [ -f "/app/scripts/patch_add_submission_files.py" ]; then
+  echo "Seeding submission files (idempotent)..."
+  python /app/scripts/patch_add_submission_files.py || echo "Seed submission files failed (non-fatal)"
+fi
+
 echo "Starting uvicorn on 0.0.0.0:$PORT"
 exec uvicorn app.main:app --host 0.0.0.0 --port "$PORT"
