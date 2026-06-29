@@ -209,6 +209,19 @@ class _EntriesTabState extends ConsumerState<_EntriesTab> {
                                             fontSize: 11, color: context.textMuted)),
                                   ]),
                             ),
+                            // Option B — cờ cảnh báo SV đăng ký dù trùng lịch.
+                            if (e['schedule_conflict_ack'] == true) ...[
+                              Tooltip(
+                                message:
+                                    'SV đã đăng ký dù được cảnh báo trùng lịch cuộc thi khác',
+                                child: Pill(
+                                  label: 'Trùng lịch',
+                                  color: context.warnOrange,
+                                  bg: context.warnSoft,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                            ],
                             Pill.status(st),
                             const SizedBox(width: 10),
                             if (isPending) ...[

@@ -43,10 +43,82 @@ def _ensure_registration_open(contest: Contest) -> None:
         )
 
 
+def _dates_overlap(a_start, a_end, b_start, b_end) -> bool:
+    """Hai khoảng [start,end] có giao nhau không (tính cả trùng ngày)."""
+    if None in (a_start, a_end, b_start, b_end):
+        return False
+    return a_start <= b_end and b_start <= a_end
+
+
+async def _find_schedule_conflicts(
+    db: AsyncSession, student_id: int, target: Contest
+) -> list[Contest]:
+    """Tìm các cuộc thi SV đã đăng ký (chưa hủy) có lịch thi trùng/đè với `target`.
+
+    Gồm cả entry cá nhân (student_id) lẫn entry đội mà SV là thành viên.
+    Bỏ qua chính cuộc thi target.
+    """
+    # 1) Entry cá nhân
+    indiv_stmt = (
+        select(Contest)
+        .join(ContestEntry, ContestEntry.contest_id == Contest.contest_id)
+        .where(
+            ContestEntry.student_id == student_id,
+            ContestEntry.registration_status != RegistrationStatus.CANCELLED,
+            Contest.contest_id != target.contest_id,
+        )
+    )
+    # 2) Entry đội — SV là member của team đã đăng ký
+    team_stmt = (
+        select(Contest)
+        .join(ContestEntry, ContestEntry.contest_id == Contest.contest_id)
+        .join(TeamMember, TeamMember.team_id == ContestEntry.team_id)
+        .where(
+            TeamMember.student_id == student_id,
+            ContestEntry.registration_status != RegistrationStatus.CANCELLED,
+            Contest.contest_id != target.contest_id,
+        )
+    )
+    rows = list((await db.execute(indiv_stmt)).scalars().all())
+    rows += list((await db.execute(team_stmt)).scalars().all())
+
+    # Khử trùng + lọc theo overlap ngày
+    seen: set[int] = set()
+    conflicts: list[Contest] = []
+    for c in rows:
+        if c.contest_id in seen:
+            continue
+        seen.add(c.contest_id)
+        if _dates_overlap(target.start_at, target.end_at, c.start_at, c.end_at):
+            conflicts.append(c)
+    return conflicts
+
+
+def _raise_schedule_conflict(conflicts: list[Contest]) -> None:
+    """Raise 409 có cấu trúc để FE phân biệt với lỗi 'đã đăng ký rồi'."""
+    raise HTTPException(
+        status.HTTP_409_CONFLICT,
+        detail={
+            "code": "SCHEDULE_CONFLICT",
+            "message": "Bạn đã đăng ký cuộc thi khác trùng lịch.",
+            "conflicts": [
+                {
+                    "contest_id": c.contest_id,
+                    "title": c.title,
+                    "start_at": c.start_at.isoformat() if c.start_at else None,
+                    "end_at": c.end_at.isoformat() if c.end_at else None,
+                }
+                for c in conflicts
+            ],
+        },
+    )
+
+
 # ---------- SV-06 register ----------
 
 async def register_individual(
-    db: AsyncSession, user: AppUser, contest_id: int, note: str | None
+    db: AsyncSession, user: AppUser, contest_id: int, note: str | None,
+    force: bool = False,
 ) -> ContestEntry:
     contest = await db.get(Contest, contest_id)
     if contest is None:
@@ -60,6 +132,12 @@ async def register_individual(
 
     student = await _get_my_student(db, user)
 
+    # Option B — cảnh báo trùng lịch. Không force → chặn mềm (409 có cấu trúc);
+    # force=True → cho qua nhưng đánh dấu để GV thấy.
+    conflicts = await _find_schedule_conflicts(db, student.student_id, contest)
+    if conflicts and not force:
+        _raise_schedule_conflict(conflicts)
+
     entry = ContestEntry(
         contest_id=contest_id,
         entry_type=EntryType.INDIVIDUAL,
@@ -67,6 +145,7 @@ async def register_individual(
         registration_status=RegistrationStatus.PENDING,
         participant_status=ParticipantStatus.REGISTERED,
         registration_note=note,
+        schedule_conflict_ack=bool(conflicts),
     )
     db.add(entry)
     try:
@@ -82,7 +161,8 @@ async def register_individual(
 
 
 async def register_team(
-    db: AsyncSession, user: AppUser, contest_id: int, team_id: int, note: str | None
+    db: AsyncSession, user: AppUser, contest_id: int, team_id: int, note: str | None,
+    force: bool = False,
 ) -> ContestEntry:
     contest = await db.get(Contest, contest_id)
     if contest is None:
@@ -110,6 +190,11 @@ async def register_team(
             "Chỉ leader của team mới đăng ký được",
         )
 
+    # Option B — kiểm trùng lịch theo leader (người đăng ký đội).
+    conflicts = await _find_schedule_conflicts(db, student.student_id, contest)
+    if conflicts and not force:
+        _raise_schedule_conflict(conflicts)
+
     entry = ContestEntry(
         contest_id=contest_id,
         entry_type=EntryType.TEAM,
@@ -117,6 +202,7 @@ async def register_team(
         registration_status=RegistrationStatus.PENDING,
         participant_status=ParticipantStatus.REGISTERED,
         registration_note=note,
+        schedule_conflict_ack=bool(conflicts),
     )
     db.add(entry)
     try:

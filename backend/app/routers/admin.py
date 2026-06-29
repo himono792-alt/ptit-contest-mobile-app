@@ -11,6 +11,7 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Query, status
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -669,3 +670,172 @@ async def create_backup(user: CurrentUser) -> dict:
         "size_mb": round(size_bytes / (1024 * 1024), 3),
         "created_at": datetime.now().isoformat(),
     }
+
+
+@router.get("/backup/download/{filename}")
+async def download_backup(filename: str, user: CurrentUser) -> FileResponse:
+    """Admin tải file backup .sql đã tạo từ thư mục BACKUP_DIR."""
+    if "ADMIN" not in user.role_codes:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Cần role ADMIN")
+
+    import os
+
+    # Chặn path traversal: chỉ cho phép basename, đuôi .sql.
+    safe = os.path.basename(filename)
+    if safe != filename or not safe.endswith(".sql"):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Tên file không hợp lệ")
+
+    backup_dir = os.environ.get("BACKUP_DIR", "/backups")
+    filepath = os.path.join(backup_dir, safe)
+    if not os.path.isfile(filepath):
+        # thử fallback /tmp/backups (khi /backups không ghi được lúc tạo)
+        filepath = os.path.join("/tmp/backups", safe)
+        if not os.path.isfile(filepath):
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "File backup không tồn tại")
+
+    return FileResponse(
+        filepath,
+        media_type="application/sql",
+        filename=safe,
+    )
+
+
+# ============================================================
+# AD-05 EXPORT EXCEL — danh sách user + audit log (2026-06-29)
+# Reuse openpyxl. FE gọi qua exportXlsxFromEndpoint (responseType bytes).
+# ============================================================
+
+_XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+def _build_xlsx(sheet_title: str, headers: list[str], rows: list[list]) -> bytes:
+    """Dựng workbook 1 sheet: header bold + nền xám, auto width, trả bytes."""
+    import io
+
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.utils import get_column_letter
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = sheet_title[:31]  # Excel giới hạn 31 ký tự tên sheet
+
+    head_fill = PatternFill("solid", fgColor="E5283C")  # ptitRed
+    head_font = Font(bold=True, color="FFFFFF")
+    for col, h in enumerate(headers, start=1):
+        c = ws.cell(row=1, column=col, value=h)
+        c.fill = head_fill
+        c.font = head_font
+        c.alignment = Alignment(horizontal="center", vertical="center")
+
+    for r_idx, row in enumerate(rows, start=2):
+        for c_idx, val in enumerate(row, start=1):
+            ws.cell(row=r_idx, column=c_idx, value=val)
+
+    # auto width thô theo độ dài nội dung
+    for col in range(1, len(headers) + 1):
+        letter = get_column_letter(col)
+        max_len = len(str(headers[col - 1]))
+        for row in rows:
+            if col - 1 < len(row) and row[col - 1] is not None:
+                max_len = max(max_len, len(str(row[col - 1])))
+        ws.column_dimensions[letter].width = min(max_len + 3, 60)
+
+    ws.freeze_panes = "A2"
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def _xlsx_stream(data: bytes, filename: str) -> StreamingResponse:
+    def _iter():
+        chunk = 64 * 1024
+        for i in range(0, len(data), chunk):
+            yield data[i:i + chunk]
+
+    return StreamingResponse(
+        _iter(),
+        media_type=_XLSX_MIME,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Length": str(len(data)),
+        },
+    )
+
+
+@router.get("/users/export.xlsx")
+async def export_users_xlsx(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    role: RoleCode | None = None,
+    status_filter: UserStatus | None = Query(None, alias="status"),
+    q: str | None = None,
+) -> StreamingResponse:
+    """Admin xuất danh sách user ra Excel (theo bộ lọc role/status/q hiện tại)."""
+    if "ADMIN" not in user.role_codes:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Cần role ADMIN")
+
+    rows, _ = await admin_user_service.list_users(
+        db, user, role=role, status_filter=status_filter, q=q,
+        offset=0, limit=10000,
+    )
+    headers = ["ID", "Email", "Họ tên", "SĐT", "Roles", "Trạng thái",
+               "Đăng nhập gần nhất", "Ngày tạo"]
+    data_rows = []
+    for u in rows:
+        item = _user_to_item(u)
+        data_rows.append([
+            item.user_id,
+            item.email,
+            item.full_name,
+            item.phone or "",
+            ", ".join(item.roles),
+            item.status.value if hasattr(item.status, "value") else str(item.status),
+            item.last_login_at.strftime("%d/%m/%Y %H:%M") if item.last_login_at else "—",
+            item.created_at.strftime("%d/%m/%Y %H:%M") if item.created_at else "",
+        ])
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M")
+    xlsx = _build_xlsx("Danh sách user", headers, data_rows)
+    return _xlsx_stream(xlsx, f"danh-sach-user_{ts}.xlsx")
+
+
+@router.get("/audit-logs/export.xlsx")
+async def export_audit_logs_xlsx(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user_id: int | None = None,
+    action_type: str | None = None,
+    entity_name: str | None = None,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+) -> StreamingResponse:
+    """Admin xuất audit log ra Excel (theo bộ lọc hiện tại, tối đa 10000 dòng)."""
+    if "ADMIN" not in user.role_codes:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Cần role ADMIN")
+
+    rows, _ = await admin_audit_service.list_audit_logs(
+        db, user,
+        user_id=user_id, action_type=action_type, entity_name=entity_name,
+        date_from=date_from, date_to=date_to,
+        offset=0, limit=10000,
+    )
+    headers = ["Log ID", "Thời gian", "User ID", "Hành động", "Đối tượng",
+               "Entity ID", "IP", "Chi tiết"]
+    data_rows = []
+    for r in rows:
+        details = r.details_json
+        data_rows.append([
+            r.log_id,
+            r.created_at.strftime("%d/%m/%Y %H:%M:%S") if r.created_at else "",
+            r.user_id if r.user_id is not None else "",
+            r.action_type,
+            r.entity_name,
+            r.entity_id or "",
+            str(r.ip_address) if r.ip_address is not None else "",
+            str(details) if details else "",
+        ])
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M")
+    xlsx = _build_xlsx("Audit log", headers, data_rows)
+    return _xlsx_stream(xlsx, f"audit-log_{ts}.xlsx")

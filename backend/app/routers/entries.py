@@ -65,9 +65,15 @@ async def register_individual(
     data: RegisterIndividualIn,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    force: Annotated[bool, Query(description="Bỏ qua cảnh báo trùng lịch")] = False,
 ) -> EntryListItem:
-    """SV-06 — Đăng ký cá nhân vào contest (status PENDING chờ BTC duyệt)."""
-    entry = await entry_service.register_individual(db, user, contest_id, data.note)
+    """SV-06 — Đăng ký cá nhân vào contest (status PENDING chờ BTC duyệt).
+
+    force=False: nếu trùng lịch cuộc thi khác → 409 SCHEDULE_CONFLICT (cảnh báo).
+    force=True: vẫn đăng ký nhưng đánh dấu schedule_conflict_ack=TRUE cho GV.
+    """
+    entry = await entry_service.register_individual(
+        db, user, contest_id, data.note, force=force)
     return EntryListItem.model_validate(entry)
 
 
@@ -81,9 +87,11 @@ async def register_team(
     data: RegisterTeamIn,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    force: Annotated[bool, Query(description="Bỏ qua cảnh báo trùng lịch")] = False,
 ) -> EntryListItem:
-    """SV-06 — Đăng ký team (chỉ leader gọi)."""
-    entry = await entry_service.register_team(db, user, contest_id, data.team_id, data.note)
+    """SV-06 — Đăng ký team (chỉ leader gọi). force: xem register_individual."""
+    entry = await entry_service.register_team(
+        db, user, contest_id, data.team_id, data.note, force=force)
     return EntryListItem.model_validate(entry)
 
 

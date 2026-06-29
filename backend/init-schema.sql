@@ -462,6 +462,8 @@ CREATE TABLE contest_entries (
     approved_by               BIGINT REFERENCES app_users(user_id) ON DELETE SET NULL,
     approved_at               TIMESTAMPTZ,
     registration_note         TEXT,
+    -- TRUE khi SV đăng ký dù đã được cảnh báo trùng lịch cuộc thi khác (option B).
+    schedule_conflict_ack     BOOLEAN NOT NULL DEFAULT FALSE,
     created_at                TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at                TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT chk_entry_target CHECK (

@@ -58,6 +58,11 @@ class _RegisterContestScreenState extends ConsumerState<RegisterContestScreen> {
       _goToTeamFlow();
       return;
     }
+    await _register(force: false);
+  }
+
+  Future<void> _register({required bool force}) async {
+    final c = widget.contest;
     setState(() {
       _loading = true;
       _error = null;
@@ -66,16 +71,80 @@ class _RegisterContestScreenState extends ConsumerState<RegisterContestScreen> {
       final api = ref.read(apiClientProvider);
       await api.dio.post(
         '/contests/${c.contestId}/register/individual',
+        queryParameters: force ? {'force': true} : null,
         data: {'note': _noteCtrl.text.isEmpty ? null : _noteCtrl.text},
       );
       if (!mounted) return;
       AppToast.success(context, 'Đăng ký thành công, chờ BTC duyệt');
       context.go('/'); // back to list
     } on DioException catch (e) {
+      // Option B — 409 SCHEDULE_CONFLICT: cảnh báo mềm, cho phép đăng ký tiếp.
+      final detail = e.response?.data is Map
+          ? (e.response!.data as Map)['detail']
+          : null;
+      if (e.response?.statusCode == 409 &&
+          detail is Map &&
+          detail['code'] == 'SCHEDULE_CONFLICT') {
+        if (mounted) setState(() => _loading = false);
+        final proceed = await _showConflictDialog(detail);
+        if (proceed == true) {
+          await _register(force: true); // SV cố tình đăng ký dù trùng lịch
+        }
+        return;
+      }
       setState(() => _error = FriendlyError.of(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  /// Dialog cảnh báo trùng lịch. Trả true nếu SV vẫn muốn đăng ký.
+  Future<bool?> _showConflictDialog(Map detail) {
+    final conflicts = (detail['conflicts'] as List?) ?? const [];
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: Icon(Icons.warning_amber_rounded, color: context.warnOrange),
+        title: const Text('Trùng lịch cuộc thi'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+                'Cuộc thi này trùng lịch với cuộc thi bạn đã đăng ký:'),
+            const SizedBox(height: 10),
+            ...conflicts.map((c) {
+              final m = c as Map;
+              final start = (m['start_at'] as String?)?.split('T').first ?? '';
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('•  '),
+                  Expanded(
+                    child: Text('${m['title'] ?? '?'}'
+                        '${start.isNotEmpty ? '  ($start)' : ''}',
+                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                  ),
+                ]),
+              );
+            }),
+            const SizedBox(height: 10),
+            Text('Bạn vẫn muốn đăng ký cuộc thi này chứ?',
+                style: TextStyle(color: context.textMuted, fontSize: 13)),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Huỷ')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: context.warnOrange),
+            child: const Text('Vẫn đăng ký'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

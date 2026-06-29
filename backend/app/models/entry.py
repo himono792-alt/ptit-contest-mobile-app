@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
-    BigInteger, Boolean, DateTime, Enum as SAEnum, ForeignKey, String, Text, func,
+    BigInteger, Boolean, DateTime, Enum as SAEnum, ForeignKey, String, Text, func, text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -87,6 +87,10 @@ class ContestEntry(Base):
     )
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     registration_note: Mapped[str | None] = mapped_column(Text)
+    # TRUE khi SV cố tình đăng ký dù đã được cảnh báo trùng lịch (option B).
+    schedule_conflict_ack: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("false"), default=False,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(),
     )

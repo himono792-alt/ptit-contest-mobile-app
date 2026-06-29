@@ -37,6 +37,7 @@ class EntryListItem(BaseModel):
     approved_by: int | None = None
     approved_at: datetime | None = None
     registration_note: str | None = None
+    schedule_conflict_ack: bool = False
     created_at: datetime
 
 
