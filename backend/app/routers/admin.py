@@ -587,3 +587,85 @@ async def delete_faculty_cert_template(
     await db.delete(tpl)
     await db.commit()
     return None
+
+
+# ============================================================
+# AD-04 BACKUP — pg_dump schema ptit_contest (2026-06-29)
+# FE (admin_shell._BackupRestoreScreen) gọi POST /admin/backup. Trước đây
+# endpoint chưa tồn tại → 404 → FE hiện "đã xóa hoặc di chuyển". Image backend
+# đã có postgresql-client (pg_dump). Restore vẫn để DBA chạy CLI thủ công.
+# ============================================================
+
+@router.post("/backup")
+async def create_backup(user: CurrentUser) -> dict:
+    """Admin tạo backup pg_dump schema ptit_contest → file .sql trong /backups."""
+    if "ADMIN" not in user.role_codes:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Cần role ADMIN")
+
+    import asyncio
+    import os
+    from urllib.parse import urlparse, unquote
+
+    from app.config import settings
+
+    # database_url dạng SQLAlchemy async: postgresql+asyncpg://user:pass@host:port/db
+    raw = settings.database_url.replace("+asyncpg", "").replace("+psycopg", "")
+    p = urlparse(raw)
+    db_user = unquote(p.username or "ptit_contest")
+    db_pass = unquote(p.password or "")
+    db_host = p.hostname or "localhost"
+    db_port = str(p.port or 5432)
+    db_name = (p.path or "/ptit_contest_db").lstrip("/")
+
+    backup_dir = os.environ.get("BACKUP_DIR", "/backups")
+    try:
+        os.makedirs(backup_dir, exist_ok=True)
+    except OSError:
+        backup_dir = "/tmp/backups"
+        os.makedirs(backup_dir, exist_ok=True)
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"ptit_contest_{ts}.sql"
+    filepath = os.path.join(backup_dir, filename)
+
+    cmd = [
+        "pg_dump",
+        "-h", db_host,
+        "-p", db_port,
+        "-U", db_user,
+        "-d", db_name,
+        "--schema=ptit_contest",
+        "--no-owner",
+        "--no-privileges",
+        "-f", filepath,
+    ]
+    env = {**os.environ, "PGPASSWORD": db_pass}
+
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            env=env,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        _, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
+    except FileNotFoundError:
+        raise HTTPException(
+            status.HTTP_501_NOT_IMPLEMENTED,
+            "pg_dump không có trong container. Cần postgresql-client trong image.",
+        )
+    except asyncio.TimeoutError:
+        raise HTTPException(status.HTTP_504_GATEWAY_TIMEOUT, "pg_dump timeout (>120s)")
+
+    if proc.returncode != 0:
+        msg = stderr.decode(errors="replace")[:500] if stderr else "unknown error"
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            f"pg_dump lỗi: {msg}")
+
+    size_bytes = os.path.getsize(filepath)
+    return {
+        "filename": filename,
+        "path": filepath,
+        "size_mb": round(size_bytes / (1024 * 1024), 3),
+        "created_at": datetime.now().isoformat(),
+    }

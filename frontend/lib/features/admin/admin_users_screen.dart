@@ -209,22 +209,27 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               final items =
                   (data['items'] as List).cast<Map<String, dynamic>>();
               final total = data['total'] as int;
-              return Padding(
+              if (items.isEmpty) {
+                return const Center(
+                  child: EmptyView(
+                    icon: Icons.people_outline,
+                    title: 'Không có user nào',
+                    subtitle: 'Tạo user mới hoặc import từ CSV.',
+                  ),
+                );
+              }
+              // Bọc SingleChildScrollView: danh sách tới 100 user (Column) tràn
+              // chiều dọc trong Expanded → trước đây không cuộn được, không xem hết.
+              return SingleChildScrollView(
                 padding: EdgeInsets.all(isMobile ? 14 : 24),
-                child: items.isEmpty
-                    ? const EmptyView(
-                        icon: Icons.people_outline,
-                        title: 'Không có user nào',
-                        subtitle: 'Tạo user mới hoặc import từ CSV.',
-                      )
-                    : MCard(
-                        padding: EdgeInsets.zero,
-                        margin: EdgeInsets.zero,
-                        child: _UsersTable(
-                            items: items, total: total, refresh: () {
-                          ref.invalidate(usersListProvider);
-                        }),
-                      ),
+                child: MCard(
+                  padding: EdgeInsets.zero,
+                  margin: EdgeInsets.zero,
+                  child: _UsersTable(
+                      items: items, total: total, refresh: () {
+                    ref.invalidate(usersListProvider);
+                  }),
+                ),
               );
             },
           ),

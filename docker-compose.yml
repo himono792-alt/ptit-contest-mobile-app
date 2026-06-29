@@ -60,6 +60,10 @@ services:
       DEBUG: "false"
       # Mật khẩu cho toàn bộ tài khoản demo do seed-demo.py tạo (SV/GV/BCN/Admin).
       DEMO_PASSWORD: abc123
+      # Thư mục lưu file pg_dump khi Admin bấm "Tạo backup" (POST /admin/backup).
+      BACKUP_DIR: /backups
+    volumes:
+      - backups:/backups
     ports:
       - "8000:8000"
     healthcheck:
@@ -129,3 +133,4 @@ volumes:
   pg_data:
   dbgate_data:
   dbx_data:
+  backups:
