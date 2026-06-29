@@ -66,6 +66,12 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
         queryParameters: {'target': newStatus});
   }
 
+  // Demo fast-forward: bỏ qua thời gian đăng ký/thi (start-now / finish-now).
+  Future<void> _demoPost(String action) async {
+    final api = ref.read(apiClientProvider);
+    await api.dio.post('/contests/${widget.contestId}/demo/$action');
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = widget.contest;
@@ -88,6 +94,34 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
                     color: context.textPrimary)),
             const SizedBox(height: 8),
             Wrap(spacing: 10, runSpacing: 10, children: [
+              // ===== DEMO fast-forward: bỏ qua thời gian =====
+              if (st == 'PUBLISHED' ||
+                  st == 'APPROVED' ||
+                  st == 'REG_OPEN' ||
+                  st == 'REG_CLOSED')
+                _ActionBtn(
+                  label: '⚡ Bắt đầu thi ngay (demo)',
+                  icon: Icons.fast_forward,
+                  bg: const Color(0xFF6D28D9),
+                  fg: Colors.white,
+                  busy: _busy,
+                  onTap: () => _action('Bắt đầu thi ngay',
+                      () => _demoPost('start-now'),
+                      successMsg:
+                          'Đã bắt đầu thi — bỏ qua thời gian, SV nộp bài được ngay'),
+                ),
+              if (st == 'REG_OPEN' || st == 'REG_CLOSED' || st == 'ONGOING')
+                _ActionBtn(
+                  label: '🏁 Kết thúc & chấm (demo)',
+                  icon: Icons.stop_circle_outlined,
+                  bg: const Color(0xFF6D28D9),
+                  fg: Colors.white,
+                  busy: _busy,
+                  onTap: () => _action('Kết thúc thi',
+                      () => _demoPost('finish-now'),
+                      successMsg:
+                          'Đã kết thúc + khoá nộp bài — qua tab Chấm bài để chấm'),
+                ),
               if (st == 'DRAFT' || st == 'REVISION_REQUESTED')
                 _ActionBtn(
                   label: 'Submit QĐ1 cho BCN',

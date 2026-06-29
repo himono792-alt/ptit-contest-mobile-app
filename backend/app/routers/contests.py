@@ -12,16 +12,18 @@ Endpoints:
   POST   /api/contests/{id}/sessions            - GV-02 thêm session
 """
 
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.deps import CurrentUser, Pagination
-from app.models.contest import Contest
+from app.models.contest import Contest, ContestRound
 from app.models.enums import ContestStatus, DeliveryMode, EntryType
+from app.models.submission import Submission
 from app.schemas.contest import (
     ContestCreateIn,
     ContestDetail,
@@ -241,6 +243,119 @@ async def transition_contest_status(
             f"Cho phép: {sorted(s.value for s in allowed)}",
         )
     contest.status = target
+    await db.commit()
+    await db.refresh(contest)
+    return ContestDetail.model_validate(contest)
+
+
+# ---------- DEMO FAST-FORWARD (2026-06-29) ----------
+# Bỏ qua thời gian đăng ký/thi để demo trơn tru. BTC bấm 1 nút là:
+#  - start-now: contest → ONGOING + mở cửa sổ nộp bài NGAY (bỏ qua lịch).
+#  - finish-now: contest → FINISHED + KHOÁ nộp bài → qua Chấm bài.
+# Owner-only. Chỉ chỉnh thời gian/status, không đụng dữ liệu đăng ký/bài nộp.
+
+_DEMO_FAR_FUTURE_DAYS = 3650  # ~10 năm: coi như "không bao giờ trễ"
+
+
+@router.post("/{contest_id}/demo/start-now", response_model=ContestDetail)
+async def demo_start_now(
+    contest_id: int,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ContestDetail:
+    """DEMO — Bỏ qua thời gian đăng ký, bắt đầu thi ngay.
+
+    Đưa contest về ONGOING và mở cửa sổ nộp bài của mọi round ngay lập tức
+    (submission_open_at = now, submission_close_at = xa) để SV nộp được liền.
+    """
+    contest = await contest_service._get_contest_or_404(db, contest_id)
+    contest_service._ensure_owner(contest, user)
+
+    if contest.status not in (
+        ContestStatus.PUBLISHED,
+        ContestStatus.REG_OPEN,
+        ContestStatus.REG_CLOSED,
+        ContestStatus.ONGOING,
+    ):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"Chỉ bắt đầu thi từ PUBLISHED/REG_OPEN/REG_CLOSED (hiện {contest.status.value}). "
+            "Cần BCN duyệt (PUBLISHED) trước.",
+        )
+
+    now = datetime.now(timezone.utc)
+    far = now + timedelta(days=_DEMO_FAR_FUTURE_DAYS)
+
+    contest.status = ContestStatus.ONGOING
+    if contest.registration_open_at is None or contest.registration_open_at > now:
+        contest.registration_open_at = now
+    contest.registration_close_at = now  # đóng đăng ký
+    contest.start_at = now
+    if contest.end_at <= now:
+        contest.end_at = far
+
+    # Mở cửa sổ nộp bài của tất cả round
+    rounds = (await db.execute(
+        select(ContestRound).where(ContestRound.contest_id == contest_id)
+    )).scalars().all()
+    for r in rounds:
+        r.submission_open_at = now
+        r.submission_close_at = far
+        if r.start_at > now:
+            r.start_at = now
+        if r.end_at <= now:
+            r.end_at = far
+
+    await db.commit()
+    await db.refresh(contest)
+    return ContestDetail.model_validate(contest)
+
+
+@router.post("/{contest_id}/demo/finish-now", response_model=ContestDetail)
+async def demo_finish_now(
+    contest_id: int,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ContestDetail:
+    """DEMO — Kết thúc thi ngay + khoá nộp bài để chuyển sang chấm.
+
+    Đưa contest về FINISHED, đóng cửa sổ nộp bài và lock toàn bộ submission
+    (SV không nộp/sửa thêm). Chấm bài không phụ thuộc status nên BTC chấm được ngay.
+    """
+    contest = await contest_service._get_contest_or_404(db, contest_id)
+    contest_service._ensure_owner(contest, user)
+
+    if contest.status not in (
+        ContestStatus.REG_OPEN,
+        ContestStatus.REG_CLOSED,
+        ContestStatus.ONGOING,
+    ):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"Chỉ kết thúc khi đang diễn ra (hiện {contest.status.value}). "
+            "Bấm 'Bắt đầu thi ngay' trước.",
+        )
+
+    now = datetime.now(timezone.utc)
+    contest.status = ContestStatus.FINISHED
+    contest.end_at = now
+
+    round_ids = (await db.execute(
+        select(ContestRound.round_id).where(ContestRound.contest_id == contest_id)
+    )).scalars().all()
+    for r in (await db.execute(
+        select(ContestRound).where(ContestRound.contest_id == contest_id)
+    )).scalars().all():
+        r.submission_close_at = now
+
+    # Khoá toàn bộ submission của các round thuộc contest này
+    if round_ids:
+        await db.execute(
+            update(Submission)
+            .where(Submission.round_id.in_(round_ids))
+            .values(is_locked=True)
+        )
+
     await db.commit()
     await db.refresh(contest)
     return ContestDetail.model_validate(contest)
